@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSession } from "@/app/providers/session";
 
 export function ThaanEditor({
   thaan,
@@ -32,6 +33,7 @@ export function ThaanEditor({
   onClose: () => void;
 }) {
   const correct = useCorrectIncompleteThaan();
+  const { isOwner } = useSession();
   const ensureFabric = useEnsureFabric();
   const [form, setForm] = useState({
     fabric: thaan.fabric_name ?? "",
@@ -57,7 +59,7 @@ export function ThaanEditor({
         fabric_id: fabricId,
         original_mm: originalMm,
         width_mm: widthMm,
-        price_paise: pricePaise,
+        price_paise: isOwner ? pricePaise : null,
         cost_paise: showCost ? cost : null,
       });
       toast.success(
@@ -111,6 +113,7 @@ export function ThaanEditor({
               <Input
                 inputMode="decimal"
                 value={form.price}
+                disabled={!isOwner}
                 onChange={(event) => setForm({ ...form, price: event.target.value })}
                 className="h-11"
               />

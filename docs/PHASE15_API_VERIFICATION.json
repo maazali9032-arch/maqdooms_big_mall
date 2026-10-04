@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-04T06:38:50.324Z",
+  "results": [
+    {
+      "rpc": "owner_erp_report",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "owner_erp_overview",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    }
+  ]
+}

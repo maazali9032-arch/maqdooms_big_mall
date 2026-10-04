@@ -1138,6 +1138,366 @@ export type Database = {
       };
     };
     Functions: {
+      finalize_production_cost: {
+        Args: {
+          p_request: string;
+          p_job: string;
+          p_expected_version: string | null;
+          p_materials: Json;
+          p_tailoring: number;
+          p_design_basis: string;
+          p_other: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      set_finished_product_sp: {
+        Args: {
+          p_request: string;
+          p_job: string;
+          p_cost_version: string;
+          p_updates: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      owner_production_costs: { Args: { p_job: string }; Returns: Json };
+
+      receive_finished_products: {
+        Args: { p_request: string; p_job: string; p_pieces: Json; p_reason: string };
+        Returns: string;
+      };
+      owner_erp_report: {
+        Args: {
+          p_dataset: string;
+          p_from?: string;
+          p_to?: string;
+          p_after?: string;
+          p_limit?: number;
+          p_search?: string;
+        };
+        Returns: Json;
+      };
+      owner_erp_overview: { Args: { p_from?: string; p_to?: string }; Returns: Json };
+      finished_product_sale_scan: { Args: { p_barcode: string }; Returns: Json };
+      complete_finished_product_sale: {
+        Args: {
+          p_request: string;
+          p_source: string;
+          p_items: Json;
+          p_customer: string | null;
+          p_payment_confirmed: boolean;
+          p_reference?: string;
+        };
+        Returns: string;
+      };
+      finished_product_order_history: {
+        Args: { p_order?: string; p_limit?: number };
+        Returns: Json;
+      };
+      finished_product_inventory: { Args: { p_after?: string; p_limit?: number }; Returns: Json };
+      finished_product_movement_history: {
+        Args: { p_piece?: string; p_limit?: number };
+        Returns: Json;
+      };
+      transfer_finished_products: {
+        Args: {
+          p_request: string;
+          p_source: string;
+          p_destination: string;
+          p_pieces: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      finished_product_catalog: {
+        Args: { p_barcode?: string; p_job?: string; p_limit?: number };
+        Returns: Json;
+      };
+
+      manage_production_catalog: {
+        Args: {
+          p_request: string;
+          p_kind: string;
+          p_id: string | null;
+          p_code: string;
+          p_name: string;
+          p_active: boolean;
+          p_charge_paise: number | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      create_owner_production: {
+        Args: {
+          p_request: string;
+          p_product: string;
+          p_design: string;
+          p_quantity: number;
+          p_assignment: string;
+          p_source: string;
+          p_items: Json;
+          p_notes: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      progress_owner_production: {
+        Args: {
+          p_request: string;
+          p_job: string;
+          p_expected_status: string;
+          p_status: string;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      owner_production_catalog: { Args: Record<PropertyKey, never>; Returns: Json };
+      owner_production_history: { Args: { p_job?: string; p_limit?: number }; Returns: Json };
+
+      owner_tailoring_hierarchy: { Args: never; Returns: Json };
+      tailoring_assignment_options: {
+        Args: { p_factory?: string; p_section?: string; p_no_section?: boolean };
+        Returns: Json;
+      };
+      manage_tailoring_entity: {
+        Args: {
+          p_request: string;
+          p_kind: string;
+          p_id: string | null;
+          p_code: string;
+          p_name: string;
+          p_active: boolean;
+          p_factory?: string | null;
+          p_profile?: string | null;
+          p_reason?: string;
+        };
+        Returns: string;
+      };
+      assign_tailor: {
+        Args: {
+          p_request: string;
+          p_tailor: string;
+          p_factory: string;
+          p_section: string | null;
+          p_expected_assignment: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      consumable_catalog: { Args: never; Returns: Json };
+      material_issue_jobs: { Args: never; Returns: Json };
+      material_issue_history: { Args: { p_job?: string; p_limit?: number }; Returns: Json };
+      consumable_receipt_history: { Args: { p_limit?: number }; Returns: Json };
+      manage_consumable: {
+        Args: { p_material: string; p_name: string; p_category: string; p_active: boolean };
+        Returns: undefined;
+      };
+      receive_consumable: {
+        Args: {
+          p_request_id: string;
+          p_material: string | null;
+          p_name: string | null;
+          p_unit: string | null;
+          p_category: string | null;
+          p_location: string;
+          p_quantity: number;
+          p_cp: number;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      post_material_issue: {
+        Args: {
+          p_request_id: string;
+          p_job_kind: string;
+          p_job: string;
+          p_source: string;
+          p_type: string;
+          p_items: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      setup_customer_tailoring_assignment: {
+        Args: {
+          p_factory_code: string;
+          p_factory_name: string;
+          p_section_code: string | null;
+          p_section_name: string | null;
+          p_tailor_code: string;
+          p_tailor_name: string;
+          p_profile?: string | null;
+        };
+        Returns: string;
+      };
+      set_customer_tailoring_charge: {
+        Args: { p_code: string; p_name: string; p_amount: number };
+        Returns: string;
+      };
+      customer_tailoring_catalog: { Args: never; Returns: Json };
+      quote_customer_tailoring: {
+        Args: { p_source: string; p_items: Json; p_charge: string };
+        Returns: Json;
+      };
+      create_customer_tailoring: {
+        Args: {
+          p_request: string;
+          p_quote: string;
+          p_customer: string;
+          p_assignment: string;
+          p_garment: string;
+          p_notes?: string;
+        };
+        Returns: string;
+      };
+      set_customer_tailoring_status: {
+        Args: { p_job: string; p_status: string };
+        Returns: undefined;
+      };
+      customer_tailoring_history: { Args: { p_job?: string; p_limit?: number }; Returns: Json };
+      owner_customer_tailoring_costs: { Args: { p_job: string }; Returns: Json };
+      direct_fabric_sale_catalog: { Args: { p_barcode?: string }; Returns: Json };
+      complete_direct_fabric_sale: {
+        Args: {
+          p_request_id: string;
+          p_source: string;
+          p_items: Json;
+          p_customer: string | null;
+          p_payment_confirmed: boolean;
+          p_reference?: string;
+        };
+        Returns: string;
+      };
+      direct_fabric_order_history: { Args: { p_order?: string; p_limit?: number }; Returns: Json };
+      owner_direct_fabric_order_costs: { Args: { p_order: string }; Returns: Json };
+      stock_transfer_history: { Args: { p_stock?: string; p_limit?: number }; Returns: Json };
+      fabric_stock_catalog: { Args: { p_barcode?: string }; Returns: Json };
+      fabric_stock_history: { Args: { p_stock: string }; Returns: Json };
+      create_fabric_entry: {
+        Args: {
+          p_request_id: string;
+          p_fabric: string;
+          p_batch: string;
+          p_lengths: Json;
+          p_cp: number;
+        };
+        Returns: string;
+      };
+      update_fabric_entry: {
+        Args: { p_stock: string; p_lengths: Json; p_cp: number };
+        Returns: undefined;
+      };
+      complete_fabric_entry: { Args: { p_stock: string }; Returns: string };
+      open_fabric_cp_correction: {
+        Args: { p_stock: string; p_reason: string };
+        Returns: undefined;
+      };
+      owner_set_fabric_sp: {
+        Args: { p_stock: string; p_sp: number; p_reason: string };
+        Returns: number;
+      };
+      domain_stock_entry_cp: {
+        Args: { p_stock_id: string; p_cp?: number };
+        Returns: number | null;
+      };
+      inventory_catalog: {
+        Args: never;
+        Returns: {
+          item_kind: string;
+          item_id: string;
+          inventory_item_id: string | null;
+          label: string;
+          unit: string;
+          quantity: number;
+          unlinked_movements: number;
+        }[];
+      };
+      inventory_locations: {
+        Args: never;
+        Returns: {
+          id: string;
+          code: string;
+          name: string;
+          kind: string;
+          parent_id: string | null;
+          active: boolean;
+        }[];
+      };
+      inventory_location_balances: {
+        Args: never;
+        Returns: {
+          inventory_item_id: string;
+          location_id: string;
+          unit: string;
+          quantity: number;
+        }[];
+      };
+      inventory_movement_history: {
+        Args: { p_limit?: number };
+        Returns: {
+          id: string;
+          inventory_item_id: string | null;
+          kind: string;
+          quantity: number;
+          unit: string;
+          source_location_id: string | null;
+          destination_location_id: string | null;
+          reference: string | null;
+          reason: string | null;
+          actor_id: string | null;
+          occurred_at: string;
+          customer_tailoring_job_id: string | null;
+          production_job_id: string | null;
+          order_item_id: string | null;
+          stock_transfer_line_id: string | null;
+        }[];
+      };
+      manage_showroom_location: {
+        Args: { p_id: string | null; p_code: string; p_name: string; p_active?: boolean };
+        Returns: string;
+      };
+      reconcile_inventory_item: {
+        Args: { p_kind: string; p_item_id: string; p_allocations: Json; p_reason: string };
+        Returns: string;
+      };
+      post_inventory_transfer: {
+        Args: {
+          p_request_id: string;
+          p_source: string;
+          p_destination: string;
+          p_items: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      record_inventory_correction: {
+        Args: {
+          p_item: string;
+          p_location: string;
+          p_kind: string;
+          p_quantity: number;
+          p_incoming: boolean;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      material_available_qty: {
+        Args: { p_material: string };
+        Returns: number;
+      };
+      owner_tailoring_line_prices: {
+        Args: never;
+        Returns: { line_id: string; price_snapshot_paise: number | null }[];
+      };
+      stock_entry_cp: {
+        Args: { p_thaan_id: string };
+        Returns: number;
+      };
+      stock_entry_set_cp: {
+        Args: { p_thaan_id: string; p_cost_paise: number };
+        Returns: undefined;
+      };
       active_tailors: {
         Args: never;
         Returns: {

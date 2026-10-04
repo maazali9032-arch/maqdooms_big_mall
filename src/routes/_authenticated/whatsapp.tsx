@@ -54,7 +54,7 @@ function WhatsAppPage() {
           description={latest ? `Based on bill ${latest.bill_no}` : undefined}
         >
           {latest ? (
-            <pre className="whitespace-pre-wrap rounded-sm bg-surface p-3 text-xs leading-relaxed">
+            <pre className="whitespace-pre-wrap rounded-md border border-border/70 bg-surface p-3 text-xs leading-relaxed">
               {`Assalamu alaikum ${(latest.customers as { name?: string } | null)?.name ?? "customer"}, thank you for shopping at Maqdoom's Big Mall.
 
 Bill: ${latest.bill_no}

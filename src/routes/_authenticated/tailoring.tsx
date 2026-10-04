@@ -1,3 +1,4 @@
+import { WorkflowTabs } from "@/shared/components/workflow-tabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +12,12 @@ import {
   useUpdateJobStatus,
 } from "@/features/tailoring";
 import { useSession } from "@/app/providers/session";
+import { CustomerTailoring } from "@/features/tailoring/CustomerTailoring";
+import { ProductionCosting } from "@/features/tailoring/ProductionCosting";
+import { OwnerProduction } from "@/features/tailoring/OwnerProduction";
+import { FinishedProductInventory } from "@/features/inventory/FinishedProductInventory";
+import { FinishedProducts } from "@/features/tailoring/FinishedProducts";
+import { MaterialIssues } from "@/features/tailoring/MaterialIssues";
 import { PageHeader, Panel, StatusBadge, EmptyState, StatCard } from "@/shared/components/page";
 import { formatMetres, formatMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
@@ -43,7 +50,7 @@ export const Route = createFileRoute("/_authenticated/tailoring")({
   component: TailoringPage,
 });
 
-function TailoringPage() {
+function LegacyTailoringPage() {
   const { can, isOwner } = useSession();
   const jobs = useTailoringJobs();
   const materials = useMaterials();
@@ -107,12 +114,12 @@ function TailoringPage() {
     <>
       <PageHeader
         title="Tailoring"
-        description="One job per garment. Material consumption is all-or-nothing and fully traced."
+        description="Customer Tailoring jobs, assigned work, orders and material traceability."
       />
 
       {isOwner ? (
         <Panel
-          title="Create tailoring job"
+          title="Create legacy tailoring job"
           description="Assign the job to an active staff account with the Tailor role."
         >
           <form className="grid gap-3 lg:grid-cols-[1fr_1fr_1fr_auto]" onSubmit={submitJob}>
@@ -164,7 +171,7 @@ function TailoringPage() {
             </Button>
           </form>
           {!tailors.isLoading && (tailors.data ?? []).length === 0 ? (
-            <p className="mt-3 rounded-sm border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+            <p className="mt-3 rounded-md border border-dashed border-border bg-surface/50 px-3 py-2 text-xs text-muted-foreground">
               No active Tailor accounts are available. Assign the Tailor role in Manage Access
               first.
             </p>
@@ -173,20 +180,23 @@ function TailoringPage() {
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Jobs" value={(jobs.data ?? []).length} />
+        <StatCard label="Legacy jobs" value={(jobs.data ?? []).length} />
         <StatCard
-          label="Active"
+          label="Legacy active jobs"
           value={
             (jobs.data ?? []).filter((j) => j.status === "open" || j.status === "in_progress")
               .length
           }
         />
         {showCost ? (
-          <StatCard label="Fabric cost consumed" value={formatMoney(totals.cost)} />
+          <StatCard label="Legacy fabric cost consumed" value={formatMoney(totals.cost)} />
         ) : null}
-        <StatCard label="Selling value consumed" value={formatMoney(totals.selling)} />
+        {showCost ? (
+          <StatCard label="Legacy selling value consumed" value={formatMoney(totals.selling)} />
+        ) : null}
       </div>
 
+      <h2 className="font-semibold">Legacy tailoring jobs</h2>
       <div className="space-y-4">
         {(jobs.data ?? []).length === 0 ? (
           <Panel>
@@ -277,7 +287,9 @@ function TailoringPage() {
                         {showCost ? (
                           <th className="px-3 py-2 text-right font-semibold">Cost</th>
                         ) : null}
-                        <th className="px-3 py-2 text-right font-semibold">Selling value</th>
+                        {showCost ? (
+                          <th className="px-3 py-2 text-right font-semibold">Selling value</th>
+                        ) : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -300,9 +312,11 @@ function TailoringPage() {
                                 {formatMoney(v.cost)}
                               </td>
                             ) : null}
-                            <td className="numeric px-3 py-2 text-right text-sm">
-                              {formatMoney(v.selling)}
-                            </td>
+                            {showCost ? (
+                              <td className="numeric px-3 py-2 text-right text-sm">
+                                {formatMoney(v.selling)}
+                              </td>
+                            ) : null}
                           </tr>
                         );
                       })}
@@ -315,9 +329,11 @@ function TailoringPage() {
                             {formatMoney(jobTotals.cost)}
                           </td>
                         ) : null}
-                        <td className="numeric px-3 py-2 text-right text-sm font-semibold">
-                          {formatMoney(jobTotals.selling)}
-                        </td>
+                        {showCost ? (
+                          <td className="numeric px-3 py-2 text-right text-sm font-semibold">
+                            {formatMoney(jobTotals.selling)}
+                          </td>
+                        ) : null}
                       </tr>
                     </tbody>
                   </table>
@@ -341,6 +357,39 @@ function TailoringPage() {
           ))}
         </div>
       </Panel>
+    </>
+  );
+}
+
+function TailoringPage() {
+  const { isOwner } = useSession();
+  return (
+    <>
+      <PageHeader
+        title="Tailoring & production"
+        description="Customer Tailoring and Owner Production remain separate workflows."
+      />
+      <WorkflowTabs
+        items={[
+          { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
+          { id: "production", label: "Owner Production", content: <OwnerProduction /> },
+          ...(isOwner
+            ? [{ id: "cost", label: "Production Costing", content: <ProductionCosting /> }]
+            : []),
+          { id: "products", label: "Finished Products", content: <FinishedProducts /> },
+          ...(isOwner
+            ? [
+                {
+                  id: "inventory",
+                  label: "Product inventory",
+                  content: <FinishedProductInventory />,
+                },
+              ]
+            : []),
+          { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
+          { id: "legacy", label: "Legacy records", content: <LegacyTailoringPage /> },
+        ]}
+      />
     </>
   );
 }

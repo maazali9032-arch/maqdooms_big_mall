@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-10-03T20:42:10.597Z",
+  "results": [
+    {
+      "rpc": "owner_tailoring_hierarchy",
+      "status": 401,
+      "code": "42501",
+      "registered": true,
+      "anonymous_denied": true
+    },
+    {
+      "rpc": "tailoring_assignment_options",
+      "status": 401,
+      "code": "42501",
+      "registered": true,
+      "anonymous_denied": true
+    }
+  ]
+}

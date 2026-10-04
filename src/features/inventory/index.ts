@@ -121,11 +121,21 @@ export function useBatches(enabled = true) {
 }
 
 /** Costs are a separate, permission-gated table: counter staff simply receive no rows. */
-export function useThaanCosts(enabled = true) {
+export function useThaanCosts(enabled = true, workflowIds?: string[]) {
   return useQuery({
-    queryKey: inventoryKeys.costs,
+    queryKey: [...inventoryKeys.costs, workflowIds ?? "owner-history"],
     enabled,
     queryFn: async () => {
+      if (workflowIds) {
+        const rows = await Promise.all(
+          workflowIds.map(async (thaan_id) => {
+            const { data, error } = await supabase.rpc("stock_entry_cp", { p_thaan_id: thaan_id });
+            if (error) return null; // Unowned/closed drafts must not expose CP.
+            return data === null ? null : { thaan_id, cost_paise: data };
+          }),
+        );
+        return rows.filter((row): row is { thaan_id: string; cost_paise: number } => row !== null);
+      }
       const { data, error } = await supabase.from("thaan_costs").select("thaan_id, cost_paise");
       if (error) return [] as { thaan_id: string; cost_paise: number }[];
       return data ?? [];
@@ -200,12 +210,13 @@ export function useUpdateThaans() {
         if (error) throw error;
       }
       if (input.cost_paise !== undefined && input.cost_paise !== null) {
-        const { error } = await supabase
-          .from("thaan_costs")
-          .upsert(
-            input.ids.map((id) => ({ thaan_id: id, cost_paise: input.cost_paise as number })),
-          );
-        if (error) throw error;
+        for (const id of input.ids) {
+          const { error } = await supabase.rpc("stock_entry_set_cp", {
+            p_thaan_id: id,
+            p_cost_paise: input.cost_paise,
+          });
+          if (error) throw error;
+        }
       }
       return input.ids.length;
     },

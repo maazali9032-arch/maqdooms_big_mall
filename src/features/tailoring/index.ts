@@ -6,23 +6,26 @@ export function useTailoringJobs(enabled = true) {
     queryKey: ["tailoring-jobs"],
     enabled,
     queryFn: async () => {
-      const [{ data, error }, { data: costs }] = await Promise.all([
+      const [{ data, error }, { data: costs }, { data: prices }] = await Promise.all([
         supabase
           .from("tailoring_jobs")
           .select(
-            "*, customers(name, phone), tailor:profiles!tailoring_jobs_tailor_id_fkey(full_name, email), tailoring_job_lines(id, category, length_mm, qty, price_snapshot_paise, thaans(barcode, fabric_id), materials(name, unit))",
+            "*, customers(name, phone), tailor:profiles!tailoring_jobs_tailor_id_fkey(full_name, email), tailoring_job_lines(id, category, length_mm, qty, thaans(barcode, fabric_id), materials(name, unit))",
           )
           .order("created_at", { ascending: false }),
         // Cost snapshots are column-restricted; this function returns rows only for cost-permitted users.
         supabase.rpc("tailoring_line_costs"),
+        supabase.rpc("owner_tailoring_line_prices"),
       ]);
       if (error) throw error;
       const costMap = new Map((costs ?? []).map((c) => [c.line_id, c.cost_snapshot_paise]));
+      const priceMap = new Map((prices ?? []).map((p) => [p.line_id, p.price_snapshot_paise]));
       return (data ?? []).map((job) => ({
         ...job,
         tailoring_job_lines: (job.tailoring_job_lines ?? []).map((l) => ({
           ...l,
           cost_snapshot_paise: costMap.get(l.id) ?? null,
+          price_snapshot_paise: priceMap.get(l.id) ?? null,
         })),
       }));
     },
@@ -64,10 +67,20 @@ export function useMaterials() {
       ]);
       if (error) throw error;
       const costMap = new Map((costs ?? []).map((row) => [row.material_id, row.cost_paise]));
-      return (data ?? []).map((material) => ({
-        ...material,
-        cost_paise: costMap.get(material.id) ?? null,
-      }));
+      return Promise.all(
+        (data ?? []).map(async (material) => {
+          const { data: quantity, error: quantityError } = await supabase.rpc(
+            "material_available_qty",
+            { p_material: material.id },
+          );
+          if (quantityError) throw quantityError;
+          return {
+            ...material,
+            qty_on_hand: quantity ?? 0,
+            cost_paise: costMap.get(material.id) ?? null,
+          };
+        }),
+      );
     },
   });
 }

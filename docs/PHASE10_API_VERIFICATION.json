@@ -1,0 +1,35 @@
+{
+  "verified_at": "2026-10-03T20:59:38.325Z",
+  "results": [
+    {
+      "rpc": "owner_production_catalog",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "owner_production_history",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "manage_production_catalog",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "create_owner_production",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "progress_owner_production",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    }
+  ]
+}

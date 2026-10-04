@@ -1,0 +1,26 @@
+{
+  "verified_at": "2026-10-03T20:21:48.499Z",
+  "results": [
+    {
+      "rpc": "consumable_catalog",
+      "status": 401,
+      "code": "42501",
+      "registered": true,
+      "anonymous_denied": true
+    },
+    {
+      "rpc": "material_issue_jobs",
+      "status": 401,
+      "code": "42501",
+      "registered": true,
+      "anonymous_denied": true
+    },
+    {
+      "rpc": "material_issue_history",
+      "status": 401,
+      "code": "42501",
+      "registered": true,
+      "anonymous_denied": true
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "verified_at": "2026-10-04T05:56:52.837Z",
+  "results": [
+    {
+      "rpc": "finished_product_inventory",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "finished_product_movement_history",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "transfer_finished_products",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    }
+  ]
+}

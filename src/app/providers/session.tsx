@@ -1,4 +1,14 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +27,9 @@ export type SessionState = {
 const SessionContext = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const generation = useRef(0);
+  const accessKey = useRef("");
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -24,50 +37,86 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<string[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
 
-  async function load() {
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
-    if (!session) {
+  const load = useCallback(async () => {
+    const ticket = ++generation.current;
+    const reset = () => {
+      accessKey.current = "";
+      void queryClient.cancelQueries();
+      queryClient.clear();
       setUserId(null);
+      setEmail(null);
+      setFullName("Staff");
       setRoles([]);
       setPermissions([]);
       setLoading(false);
-      return;
-    }
-    setUserId(session.user.id);
-    setEmail(session.user.email ?? null);
+    };
+    try {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (ticket !== generation.current) return;
+      if (sessionError) throw sessionError;
+      const session = data.session;
+      if (!session) {
+        reset();
+        return;
+      }
+      if (!accessKey.current.startsWith(`${session.user.id}:`)) {
+        setLoading(true);
+        void queryClient.cancelQueries();
+        queryClient.clear();
+        setRoles([]);
+        setPermissions([]);
+      }
 
-    const { data: bootstrap } = await supabase.rpc("bootstrap_current_user", {
-      _full_name: (session.user.user_metadata?.["full_name"] as string) ?? null,
-    });
-    const payload = bootstrap as {
-      roles?: string[];
-      permissions?: string[];
-      active?: boolean;
-    } | null;
-    if (payload && payload.active === false) {
-      // Deactivated accounts are signed out immediately; the database already denies them all data.
-      await supabase.auth.signOut();
-      toast.error("Your account has been deactivated. Contact the owner.");
-      return;
-    }
-    setRoles(payload?.roles ?? []);
-    setPermissions(payload?.permissions ?? []);
+      const { data: bootstrap, error: bootstrapError } = await supabase.rpc(
+        "bootstrap_current_user",
+        {
+          _full_name: (session.user.user_metadata?.["full_name"] as string) ?? null,
+        },
+      );
+      if (ticket !== generation.current) return;
+      if (bootstrapError || !bootstrap)
+        throw bootstrapError ?? new Error("Access verification failed");
+      const payload = bootstrap as {
+        roles?: string[];
+        permissions?: string[];
+        active?: boolean;
+      } | null;
+      if (payload?.active !== true) {
+        // Deactivated accounts are signed out immediately; the database already denies them all data.
+        reset();
+        await supabase.auth.signOut();
+        toast.error("Your account has been deactivated. Contact the owner.");
+        return;
+      }
+      const nextKey = `${session.user.id}:${JSON.stringify([payload.roles, payload.permissions])}`;
+      if (accessKey.current !== nextKey) {
+        void queryClient.cancelQueries();
+        queryClient.clear();
+        accessKey.current = nextKey;
+      }
+      setUserId(session.user.id);
+      setEmail(session.user.email ?? null);
+      setRoles(payload?.roles ?? []);
+      setPermissions(payload?.permissions ?? []);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", session.user.id)
-      .maybeSingle();
-    if (profile?.full_name) setFullName(profile.full_name);
-    setLoading(false);
-  }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (ticket !== generation.current) return;
+      setFullName(profile?.full_name ?? "Staff");
+      setLoading(false);
+    } catch {
+      if (ticket === generation.current) reset();
+    }
+  }, [queryClient]);
 
   useEffect(() => {
     void load();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-        void load();
+        queueMicrotask(() => void load());
       }
     });
     // Re-check access periodically and on focus so role changes and deactivation apply without re-login.
@@ -79,7 +128,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
       window.removeEventListener("focus", recheck);
     };
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     if (!userId) return;
@@ -89,16 +138,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${userId}` },
         (payload) => {
-          const profile = payload.new as { active?: boolean };
+          const profile = payload.new as { active?: boolean; full_name?: string };
           if (profile.active === false) void supabase.auth.signOut();
-          else void load();
+          // Bootstrap itself updates last_login. Do not bootstrap again on
+          // that event, which would create a realtime feedback loop.
+          else if (profile.full_name) setFullName(profile.full_name);
         },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, load]);
 
   const value = useMemo<SessionState>(() => {
     const isOwner = roles.includes("owner");
@@ -113,9 +164,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       can: (permission: string) => isOwner || permissions.includes(permission),
       refresh: load,
     };
-  }, [loading, userId, email, fullName, roles, permissions]);
+  }, [loading, userId, email, fullName, roles, permissions, load]);
 
-  return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider key={accessKey.current} value={value}>
+      {children}
+    </SessionContext.Provider>
+  );
 }
 
 export function useSession(): SessionState {

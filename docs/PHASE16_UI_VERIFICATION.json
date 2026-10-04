@@ -1,0 +1,7 @@
+{
+  "verified_at": "2026-10-04T12:55:38.945Z",
+  "checks": 24,
+  "errors": [],
+  "mode": "synthetic fixture reads only",
+  "viewports": [320, 390, 768, 1440]
+}

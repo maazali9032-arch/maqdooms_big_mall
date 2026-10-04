@@ -1,0 +1,71 @@
+{
+  "phase": 9,
+  "client_date": "2026-10-04",
+  "timezone": "Asia/Calcutta",
+  "verified_at": "2026-10-03T20:44:06.181Z",
+  "migration": "20261004000000_phase9_tailoring_management.sql",
+  "mirror": "0023_phase9_tailoring_management.sql",
+  "journal_entry": 23,
+  "sha256": "f786c1e1120fba624e3dee00f7b3dde4b2d66330ac3f13d17858c793a9d3678e",
+  "local_checks": {
+    "phase1": 278,
+    "phase2": 164,
+    "phase3": 230,
+    "phase4": 228,
+    "phase5": 171,
+    "phase6": 238,
+    "phase7": 290,
+    "phase8": 372,
+    "phase9": 297,
+    "legacy_reconciliation": 207,
+    "test_stock_scenarios": 96,
+    "total": 2571
+  },
+  "live_checks": 115,
+  "preexisting_public_tables_preserved": 65,
+  "preexisting_public_rows_preserved": 366,
+  "schema": "Matches cumulative canonical Phase 9 including fixture provenance and browser permissions/RLS",
+  "recorded_migrations": 24,
+  "retry": "Phase 9 recorded hash matched; migration skipped without replay",
+  "typescript": "passed",
+  "build": {
+    "status": "passed",
+    "location": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-phase9-build-3f1a2933-db8a-41ae-8e31-715371a0946b",
+    "deployment": "none",
+    "warnings": [
+      "Existing tsconfig-paths plugin notice",
+      "Existing mixed Supabase import notice"
+    ]
+  },
+  "lint": {
+    "affected_source_and_scripts": "0 errors, 8 existing fast-refresh warnings",
+    "full_repository_errors": 217,
+    "full_repository_warnings": 8,
+    "preexisting_formatting_files": [
+      {
+        "file": "scripts/legacy-reconciliation-test.mjs",
+        "errors": 47
+      },
+      {
+        "file": "scripts/live-legacy-reconciliation.mjs",
+        "errors": 38
+      },
+      {
+        "file": "scripts/live-test-stock-scenarios.mjs",
+        "errors": 46
+      },
+      {
+        "file": "scripts/test-stock-scenarios-test.mjs",
+        "errors": 86
+      }
+    ]
+  },
+  "limitations": [
+    "No authenticated browser click acceptance",
+    "No live multi-connection race test",
+    "No real hierarchy records, profiles or jobs created during rollout",
+    "Four legacy tailoring-job issues untouched",
+    "Hierarchy history shows current entity labels; rename audit retains previous values",
+    "No Phase 10 or later implementation"
+  ]
+}

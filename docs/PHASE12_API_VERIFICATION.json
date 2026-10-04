@@ -1,0 +1,23 @@
+{
+  "verified_at": "2026-10-04T05:34:26.857Z",
+  "results": [
+    {
+      "rpc": "owner_production_costs",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "finalize_production_cost",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "set_finished_product_sp",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    }
+  ]
+}

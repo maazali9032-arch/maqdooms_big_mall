@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Asia/Calcutta",
+  "phase": 13,
+  "status": "implemented and live verified",
+  "migration": "20261004000400_phase13_finished_product_inventory.sql",
+  "sha256": "11a6648c6bd8c9871ae4657f7f9ea9e35eaaac2218a4bdb25517eb7332a60d35",
+  "local_checks": 4186,
+  "new_database_checks": 309,
+  "business_database_checks": 4146,
+  "barcode_money_checks": 40,
+  "live_checks": 257,
+  "postgrest_checks": 3,
+  "preserved_tables": 73,
+  "preserved_rows": 366,
+  "new_tables": 1,
+  "migration_versions": 28,
+  "build": {
+    "directory": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-phase13-build-b6cb45d6-cdb1-49d2-903e-18db410140c8",
+    "exit": 0
+  },
+  "typescript": "passed",
+  "scoped_lint": {
+    "errors": 0,
+    "warnings": 8
+  },
+  "full_lint": {
+    "errors": 217,
+    "warnings": 8,
+    "files": [
+      {
+        "file": "scripts\\legacy-reconciliation-test.mjs",
+        "errors": 47
+      },
+      {
+        "file": "scripts\\live-legacy-reconciliation.mjs",
+        "errors": 38
+      },
+      {
+        "file": "scripts\\live-test-stock-scenarios.mjs",
+        "errors": 46
+      },
+      {
+        "file": "scripts\\test-stock-scenarios-test.mjs",
+        "errors": 86
+      }
+    ]
+  },
+  "local_suites": [
+    {
+      "suite": "phase1-schema",
+      "exit": 0,
+      "output": "supabase/migrations: PASS (11 migrations; 34 new tables; cumulative 136 assertions)\ndrizzle/migrations: PASS (11 migrations; 34 new tables; cumulative 272 assertions)\nFresh chain without demo data: PASS\nPASS: 278 checks; both chains produce equivalent schema; new migration SHA256 3c7baf5f4d04a1189a88dfad857ba8b31d2e0a278bd739f918a1165096586116\n"
+    },
+    {
+      "suite": "phase2-security",
+      "exit": 0,
+      "output": "supabase/migrations: role matrix verified\ndrizzle/migrations: role matrix verified\n164 Phase 2 security checks passed\n"
+    },
+    {
+      "suite": "phase3-ledger",
+      "exit": 0,
+      "output": "supabase/migrations (demo): Phase 3 verified\ndrizzle/migrations (demo): Phase 3 verified\nsupabase/migrations (clean): Phase 3 verified\nPASS: 230 Phase 3 ledger/security checks\n"
+    },
+    {
+      "suite": "phase4-fabric",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 4 role/receipt checks passed\ndrizzle/migrations demo: Phase 4 role/receipt checks passed\nsupabase/migrations clean: Phase 4 role/receipt checks passed\nPASS: 228 Phase 4 checks\n"
+    },
+    {
+      "suite": "phase5-transfer",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 5 transfer acceptance passed\ndrizzle/migrations demo: Phase 5 transfer acceptance passed\nsupabase/migrations clean: Phase 5 transfer acceptance passed\nPASS: 171 Phase 5 transfer / UI planning checks\n"
+    },
+    {
+      "suite": "phase6-sale",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 6 sale acceptance passed\ndrizzle/migrations demo: Phase 6 sale acceptance passed\nsupabase/migrations clean: Phase 6 sale acceptance passed\nPASS: 238 Phase 6 sale / money / security checks\n"
+    },
+    {
+      "suite": "phase7-tailoring",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 7 Customer Tailoring acceptance passed\ndrizzle/migrations demo: Phase 7 Customer Tailoring acceptance passed\nsupabase/migrations clean: Phase 7 Customer Tailoring acceptance passed\nPASS: 290 Phase 7 customer / tailoring / pricing / security checks\n"
+    },
+    {
+      "suite": "phase8-material",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 8 business/security/preservation checks passed\ndrizzle/migrations demo: Phase 8 business/security/preservation checks passed\nsupabase/migrations clean: Phase 8 business/security/preservation checks passed\nPhase 8: 372 checks passed\n"
+    },
+    {
+      "suite": "phase9-hierarchy",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 9 hierarchy/history/security passed\ndrizzle/migrations demo: Phase 9 hierarchy/history/security passed\nsupabase/migrations clean: Phase 9 hierarchy/history/security passed\nPhase 9: 297 checks passed\n"
+    },
+    {
+      "suite": "phase10-production",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 10 business/security/atomicity passed\ndrizzle/migrations demo: Phase 10 business/security/atomicity passed\nsupabase/migrations clean: Phase 10 business/security/atomicity passed\nPhase 10: 399 checks passed\n"
+    },
+    {
+      "suite": "phase11-products",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 11 bulk/genealogy/receipt/security passed\ndrizzle/migrations demo: Phase 11 bulk/genealogy/receipt/security passed\nsupabase/migrations clean: Phase 11 bulk/genealogy/receipt/security passed\nPhase 11: 351 checks passed\n"
+    },
+    {
+      "suite": "phase12-costing",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 12 costs/Design/rounding/SP/security passed\ndrizzle/migrations demo: Phase 12 costs/Design/rounding/SP/security passed\nsupabase/migrations clean: Phase 12 costs/Design/rounding/SP/security passed\nPhase 12: 516 checks passed\n"
+    },
+    {
+      "suite": "phase13-inventory",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 13 inventory/path/transfer/history/security passed\ndrizzle/migrations demo: Phase 13 inventory/path/transfer/history/security passed\nsupabase/migrations clean: Phase 13 inventory/path/transfer/history/security passed\nPhase 13: 309 checks passed\n"
+    },
+    {
+      "suite": "legacy-reconciliation",
+      "exit": 0,
+      "output": "PASS: 207 guarded reconciliation/preservation/security checks\n"
+    },
+    {
+      "suite": "test-stock-scenarios",
+      "exit": 0,
+      "output": "PASS: 96 test-stock allocation/provenance/preservation/rollback checks\n"
+    }
+  ],
+  "limitations": [
+    "No browser acceptance or live multi-connection race test",
+    "No live business fixtures or manufacturing/transfers posted; populated behavior tested in disposable PostgreSQL",
+    "Four legacy job domain/assignment decisions retained",
+    "No Phase 14 implementation, deployment, commit or push"
+  ]
+}

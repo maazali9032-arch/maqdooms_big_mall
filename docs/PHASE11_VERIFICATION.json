@@ -1,0 +1,122 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Asia/Calcutta",
+  "phase": 11,
+  "status": "implemented and live verified",
+  "migration": "20261004000200_phase11_finished_products.sql",
+  "sha256": "60d13e54d09816b654486dd35ed51218ffce0314f81c6db9f182746d00bf49af",
+  "local_checks": 3361,
+  "phase11_database_checks": 351,
+  "phase11_label_checks": 15,
+  "prior_checks": 2995,
+  "live_checks": 188,
+  "postgrest_checks": 2,
+  "preserved_tables": 68,
+  "preserved_rows": 366,
+  "new_tables": 2,
+  "build": {
+    "path": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-phase11-build-4dee99fd-8cd6-4e69-abe7-c3c8435944c0",
+    "exit": 0
+  },
+  "typescript": "passed",
+  "scoped_lint": {
+    "errors": 0,
+    "warnings": 8
+  },
+  "full_lint": {
+    "errors": 217,
+    "warnings": 8,
+    "files": [
+      {
+        "file": "scripts\\legacy-reconciliation-test.mjs",
+        "errors": 47
+      },
+      {
+        "file": "scripts\\live-legacy-reconciliation.mjs",
+        "errors": 38
+      },
+      {
+        "file": "scripts\\live-test-stock-scenarios.mjs",
+        "errors": 46
+      },
+      {
+        "file": "scripts\\test-stock-scenarios-test.mjs",
+        "errors": 86
+      }
+    ]
+  },
+  "local_suites": [
+    {
+      "suite": "phase1-schema",
+      "exit": 0,
+      "output": "supabase/migrations: PASS (11 migrations; 34 new tables; cumulative 136 assertions)\ndrizzle/migrations: PASS (11 migrations; 34 new tables; cumulative 272 assertions)\nFresh chain without demo data: PASS\nPASS: 278 checks; both chains produce equivalent schema; new migration SHA256 3c7baf5f4d04a1189a88dfad857ba8b31d2e0a278bd739f918a1165096586116\n"
+    },
+    {
+      "suite": "phase2-security",
+      "exit": 0,
+      "output": "supabase/migrations: role matrix verified\ndrizzle/migrations: role matrix verified\n164 Phase 2 security checks passed\n"
+    },
+    {
+      "suite": "phase3-ledger",
+      "exit": 0,
+      "output": "supabase/migrations (demo): Phase 3 verified\ndrizzle/migrations (demo): Phase 3 verified\nsupabase/migrations (clean): Phase 3 verified\nPASS: 230 Phase 3 ledger/security checks\n"
+    },
+    {
+      "suite": "phase4-fabric",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 4 role/receipt checks passed\ndrizzle/migrations demo: Phase 4 role/receipt checks passed\nsupabase/migrations clean: Phase 4 role/receipt checks passed\nPASS: 228 Phase 4 checks\n"
+    },
+    {
+      "suite": "phase5-transfer",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 5 transfer acceptance passed\ndrizzle/migrations demo: Phase 5 transfer acceptance passed\nsupabase/migrations clean: Phase 5 transfer acceptance passed\nPASS: 171 Phase 5 transfer / UI planning checks\n"
+    },
+    {
+      "suite": "phase6-sale",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 6 sale acceptance passed\ndrizzle/migrations demo: Phase 6 sale acceptance passed\nsupabase/migrations clean: Phase 6 sale acceptance passed\nPASS: 238 Phase 6 sale / money / security checks\n"
+    },
+    {
+      "suite": "phase7-tailoring",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 7 Customer Tailoring acceptance passed\ndrizzle/migrations demo: Phase 7 Customer Tailoring acceptance passed\nsupabase/migrations clean: Phase 7 Customer Tailoring acceptance passed\nPASS: 290 Phase 7 customer / tailoring / pricing / security checks\n"
+    },
+    {
+      "suite": "phase8-material",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 8 business/security/preservation checks passed\ndrizzle/migrations demo: Phase 8 business/security/preservation checks passed\nsupabase/migrations clean: Phase 8 business/security/preservation checks passed\nPhase 8: 372 checks passed\n"
+    },
+    {
+      "suite": "phase9-hierarchy",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 9 hierarchy/history/security passed\ndrizzle/migrations demo: Phase 9 hierarchy/history/security passed\nsupabase/migrations clean: Phase 9 hierarchy/history/security passed\nPhase 9: 297 checks passed\n"
+    },
+    {
+      "suite": "phase10-production",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 10 business/security/atomicity passed\ndrizzle/migrations demo: Phase 10 business/security/atomicity passed\nsupabase/migrations clean: Phase 10 business/security/atomicity passed\nPhase 10: 399 checks passed\n"
+    },
+    {
+      "suite": "phase11-products",
+      "exit": 0,
+      "output": "supabase/migrations demo: Phase 11 bulk/genealogy/receipt/security passed\ndrizzle/migrations demo: Phase 11 bulk/genealogy/receipt/security passed\nsupabase/migrations clean: Phase 11 bulk/genealogy/receipt/security passed\nPhase 11: 351 checks passed\n"
+    },
+    {
+      "suite": "legacy-reconciliation",
+      "exit": 0,
+      "output": "PASS: 207 guarded reconciliation/preservation/security checks\n"
+    },
+    {
+      "suite": "test-stock-scenarios",
+      "exit": 0,
+      "output": "PASS: 96 test-stock allocation/provenance/preservation/rollback checks\n"
+    }
+  ],
+  "limitations": [
+    "No browser/physical-printer acceptance",
+    "No live business transaction fixtures",
+    "No real multi-connection race test",
+    "Four existing legacy job decisions unchanged",
+    "No Phase 12 costing/SP setup, Phase 13 Finished Product transfer workflow or Phase 14 sale workflow"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-03T21:12:28.596Z",
+  "results": [
+    {
+      "rpc": "finished_product_catalog",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    },
+    {
+      "rpc": "receive_finished_products",
+      "status": 401,
+      "code": "42501",
+      "verified": true
+    }
+  ]
+}

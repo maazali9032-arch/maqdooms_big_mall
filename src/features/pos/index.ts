@@ -16,8 +16,7 @@ export type TailoringIssueResult = {
   job_id: string;
   cut_count: number;
   total_length_mm: number;
-  total_selling_value_paise: number;
-  cuts: Array<CutResult & { selling_value_paise: number }>;
+  cuts: CutResult[];
 };
 
 export type FabricSaleResult = {

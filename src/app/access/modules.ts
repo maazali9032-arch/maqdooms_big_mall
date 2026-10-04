@@ -37,7 +37,7 @@ export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   stock_entry: ["inventory", "settings"],
   counter: ["pos", "settings"],
   ecommerce_manager: ["inventory", "ecommerce", "whatsapp", "settings"],
-  tailor: ["pos", "tailoring", "settings"],
+  tailor: ["tailoring", "settings"],
 };
 
 /** Union of modules across all of the user's roles; Settings is always available. */

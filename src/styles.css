@@ -6,8 +6,8 @@
 
 /*
  * Maqdoom's Big Mall — ERP design system.
- * Restrained enterprise palette: warm paper surfaces, ink navy primary,
- * brass accent for attention states. All colours are oklch tokens.
+ * Heritage Enterprise palette: warm paper surfaces, espresso navigation,
+ * and restrained brass accents for selected and important states.
  */
 
 @theme inline {
@@ -61,47 +61,47 @@
 }
 
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.982 0.004 95);
-  --foreground: oklch(0.21 0.02 255);
-  --surface: oklch(0.965 0.005 95);
-  --surface-strong: oklch(0.935 0.006 95);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.02 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.02 255);
-  --primary: oklch(0.33 0.055 255);
-  --primary-foreground: oklch(0.98 0.004 95);
-  --secondary: oklch(0.945 0.006 95);
-  --secondary-foreground: oklch(0.28 0.03 255);
-  --muted: oklch(0.955 0.005 95);
-  --muted-foreground: oklch(0.505 0.018 255);
-  --accent: oklch(0.93 0.03 85);
-  --accent-foreground: oklch(0.3 0.05 70);
-  --destructive: oklch(0.52 0.19 27);
-  --destructive-foreground: oklch(0.98 0.004 95);
-  --success: oklch(0.52 0.11 155);
-  --success-foreground: oklch(0.98 0.004 95);
-  --warning: oklch(0.72 0.14 75);
-  --warning-foreground: oklch(0.26 0.05 70);
-  --info: oklch(0.52 0.09 245);
-  --info-foreground: oklch(0.98 0.004 95);
-  --border: oklch(0.885 0.007 95);
-  --input: oklch(0.885 0.007 95);
-  --ring: oklch(0.45 0.06 255);
+  --radius: 0.5rem;
+  --background: #f5f3ef;
+  --foreground: #24211e;
+  --surface: #f8f6f2;
+  --surface-strong: #eeeae3;
+  --card: #ffffff;
+  --card-foreground: #24211e;
+  --popover: #ffffff;
+  --popover-foreground: #24211e;
+  --primary: #9a753d;
+  --primary-foreground: #ffffff;
+  --secondary: #f1eee9;
+  --secondary-foreground: #342f2a;
+  --muted: #f3f0eb;
+  --muted-foreground: #77716a;
+  --accent: #f1e8d7;
+  --accent-foreground: #604517;
+  --destructive: #b33a32;
+  --destructive-foreground: #ffffff;
+  --success: #2f7d47;
+  --success-foreground: #ffffff;
+  --warning: #a86f12;
+  --warning-foreground: #61420e;
+  --info: #3f6695;
+  --info-foreground: #ffffff;
+  --border: #e5e0d8;
+  --input: #ddd7ce;
+  --ring: #b18a4a;
   --chart-1: oklch(0.42 0.08 255);
   --chart-2: oklch(0.58 0.1 175);
   --chart-3: oklch(0.68 0.13 75);
   --chart-4: oklch(0.5 0.13 25);
   --chart-5: oklch(0.6 0.06 300);
-  --sidebar: oklch(0.255 0.028 255);
-  --sidebar-foreground: oklch(0.86 0.012 250);
-  --sidebar-primary: oklch(0.72 0.12 78);
-  --sidebar-primary-foreground: oklch(0.2 0.02 255);
-  --sidebar-accent: oklch(0.32 0.03 255);
-  --sidebar-accent-foreground: oklch(0.97 0.004 95);
-  --sidebar-border: oklch(0.35 0.025 255);
-  --sidebar-ring: oklch(0.6 0.05 255);
+  --sidebar: #171513;
+  --sidebar-foreground: #d9d2c8;
+  --sidebar-primary: #b18a4a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #342b20;
+  --sidebar-accent-foreground: #fffdf8;
+  --sidebar-border: #312d28;
+  --sidebar-ring: #c39b5a;
 }
 
 .dark {
@@ -157,6 +157,7 @@
     font-family: var(--font-sans);
     font-feature-settings: "cv05", "tnum";
     -webkit-font-smoothing: antialiased;
+    min-width: 320px;
   }
 
   h1,
@@ -168,6 +169,15 @@
 
   table {
     font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-sidebar-primary) 28%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
 }
 
@@ -188,5 +198,58 @@
 @utility panel {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 1px 2px rgb(36 33 30 / 0.025),
+    0 8px 24px rgb(36 33 30 / 0.025);
+}
+
+@utility heritage-grid {
+  background-image:
+    linear-gradient(rgb(177 138 74 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(177 138 74 / 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+@utility scrollbar-subtle {
+  scrollbar-color: color-mix(in srgb, var(--color-muted-foreground) 35%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+/* Keep native controls and workflow tabs usable at small viewport widths. */
+@layer base {
+  [hidden] {
+    display: none !important;
+  }
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+  th {
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  @media print {
+    aside,
+    [data-workspace-header],
+    button,
+    [role="tablist"] {
+      display: none !important;
+    }
+    main {
+      padding: 0 !important;
+    }
+    .panel {
+      box-shadow: none;
+      break-inside: avoid;
+    }
+  }
 }

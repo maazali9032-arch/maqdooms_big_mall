@@ -1,0 +1,103 @@
+{
+  "phase": 8,
+  "client_date": "2026-10-04",
+  "timezone": "Asia/Calcutta",
+  "verified_at": "2026-10-03T20:27:37.985Z",
+  "migration": "20261003001100_phase8_consumables_material_issues.sql",
+  "mirror": "0021_phase8_consumables_material_issues.sql",
+  "sha256": "6dc6283c4a8a623b14c8773d17c9ef6e54abc36549c0ad982e3da2f45aeaba37",
+  "local_checks": {
+    "phase1": 278,
+    "phase2": 164,
+    "phase3": 230,
+    "phase4": 228,
+    "phase5": 171,
+    "phase6": 238,
+    "phase7": 290,
+    "phase8": 372,
+    "legacy_reconciliation": 207,
+    "test_stock_scenarios": 96,
+    "total": 2274
+  },
+  "local_database": "Disposable PGlite only; canonical and mirror demo chains plus clean canonical chains",
+  "live_checks": 93,
+  "existing_public_tables_verified": 63,
+  "existing_public_rows_verified": 366,
+  "live_schema": "Matches cumulative canonical Phase 8 including approved fixture provenance, columns, constraints, indexes, functions/grants, triggers, policies and RLS",
+  "rollout_retry": "Recorded migration hash matches; skipped without replay",
+  "typescript": "tsc --noEmit passed",
+  "build": {
+    "status": "passed",
+    "location": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-phase8-build-fb3486d9-7441-46a8-bdda-676425b48844",
+    "target": "Production client and server build; no deployment",
+    "warnings": [
+      "Existing tsconfig paths plugin notice",
+      "Existing mixed static/dynamic Supabase import notice"
+    ]
+  },
+  "lint": {
+    "phase8_changed_source_and_scripts": "0 errors; 8 existing React fast-refresh warnings",
+    "full_repository_errors": 217,
+    "full_repository_warnings": 8,
+    "existing_unmodified_formatting_files": [
+      {
+        "file": "scripts/legacy-reconciliation-test.mjs",
+        "errors": 47,
+        "rules": [
+          "prettier/prettier"
+        ]
+      },
+      {
+        "file": "scripts/live-legacy-reconciliation.mjs",
+        "errors": 38,
+        "rules": [
+          "prettier/prettier"
+        ]
+      },
+      {
+        "file": "scripts/live-test-stock-scenarios.mjs",
+        "errors": 46,
+        "rules": [
+          "prettier/prettier"
+        ]
+      },
+      {
+        "file": "scripts/test-stock-scenarios-test.mjs",
+        "errors": 86,
+        "rules": [
+          "prettier/prettier"
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "No authenticated browser click/scanner/printer acceptance test",
+    "No live business fixtures or concurrent multi-connection race test",
+    "Four historical tailoring jobs remain unresolved and untouched",
+    "Production Job creation is Phase 10; allocation/valuation/complete production costing is Phase 12",
+    "Legacy consumable categories default to other until Owner explicitly classifies them"
+  ],
+  "migrations": [
+    {
+      "filename": "20261003001100_phase8_consumables_material_issues.sql",
+      "mirror": "0021_phase8_consumables_material_issues.sql",
+      "sha256": "6dc6283c4a8a623b14c8773d17c9ef6e54abc36549c0ad982e3da2f45aeaba37"
+    },
+    {
+      "filename": "20261003001200_phase8_required_issue_guard.sql",
+      "mirror": "0022_phase8_required_issue_guard.sql",
+      "sha256": "980f9df5c08e6c3ef36c3411935274ed988788ffdc4ea77dc9ff32c151fcadf5"
+    }
+  ],
+  "recorded_migration_count": 23,
+  "mirror_verification": {
+    "phase1_onward": "Byte-identical, including both new Phase 8 files",
+    "historical_unmodified_differences": [
+      "0004_requirements_completion.sql whitespace",
+      "0005_incomplete_stock_correction.sql whitespace",
+      "0009_customer_multi_fabric_sale.sql comments/formatting"
+    ],
+    "journal_entries": 23,
+    "journal_order": "verified"
+  }
+}

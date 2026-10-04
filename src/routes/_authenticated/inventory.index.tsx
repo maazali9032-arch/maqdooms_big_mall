@@ -1,3 +1,4 @@
+import { FinishedProductInventory } from "@/features/inventory/FinishedProductInventory";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -13,6 +14,9 @@ import {
   type ThaanOverview,
 } from "@/features/inventory";
 import { ThaanEditor } from "@/features/inventory/ThaanEditor";
+import { LocationLedger } from "@/features/inventory/LocationLedger";
+import { FabricStock } from "@/features/inventory/FabricStock";
+import { Consumables } from "@/features/inventory/Consumables";
 import { useSession } from "@/app/providers/session";
 import {
   PageHeader,
@@ -197,7 +201,7 @@ function ThaanTable({
 }
 
 function InventoryPage() {
-  const { can } = useSession();
+  const { can, isOwner } = useSession();
   const showCost = can("inventory.view_cost");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
   const showOperationalHistory = can("inventory.receive") || can("reports.view");
@@ -223,7 +227,7 @@ function InventoryPage() {
   );
 
   const filtered = useMemo(() => {
-    const all = thaans.data ?? [];
+    const all = (thaans.data ?? []).filter((t) => t.barcode !== null);
     const q = search.trim().toLowerCase();
     const searched = !q
       ? all
@@ -265,7 +269,7 @@ function InventoryPage() {
     <>
       <PageHeader
         title="Inventory"
-        description="Each physical roll is one thaan with its own barcode and ledger."
+        description="One Fabric Barcode identifies a Fabric + Batch. Individual Thans and historical labels remain traceable."
         actions={
           can("inventory.receive") ? (
             <Button asChild size="sm">
@@ -282,19 +286,25 @@ function InventoryPage() {
         <StatCard label="Depleted" value={m["depleted_thaans"] ?? 0} />
       </div>
 
-      <Tabs defaultValue="thaans">
+      <Tabs defaultValue="fabric-stock">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full overflow-x-auto sm:w-auto">
-            <TabsTrigger value="thaans">Thaans</TabsTrigger>
+            <TabsTrigger value="fabric-stock">Fabric Stock &amp; scan</TabsTrigger>
+            <TabsTrigger value="thaans">Legacy / internal Thans</TabsTrigger>
+            <TabsTrigger value="locations">Locations &amp; transfers</TabsTrigger>
             {showOperationalHistory ? (
               <TabsTrigger value="movements">Stock movements</TabsTrigger>
             ) : null}
             {can("inventory.receive") ? <TabsTrigger value="batches">Receiving</TabsTrigger> : null}
+            {isOwner ? (
+              <TabsTrigger value="finished-products">Finished Products</TabsTrigger>
+            ) : null}
+            <TabsTrigger value="consumables">Consumables</TabsTrigger>
             <TabsTrigger value="archived">Depleted / archived</TabsTrigger>
           </TabsList>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {canCorrectIncomplete ? (
-              <label className="flex h-10 items-center gap-2 whitespace-nowrap rounded-sm border border-input px-3 text-sm">
+              <label className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-input bg-card px-3 text-sm shadow-sm shadow-black/[0.02]">
                 <Checkbox
                   checked={incompleteOnly}
                   onCheckedChange={(checked) => setIncompleteOnly(Boolean(checked))}
@@ -311,6 +321,20 @@ function InventoryPage() {
           </div>
         </div>
 
+        <TabsContent value="fabric-stock" className="mt-4">
+          <FabricStock />
+        </TabsContent>
+        {isOwner ? (
+          <TabsContent value="finished-products" className="mt-4">
+            <FinishedProductInventory />
+          </TabsContent>
+        ) : null}
+        <TabsContent value="consumables" className="mt-4">
+          <Consumables />
+        </TabsContent>
+        <TabsContent value="locations" className="mt-4">
+          <LocationLedger />
+        </TabsContent>
         <TabsContent value="thaans" className="mt-4">
           <Panel bodyClassName="p-0">
             <ThaanTable

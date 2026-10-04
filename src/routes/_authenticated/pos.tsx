@@ -1,3 +1,5 @@
+import { WorkflowTabs } from "@/shared/components/workflow-tabs";
+import { FinishedProductSale } from "@/features/pos/FinishedProductSale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -10,6 +12,10 @@ import {
 import { useCreateCustomer, useCustomers } from "@/features/customers";
 import { useActiveTailors, useCreateJob, useEligibleTailoringJobs } from "@/features/tailoring";
 import type { ThaanOverview } from "@/features/inventory";
+import { DirectFabricSale } from "@/features/pos/DirectFabricSale";
+import { CustomerTailoring } from "@/features/tailoring/CustomerTailoring";
+import { FinishedProducts } from "@/features/tailoring/FinishedProducts";
+import { MaterialIssues } from "@/features/tailoring/MaterialIssues";
 import { PageHeader, Panel, StatusBadge, EmptyState } from "@/shared/components/page";
 import { formatMetres, formatMoney, lineAmountPaise, parseMetreInput } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
@@ -79,7 +85,7 @@ export const Route = createFileRoute("/_authenticated/pos")({
   component: PosPage,
 });
 
-function PosPage() {
+function LegacyPosPage() {
   const { can, isOwner, roles } = useSession();
   const canSell = can("pos.sell");
   const canIssue = can("pos.issue_to_tailoring");
@@ -295,16 +301,18 @@ function PosPage() {
     <>
       <PageHeader
         title="Counter"
-        description="Scan a thaan barcode to begin. Every cut goes through the same ledger operation."
+        description="Scan a Fabric Barcode for Direct Fabric Sale or Customer Tailoring."
       />
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <div className="space-y-4">
-          <Panel title="Scan thaan barcode">
+          <Panel
+            title="Legacy Than lookup"
+            description="Existing legacy stock and tailoring workflows."
+          >
             <form onSubmit={findThaan} className="flex flex-col gap-2 sm:flex-row">
               <Input
                 ref={scanRef}
-                autoFocus
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
                 placeholder="TH-0001"
@@ -333,10 +341,12 @@ function PosPage() {
                   <p className="label-eyebrow">Held online</p>
                   <p className="numeric text-lg">{formatMetres(thaan.held_mm)}</p>
                 </div>
-                <div>
-                  <p className="label-eyebrow">Selling / m</p>
-                  <p className="numeric text-lg">{formatMoney(thaan.price_paise)}</p>
-                </div>
+                {purpose === "sale" ? (
+                  <div>
+                    <p className="label-eyebrow">Selling / m</p>
+                    <p className="numeric text-lg">{formatMoney(thaan.price_paise)}</p>
+                  </div>
+                ) : null}
               </div>
               <div className="mt-3">
                 <StatusBadge status={thaan.is_incomplete ? "incomplete" : thaan.status} />
@@ -570,7 +580,7 @@ function PosPage() {
                       </SelectContent>
                     </Select>
                     {!jobs.isLoading && (jobs.data ?? []).length === 0 ? (
-                      <p className="rounded-sm border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                      <p className="rounded-md border border-dashed border-border bg-surface/50 px-3 py-2 text-xs text-muted-foreground">
                         No assigned open or in-progress tailoring jobs are available.
                       </p>
                     ) : null}
@@ -583,12 +593,12 @@ function PosPage() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between rounded-sm bg-surface px-3 py-3">
-                  <span className="text-sm text-muted-foreground">
-                    {purpose === "sale" ? "Line amount" : "This cut selling value"}
-                  </span>
-                  <span className="numeric text-xl font-semibold">{formatMoney(amount)}</span>
-                </div>
+                {purpose === "sale" ? (
+                  <div className="flex items-center justify-between rounded-md border border-border/70 bg-surface px-3 py-3">
+                    <span className="text-sm text-muted-foreground">Line amount</span>
+                    <span className="numeric text-xl font-semibold">{formatMoney(amount)}</span>
+                  </div>
+                ) : null}
 
                 <Button
                   className="h-12 w-full"
@@ -644,7 +654,9 @@ function PosPage() {
                     <div className="text-right">
                       <p className="numeric text-sm font-medium">{formatMetres(item.lengthMm)}</p>
                       <p className="numeric text-xs text-muted-foreground">
-                        {formatMoney(lineAmountPaise(item.lengthMm, item.pricePaise))}
+                        {purpose === "sale"
+                          ? formatMoney(lineAmountPaise(item.lengthMm, item.pricePaise))
+                          : null}
                       </p>
                     </div>
                     <Button
@@ -664,7 +676,7 @@ function PosPage() {
                 ))}
               </div>
               <div className="space-y-3 border-t border-border p-4">
-                <div className="flex items-center justify-between gap-3 rounded-sm bg-surface px-3 py-3">
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-surface px-3 py-3">
                   <div>
                     <p className="text-sm font-medium">
                       {stagedCuts.length} fabric {purpose === "sale" ? "item" : "cut"}
@@ -675,7 +687,7 @@ function PosPage() {
                     </p>
                   </div>
                   <span className="numeric text-xl font-semibold">
-                    {formatMoney(stagedValuePaise)}
+                    {purpose === "sale" ? formatMoney(stagedValuePaise) : null}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -710,7 +722,7 @@ function PosPage() {
               title="WhatsApp receipt preview"
               description="Nothing is sent — no provider is configured"
             >
-              <pre className="whitespace-pre-wrap rounded-sm bg-surface p-3 text-xs leading-relaxed">
+              <pre className="whitespace-pre-wrap rounded-md border border-border/70 bg-surface p-3 text-xs leading-relaxed">
                 {`Assalamu alaikum, thank you for shopping at Maqdoom's Big Mall.
 
 Bill: ${receipt.billNo}
@@ -755,6 +767,27 @@ We look forward to serving you again.`}
           ) : null}
         </div>
       </div>
+    </>
+  );
+}
+
+function PosPage() {
+  return (
+    <>
+      <PageHeader
+        title="Counter"
+        description="Choose Direct Fabric Sale, Finished Product Sale, Customer Tailoring or Material Issue."
+      />
+      <WorkflowTabs
+        items={[
+          { id: "fabric", label: "Direct Fabric Sale", content: <DirectFabricSale /> },
+          { id: "products", label: "Finished Product Sale", content: <FinishedProductSale /> },
+          { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
+          { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
+          { id: "scan", label: "Product genealogy", content: <FinishedProducts /> },
+          { id: "legacy", label: "Legacy records", content: <LegacyPosPage /> },
+        ]}
+      />
     </>
   );
 }

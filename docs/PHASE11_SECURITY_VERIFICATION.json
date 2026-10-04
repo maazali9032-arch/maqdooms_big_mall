@@ -1,0 +1,216 @@
+{
+  "verified_at": "2026-10-03T21:12:04.444Z",
+  "checks": 188,
+  "results": [
+    {
+      "role": "owner",
+      "effective_roles": [
+        "counter",
+        "ecommerce_manager",
+        "owner",
+        "stock_entry",
+        "tailor"
+      ],
+      "verified": true,
+      "visible_fabric_cost_rows": 10,
+      "visible_legacy_cost_rows": 16
+    },
+    {
+      "role": "counter",
+      "effective_roles": [
+        "counter",
+        "tailor"
+      ],
+      "verified": true,
+      "visible_fabric_cost_rows": 0,
+      "visible_legacy_cost_rows": 0
+    },
+    {
+      "role": "tailor",
+      "effective_roles": [
+        "tailor"
+      ],
+      "verified": true,
+      "visible_fabric_cost_rows": 0,
+      "visible_legacy_cost_rows": 0
+    },
+    {
+      "role": "stock_entry",
+      "effective_roles": [
+        "stock_entry"
+      ],
+      "verified": true,
+      "visible_fabric_cost_rows": 0,
+      "visible_legacy_cost_rows": 0
+    }
+  ],
+  "unresolved": [
+    {
+      "issue": "job_domain_and_assignment_unverified",
+      "records": 4
+    }
+  ],
+  "ledger": [
+    {
+      "version": "20260924000000",
+      "filename": "20260924000000_erp_core_schema.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "e58a8bb2a25f564bd3b9b56e9b2ea26e16c27b2cb9cca343bbd9e0eebbccbc1e"
+    },
+    {
+      "version": "20260924000100",
+      "filename": "20260924000100_demo_seed_data.sql",
+      "mode": "skipped_demo_seed",
+      "sha256": "492fc0e01669f1c4aee120f418a093da61061160362b254d531c1d7763f33a46"
+    },
+    {
+      "version": "20260924000200",
+      "filename": "20260924000200_reporting_views.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "ab52169b6f7497be16292f9931340c53dd328c4039416e4e9aeac65e4213b3ca"
+    },
+    {
+      "version": "20260926000000",
+      "filename": "20260926000000_role_access_hardening.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "5417ea7df87aacbab5523097c566142255b272289d1d3400776efa2ba9c4e7bb"
+    },
+    {
+      "version": "20260926000100",
+      "filename": "20260926000100_requirements_completion.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "8ab1c0f26d947a40a85fc9dabbdabd9205ba30c85199b935e1a0c260a9aa4a65"
+    },
+    {
+      "version": "20260926000200",
+      "filename": "20260926000200_incomplete_stock_correction.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "bdcdf62eba2dcd9994bd7bf2182f5bc63525de2f090771d86c7c81c6f79a95f2"
+    },
+    {
+      "version": "20260926000300",
+      "filename": "20260926000300_pos_customer_details.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "408e05becabeab1246e3d8f5a626676ba0874aafa043ff6d0aee12d457f67e15"
+    },
+    {
+      "version": "20260926000400",
+      "filename": "20260926000400_tailor_job_assignment.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "99e086992702877545d279a9bb759153bbc5b6e4d4b5df398e61c692edc2aac2"
+    },
+    {
+      "version": "20260927000000",
+      "filename": "20260927000000_tailoring_multi_cut.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "7ba27328f5e71a89e0fb1708379c8b84d1afc730da17601e8c90e0770c991781"
+    },
+    {
+      "version": "20260927000100",
+      "filename": "20260927000100_customer_multi_fabric_sale.sql",
+      "mode": "applied",
+      "sha256": "3cf8b6d2805a2e70f34072af85bfde03361983b2906eee1fc8aa872fe3b0c6e4"
+    },
+    {
+      "version": "20261003000000",
+      "filename": "20261003000000_phase1_domain_model.sql",
+      "mode": "adopted_existing_schema",
+      "sha256": "3c7baf5f4d04a1189a88dfad857ba8b31d2e0a278bd739f918a1165096586116"
+    },
+    {
+      "version": "20261003000100",
+      "filename": "20261003000100_phase2_authorization.sql",
+      "mode": "applied",
+      "sha256": "f9e4f044abb0fe652a5ad533eac45d02d41fedee04e563555e9890f9e370a5ea"
+    },
+    {
+      "version": "20261003000200",
+      "filename": "20261003000200_phase3_locations_ledger.sql",
+      "mode": "applied",
+      "sha256": "a63886220f64c5d2844d0d4df1d44bf209b10fe7020fd90e3537981923e0181c"
+    },
+    {
+      "version": "20261003000300",
+      "filename": "20261003000300_phase4_fabric_receiving_barcode.sql",
+      "mode": "applied",
+      "sha256": "5efc287ff1d1781858415ad68ab24dd110eaae1a995ad1c63a397ae225acd23b"
+    },
+    {
+      "version": "20261003000400",
+      "filename": "20261003000400_phase5_transfer_history.sql",
+      "mode": "applied",
+      "sha256": "76edaf7ba87880d4fb7dc87599ec1509e354192fe9d2ca403cfc42294aa48a72"
+    },
+    {
+      "version": "20261003000500",
+      "filename": "20261003000500_phase6_direct_fabric_sale.sql",
+      "mode": "applied",
+      "sha256": "8652e05d27628b7c8456823d76aec0a2edbf948814763218f166292afba1d56f"
+    },
+    {
+      "version": "20261003000600",
+      "filename": "20261003000600_phase7_customer_tailoring.sql",
+      "mode": "applied",
+      "sha256": "ce8a20195a72705974de8fdb2fdf3f60ad0cfe78651f5a818cf858e08ddb5722"
+    },
+    {
+      "version": "20261003000700",
+      "filename": "20261003000700_live_migration_tracking.sql",
+      "mode": "applied",
+      "sha256": "e3ff83d9b733ea06c45c0019bd14960e3b57a9dee79a699b8c151d23cdd4a400"
+    },
+    {
+      "version": "20261003000800",
+      "filename": "20261003000800_live_function_grants_reconciliation.sql",
+      "mode": "applied",
+      "sha256": "259b95452f4c14cb34c52fa8d7b67cdc9887bba14c9f650fb097cbd93b16e340"
+    },
+    {
+      "version": "20261003000900",
+      "filename": "20261003000900_live_legacy_reconciliation.sql",
+      "mode": "applied",
+      "sha256": "16ce4859a561ed6182be6fcda654d52d13dabe52254bbd6eec6c5782e58478bf"
+    },
+    {
+      "version": "20261003001000",
+      "filename": "20261003001000_live_test_stock_scenarios.sql",
+      "mode": "applied",
+      "sha256": "6b11bcc9b7c0f5c8cacec3bbef913261db5bba055a191a9677e004304af3e1ff"
+    },
+    {
+      "version": "20261003001100",
+      "filename": "20261003001100_phase8_consumables_material_issues.sql",
+      "mode": "applied",
+      "sha256": "6dc6283c4a8a623b14c8773d17c9ef6e54abc36549c0ad982e3da2f45aeaba37"
+    },
+    {
+      "version": "20261003001200",
+      "filename": "20261003001200_phase8_required_issue_guard.sql",
+      "mode": "applied",
+      "sha256": "980f9df5c08e6c3ef36c3411935274ed988788ffdc4ea77dc9ff32c151fcadf5"
+    },
+    {
+      "version": "20261004000000",
+      "filename": "20261004000000_phase9_tailoring_management.sql",
+      "mode": "applied",
+      "sha256": "f786c1e1120fba624e3dee00f7b3dde4b2d66330ac3f13d17858c793a9d3678e"
+    },
+    {
+      "version": "20261004000100",
+      "filename": "20261004000100_phase10_owner_production.sql",
+      "mode": "applied",
+      "sha256": "85ad3f59045bf4670b9b29cd042edb1b0159b8335bff4a37a7527ce9d008cd30"
+    },
+    {
+      "version": "20261004000200",
+      "filename": "20261004000200_phase11_finished_products.sql",
+      "mode": "applied",
+      "sha256": "60d13e54d09816b654486dd35ed51218ffce0314f81c6db9f182746d00bf49af"
+    }
+  ],
+  "limitations": [
+    "No business transaction fixtures executed live",
+    "No live multi-connection race tests",
+    "Legacy inventory opening quantities/locations require explicit Owner reconciliation"
+  ]
+}

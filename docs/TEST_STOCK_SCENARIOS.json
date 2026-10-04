@@ -1,0 +1,341 @@
+{
+  "authorization": "User explicitly classified reviewed stock as testing data and authorized deliberate scenario distribution.",
+  "jobs_scope": "Four legacy jobs unchanged pending clarification",
+  "fixtures": [
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "02d9bec3-eaaa-46d6-97c8-31f33573f828",
+      "label": "TH-0006",
+      "status": "active",
+      "quantity": 16500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 16500
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "0934b643-0dbd-4a57-a566-8105c8b6a4c7",
+      "label": "TH-0012",
+      "status": "active",
+      "quantity": 26600,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "TEST-DISPLAY-B",
+          "quantity": 26600
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "1eaffab4-4aa7-4fa6-a10c-bb54650e66f9",
+      "label": "TH-0014",
+      "status": "active",
+      "quantity": 30500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 30500
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "242d349e-01cd-4d2e-8c69-d534a03fb729",
+      "label": "TH-0013",
+      "status": "active",
+      "quantity": 27000,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 17000
+        },
+        {
+          "code": "TEST-DISPLAY-A",
+          "quantity": 10000
+        }
+      ],
+      "scenario": "split_than_locations"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "4133c2d2-6d02-49b9-b9a1-83823fe51b2e",
+      "label": "TH-0011",
+      "status": "active",
+      "quantity": 18500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 18500
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "442fe81d-12c2-4bb5-b983-f53e2ad7411d",
+      "label": "TH-0001",
+      "status": "active",
+      "quantity": 23500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 23500
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "57a2dd59-95fe-4e33-9fc3-134bc7d4816d",
+      "label": "TH-0010",
+      "status": "active",
+      "quantity": 16500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "TEST-DISPLAY-A",
+          "quantity": 16500
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "989fd388-42fd-4e9d-929e-e76b8e8f3148",
+      "label": "TH-0017",
+      "status": "draft",
+      "quantity": 0,
+      "unit": "mm",
+      "allocations": [],
+      "scenario": "unreceived_missing_cp_sp"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "ae30649f-bdce-4aeb-a6ae-02b0f32b46fb",
+      "label": "TH-0016",
+      "status": "draft",
+      "quantity": 0,
+      "unit": "mm",
+      "allocations": [],
+      "scenario": "unreceived_draft"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "d7bc14e3-a672-4277-8b88-be1d751b767b",
+      "label": "TH-0003",
+      "status": "depleted",
+      "quantity": 0,
+      "unit": "mm",
+      "allocations": [],
+      "scenario": "fully_depleted"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "d8ddd5f7-7b1b-4f4f-bcd4-770dfcb4e10e",
+      "label": "TH-0007",
+      "status": "active",
+      "quantity": 25800,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 15800
+        },
+        {
+          "code": "SHOWROOM",
+          "quantity": 10000
+        }
+      ],
+      "scenario": "split_than_locations"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "dae8dfd0-8087-4924-aab8-113670b4cf22",
+      "label": "TH-0015",
+      "status": "draft",
+      "quantity": 0,
+      "unit": "mm",
+      "allocations": [],
+      "scenario": "unreceived_draft"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "e5d97da7-8c0e-45ca-8546-8ff75bc82635",
+      "label": "TH-0009",
+      "status": "active",
+      "quantity": 18000,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "SHOWROOM",
+          "quantity": 18000
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "eaf4197f-c4fd-4109-a8af-dbac9a4cb6ba",
+      "label": "TH-0008",
+      "status": "active",
+      "quantity": 36000,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 16000
+        },
+        {
+          "code": "SHOWROOM",
+          "quantity": 10000
+        },
+        {
+          "code": "TEST-DISPLAY-B",
+          "quantity": 10000
+        }
+      ],
+      "scenario": "split_than_locations"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "f2ef011e-a4fc-4d05-978c-4a68c35fee30",
+      "label": "TH-0002",
+      "status": "active",
+      "quantity": 25750,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "SHOWROOM",
+          "quantity": 25750
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "f9416b8e-0547-4e1d-af27-affdc2c01f1f",
+      "label": "TH-0005",
+      "status": "active",
+      "quantity": 29250,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "TEST-DISPLAY-A",
+          "quantity": 29250
+        }
+      ],
+      "scenario": "single_location_stock"
+    },
+    {
+      "legacy_table": "thaans",
+      "legacy_id": "fd27265b-755c-4672-a353-180332c8b863",
+      "label": "TH-0004",
+      "status": "active",
+      "quantity": 21500,
+      "unit": "mm",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 11500
+        },
+        {
+          "code": "SHOWROOM",
+          "quantity": 10000
+        }
+      ],
+      "scenario": "split_than_locations"
+    },
+    {
+      "legacy_table": "materials",
+      "legacy_id": "000c3b67-1b95-4b22-bd46-8878f71f3c17",
+      "label": "Canvas Padding",
+      "status": "active",
+      "quantity": 42,
+      "unit": "m",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 30
+        },
+        {
+          "code": "SHOWROOM",
+          "quantity": 12
+        }
+      ],
+      "scenario": "material_unit_split"
+    },
+    {
+      "legacy_table": "materials",
+      "legacy_id": "038c4ca5-5670-476f-84cc-fcd458419ba1",
+      "label": "Horn Buttons (set)",
+      "status": "active",
+      "quantity": 60,
+      "unit": "set",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 40
+        },
+        {
+          "code": "TEST-DISPLAY-A",
+          "quantity": 20
+        }
+      ],
+      "scenario": "material_unit_split"
+    },
+    {
+      "legacy_table": "materials",
+      "legacy_id": "529710b8-3cca-49d3-b741-7cb139622e18",
+      "label": "Shoulder Pads",
+      "status": "active",
+      "quantity": 35,
+      "unit": "pair",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 20
+        },
+        {
+          "code": "SHOWROOM",
+          "quantity": 10
+        },
+        {
+          "code": "TEST-DISPLAY-B",
+          "quantity": 5
+        }
+      ],
+      "scenario": "material_unit_split"
+    },
+    {
+      "legacy_table": "materials",
+      "legacy_id": "bcfcb3ea-c497-4dcd-8c2d-5f1898a67fe4",
+      "label": "Suit Lining Silk",
+      "status": "active",
+      "quantity": 80,
+      "unit": "m",
+      "allocations": [
+        {
+          "code": "WORKSHOP",
+          "quantity": 50
+        },
+        {
+          "code": "TEST-DISPLAY-B",
+          "quantity": 30
+        }
+      ],
+      "scenario": "material_unit_split"
+    }
+  ]
+}

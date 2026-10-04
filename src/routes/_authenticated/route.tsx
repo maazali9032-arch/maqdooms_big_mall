@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated")({
     );
     if (bootstrapError) throw bootstrapError;
     const access = (bootstrap ?? {}) as AccessBootstrap;
-    if (access.active === false) {
+    if (access.active !== true) {
       await supabase.auth.signOut();
       throw redirect({ to: "/auth" });
     }
