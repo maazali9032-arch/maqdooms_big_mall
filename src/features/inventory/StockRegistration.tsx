@@ -50,6 +50,7 @@ function BarcodeLabel({
   provider: string;
   fabric: string;
 }) {
+  const { can } = useSession();
   const ref = useRef<HTMLDivElement>(null);
   const bars = fabricBarcodeBars(variant.code);
   return (
@@ -78,6 +79,7 @@ function BarcodeLabel({
         type="button"
         variant="outline"
         className="mt-2"
+        disabled={!can("stock.print_barcode")}
         onClick={() => {
           try {
             if (ref.current) printFabricLabel(ref.current, variant.code);
@@ -439,7 +441,7 @@ export function StockRegistration() {
                       <p>CP / Lagat: {reportMoney(variant.cp_paise_per_m)} / m</p>
                     ) : null}
                     {variant.cp_missing &&
-                    (isOwner || variant.can_fill_cp) &&
+                    (isOwner || (variant.can_fill_cp && can("inventory.fill_missing_cp"))) &&
                     variant.code === scanned ? (
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Input

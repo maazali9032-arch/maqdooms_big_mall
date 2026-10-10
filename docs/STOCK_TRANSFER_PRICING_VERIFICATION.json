@@ -1,0 +1,33 @@
+{
+  "verified_at": "2026-10-10T21:35:00.8971249Z",
+  "migration": "20261011000100_stock_transfer_counter_pricing.sql",
+  "mirror": "0031_stock_transfer_counter_pricing.sql",
+  "sha256": "2e6e6db128443d4ad4ff17dfbb53e278a8192b0fe6d33d1d91997ec17860937d",
+  "applied": [
+    "20261011000100_stock_transfer_counter_pricing.sql"
+  ],
+  "original_public_tables": 79,
+  "original_rows_preserved": 425,
+  "permission_rows_added": 4,
+  "default_grants_added": 4,
+  "audit_rows_added": 8,
+  "database_assertions_new": 132,
+  "ui_assertions_new": 15,
+  "regression_database_assertions": 5493,
+  "registration_ui_regressions": 16,
+  "navigation_regressions": 11,
+  "barcode_decode_regressions": 18,
+  "live_checks": 389,
+  "live_api_checks": 6,
+  "schema_recheck": "passed",
+  "typescript": "passed",
+  "scoped_lint": "0 errors; 8 existing warnings",
+  "vercel_build": "passed",
+  "deployed": false,
+  "limitations": [
+    "No live business fixtures",
+    "No multi-connection race tests",
+    "Physical printer/scanner and staff acceptance pending",
+    "Four prior Owner job reconciliation decisions"
+  ]
+}

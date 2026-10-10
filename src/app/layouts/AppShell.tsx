@@ -50,6 +50,12 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { to: "/inventory", label: "Inventory", icon: Boxes, module: "inventory" },
       { to: "/inventory/receiving", label: "Stock Entry", icon: Boxes, module: "stock_entry" },
+      {
+        to: "/inventory/transfers",
+        label: "Stock Transfer",
+        icon: Boxes,
+        module: "stock_transfer",
+      },
       { to: "/pos", label: "Counter / POS", icon: ShoppingCart, module: "pos" },
       { to: "/tailoring", label: "Tailoring", icon: Scissors, module: "tailoring" },
       { to: "/customers", label: "Customers", icon: Users, module: "customers" },
@@ -126,7 +132,11 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               {visibleItems.map((item) => {
                 const active =
                   (pathname === item.to || pathname.startsWith(`${item.to}/`)) &&
-                  !(item.to === "/inventory" && pathname.startsWith("/inventory/receiving"));
+                  !(
+                    item.to === "/inventory" &&
+                    (pathname.startsWith("/inventory/receiving") ||
+                      pathname.startsWith("/inventory/transfers"))
+                  );
                 const Icon = item.icon;
                 return (
                   <Link

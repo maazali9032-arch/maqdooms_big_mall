@@ -1372,6 +1372,21 @@ export type Database = {
       customer_tailoring_history: { Args: { p_job?: string; p_limit?: number }; Returns: Json };
       owner_customer_tailoring_costs: { Args: { p_job: string }; Returns: Json };
       direct_fabric_sale_catalog: { Args: { p_barcode?: string }; Returns: Json };
+      owner_set_user_permission: {
+        Args: { p_user: string; p_permission: string; p_granted: boolean | null };
+        Returns: undefined;
+      };
+      complete_counter_fabric_sale: {
+        Args: {
+          p_request_id: string;
+          p_source: string;
+          p_items: Json;
+          p_customer: string | null;
+          p_payment_confirmed: boolean;
+          p_reference?: string;
+        };
+        Returns: string;
+      };
       complete_direct_fabric_sale: {
         Args: {
           p_request_id: string;

@@ -1,0 +1,22 @@
+{
+  "verified_at": "2026-10-10T21:30:53.504Z",
+  "checks": 6,
+  "results": [
+    {
+      "rpc": "complete_counter_fabric_sale",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "owner_set_user_permission",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "post_inventory_transfer",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "mode": "anonymous invalid-input API calls; no live business writes"
+}

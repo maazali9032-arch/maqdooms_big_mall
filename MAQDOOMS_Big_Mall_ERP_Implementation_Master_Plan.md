@@ -1420,3 +1420,32 @@ financial/inventory history remain preserved; earlier migration files are not re
 
 Implementation uses additive version-controlled migrations and records actual
 changes, verification and limits in the permanent Implementation History.
+
+# 34. OWNER-APPROVED WORKSHOP TRANSFER AND COUNTER FABRIC PRICING REVISION
+
+Approved 11 October 2026 after the Owner's handwritten stock-exit diagram and
+explicit clarification. These later rules override conflicting earlier transfer
+access and fixed Owner fabric-SP requirements for this workflow:
+
+- Authorized Stock Entry staff get a Stock Transfer sidebar. Scan the original
+  registered barcode, select all or some metres, and choose an active Showroom
+  floor. Submission immediately deducts Workshop stock and adds destination stock.
+  There is no receiving receipt, approval or confirmation by Showroom staff.
+- Original and separated pieces retain exactly the same barcode. Location ledger
+  balances determine how much of that identity is in Workshop or each floor.
+  Transfers conserve total stock; selling/consumption reduces it.
+- Authorized Stock Entry can transfer available Workshop fabric entered by any
+  staff member. Owner retains existing broader ledger controls.
+- Counter staff enter a price per metre for each fabric sale. Metres × entered
+  price calculate its payable line total, rounded to paise. No fixed Owner SP or
+  saved stock price is required or updated by this new sale API.
+- Counter users have no assigned floor limitation. A sale explicitly chooses its
+  source location and cannot deduct more than that location's available stock.
+- Owner manages per-user action overrides (allow, deny, inherit role defaults).
+  Transfer, label printing, delayed missing-CP fill and Counter price entry have
+  separate controls alongside existing receive/sell permissions. Existing role
+  eligibility, Owner-only internal costs/administration and active-staff rules
+  remain enforced. Permission overrides do not grant roles or reveal internal CP.
+- Historical stock, prices, immutable financial snapshots and migration files are
+  preserved. Older sale APIs remain for historical compatibility. Finished Product
+  pricing and Customer Tailoring CP/charges are outside this fabric pricing change.

@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { UserPermissions } from "@/features/access/UserPermissions";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -347,6 +348,7 @@ function AccessPage() {
         )}
       </section>
 
+      <UserPermissions />
       <details className="panel group overflow-hidden">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">

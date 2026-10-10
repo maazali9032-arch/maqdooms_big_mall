@@ -56,7 +56,7 @@ for (const [directory, demo] of [
       .filter(
         (f) =>
           (process.argv.includes("--include-phase10") || !f.includes("phase12_")) &&
-          f.endsWith(".sql") &&
+          f.endsWith(".sql") && !f.includes("_stock_transfer_counter_pricing") &&
           !f.includes("_stock_registration") &&
           (process.argv.includes("--include-phase15") || !f.includes("phase15_")) &&
           (process.argv.includes("--include-phase14") || !f.includes("phase14_")) &&

@@ -4103,3 +4103,149 @@ REMAINING:
 
 NEXT PHASE:
 - None. This approved revision is complete; await Owner review/deployment direction.
+
+## 2026-10-11 — Immediate Workshop transfer and Counter fabric sale pricing
+
+PHASE:
+- Owner-approved post-Phase 16 workflow revision; Master Plan Section 34 records
+  the subsequent business-rule override. No later implementation phase invented.
+
+STATUS:
+- Implemented and verified locally; new migration applied and schema rechecked live.
+- Application push/deployment and real staff/hardware acceptance remain pending.
+
+IMPLEMENTED:
+- Stock Transfer sidebar for authorized Stock Entry: same original barcode scan,
+  automatic Workshop source, individual metre selection or all-available shortcut,
+  active Showroom floor destination, immediate atomic posting and same-barcode
+  label printing for the outgoing piece. No receipt/confirmation state introduced.
+- Quantities at Workshop and all Showroom locations remain under the same original
+  barcode; transfer does not create another Than, variant, fabric or barcode.
+- Counter fabric sales accept a price per metre per sale; exact quantity/price
+  calculation and paise display, source-location deduction, immutable rate/CP
+  snapshots and confirmed payment. No saved Owner SP/version required or updated.
+- No Counter floor assignments or floor restrictions. Source stock must exist and
+  transfers/sales cannot exceed that source location's balance.
+- Owner Individual user permissions panel: allow, deny, inherit/reset for all
+  existing permission keys; four additional action keys for transfer, barcode
+  printing, delayed missing-CP fill and Counter fabric price entry. Existing roles
+  still define eligible workflows; internal costs and administration stay private.
+
+MODIFIED:
+- `src/features/inventory/FabricTransfer.tsx`: staff access, Workshop/floor choices,
+  live balances, exact retry freeze, original-code outgoing labels, cache refresh.
+- New `src/routes/_authenticated/inventory.transfers.tsx`; generated route tree.
+- `src/app/access/modules.ts`, `src/app/layouts/AppShell.tsx`: dedicated route,
+  permission guard, navigation and active-link behavior.
+- `src/features/pos/DirectFabricSale.tsx`: explicit transaction price, computed
+  preview/cart totals with paise, new checked sale API, location availability.
+- New `src/features/access/UserPermissions.tsx` integrated into access.tsx;
+  `src/integrations/supabase/types.ts`: typed access and Counter sale RPCs.
+- `src/features/inventory/StockRegistration.tsx`: print and delayed CP-fill controls
+  respect their independent permissions. Updated synthetic Stock Entry sessions.
+- `scripts/live-db-rollout.mjs`: checked cumulative extension replay, sequential
+  application, original-row preservation with explicitly permitted metadata inserts.
+- `scripts/live-db-verify.mjs`: read-only transfer/history/access/price/helper checks;
+  fixture count now targets the permanent manifest, not all newly received stock.
+  Opening provenance uses actual ADJUSTMENT/OPENING references, inward receipts,
+  or an explicitly documented zero fixture; no invented movement is required.
+- Phase 1–15 and Stock Entry historical test scopes exclude the later migration
+  while retaining their assertions. New stock-transfer-pricing database/UI/API
+  scripts and isolated fixture directory exercise the full extended chains.
+- Master Plan, README, this history, `docs/STOCK_TRANSFER_PRICING.md`, and separate
+  STOCK_TRANSFER_PRICING verification JSON files. Older evidence files preserved.
+
+REUSED:
+- Canonical stock authority, location ledger locks/balance guards, transfer
+  documents/history, Code128 generation/print helper, existing orders/items,
+  payment confirmation, CP snapshots, permanent history/audits and exact retries.
+
+DATABASE CHANGES:
+- New `supabase/migrations/20261011000100_stock_transfer_counter_pricing.sql`;
+  identical `drizzle/migrations/0031_stock_transfer_counter_pricing.sql`, journal
+  index 31. SHA256 both:
+  `2e6e6db128443d4ad4ff17dfbb53e278a8192b0fe6d33d1d91997ec17860937d`.
+- Purpose: permitted immediate Workshop → Showroom floor fabric transfers and
+  transaction-time Counter fabric SP, with audited individual permission controls.
+- Tables/columns/relationships/constraints/indexes/sequences/triggers: unchanged.
+- Inserted four permissions: stock.transfer, stock.print_barcode,
+  inventory.fill_missing_cp, pos.enter_price. Inserted default Stock Entry grants
+  for the first three and Counter grant for the fourth. Existing audit triggers
+  appended eight records. No existing permission row/override was overwritten.
+- Replaced post_inventory_transfer: active Owner/Stock Entry plus stock.transfer;
+  non-Owner limited to Workshop fabric → active Showroom floor, available quantities
+  and actor-bound retries. Authorized staff can move another user's Workshop stock.
+- Replaced stock_transfer_history with checked definer: Owner full history or
+  authorized Stock Entry's own transfer documents only, no financial projection.
+- New complete_counter_fabric_sale: exact integer millimetres and explicit integer
+  nonnegative paise-per-metre; no stock-SP lookup. Existing canonical order/ledger/
+  financial snapshot/audit writes remain atomic, payment confirmed, retries exact.
+- New owner_set_user_permission: Owner only, existing user/key validation, allow,
+  deny or reset; row and explicit action audits. Owner-only costs/role checks remain.
+- Renamed existing CP-fill function to private registration_fill_cp_internal and
+  revoked browser execution; new public fill_registered_thaan_cp wrapper adds
+  inventory.fill_missing_cp enforcement and retains ownership/missing-only logic.
+- RLS/raw table grants: no broadening. Checked new APIs authenticated-only;
+  private CP helper inaccessible to browser roles; security-definer fixed search
+  paths retained. Existing raw ledger writes and private costs remain sealed.
+- Data/backfill: permission/default/audit inserts only. No stock, price, CP,
+  quantities, locations, opening balances, seed or historical transactions changed.
+- Applied live 2026-10-10 21:30:25 UTC / 2026-10-11 03:00:25 IST; prior 31 migrations
+  skipped as already recorded. New version/hash recorded in both migration ledgers.
+  Existing 79-table / 425-row baseline preserved. Other table fingerprints match
+  exactly; every existing permission/default/audit row retained in full. Only four
+  permissions + four role grants + eight audits appended (16 new rows total).
+- Complete schema/function/index/RLS/grant comparison passes; independent read-only
+  cumulative recheck stock_transfer_counter_pricing_verified=true. No manual DB edit
+  and no earlier applied migration modified, renamed or deleted.
+
+SECURITY / PERMISSIONS:
+- Database validates current permissions on every write, independent of stale UI.
+  Owner can change per-user permissions; staff refresh displayed access afterward.
+- Counter/Tailor/e-commerce unauthorized transfer denied; Counter rate-entry
+  revocation denies new priced sales. Stock Entry transfer/CP-fill overrides tested.
+  Label print controls honor permission; barcode identity itself is not secret.
+- Existing eligible-role and Owner-only financial safeguards deliberately retained.
+
+TESTS:
+- 132 new full-chain database assertions pass across Supabase demo, mirrored demo
+  and clean replay: 50=20+10+10+10 split, unchanged barcode, immediate posted state,
+  exact/cross-actor retries, another user's stock, excess/reverse transfer denial,
+  transaction rate/no saved SP, any floor, exact rounding, invalid/changed request
+  denial, CP privacy/snapshot, permission deny/reset, no double stock deduction.
+- All eighteen prior cumulative DB suites pass again (5,493 assertions). Eleven
+  existing navigation, eighteen decoded barcode and sixteen Stock Entry browser
+  checks pass against current code. Fifteen new actual-component browser checks
+  verify transfer/sidebar/printing/balances, price multiplication and Owner
+  allow/deny/inherit controls; transfer fits 320/390/768/1440px.
+- New UI test caught old whole-rupee formatting; current fabric POS consistently
+  displays paise. 333.33 rupees/m × 2.5m = 833.33 rupees is verified.
+- Six anonymous live PostgREST registration/denial checks pass for new sale/access
+  and existing transfer endpoints. All 389 live security checks pass, recorded in
+  separate evidence after correcting obsolete global fixture-count assumptions.
+- Verification initially stopped at an old total-inventory count (18 vs actual 20),
+  then an incorrect opening-kind check. Actual opening stock uses ADJUSTMENT with
+  OPENING reference; one authorized zero fixture intentionally has no movement.
+  Verifier corrected to actual provenance; no database records altered for tests.
+- No live business transaction/auth fixture executed by this implementation.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Eight existing
+  fast-refresh warnings remain. Standard and Vercel-preset builds pass; patched
+  TanStack core 1.169.39 and Vercel output verified. No dependency/.env changes.
+
+BUSINESS RULES VERIFIED:
+- Immediate Workshop floor transfer, partial/full length control, same code on all
+  pieces, location-specific quantities, source-balance protection, unrestricted
+  Counter floor selection, sale-time per-metre SP and Owner per-user action control.
+
+REMAINING:
+- Publish/deploy application; actual staff/printer/scanner acceptance, large-history
+  performance and multi-connection concurrency tests. Four previous legacy job
+  domain/assignment Owner decisions remain.
+- Finished Product Owner pricing and Customer Tailoring CP/charges unchanged.
+  Historical stock prices and older compatibility APIs retained; the revised
+  fabric POS does not depend on or write fixed stock prices.
+
+NEXT PHASE:
+- None started. Await Owner review or deployment direction.

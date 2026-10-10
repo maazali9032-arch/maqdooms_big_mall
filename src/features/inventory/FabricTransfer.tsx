@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { formatDateTime } from "@/shared/utils/format";
 import { quantityText } from "./ledger-quantity";
 import { prepareFabricTransfer } from "./fabric-transfer";
+import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
+import { definiteDatabaseRejection } from "./consumable-input";
 
 type Stock = {
   id: string;
@@ -44,10 +46,14 @@ type Transfer = {
 };
 
 export function FabricTransfer() {
-  const { isOwner } = useSession();
+  const { isOwner, roles, can } = useSession();
+  const allowed = (isOwner || roles.includes("stock_entry")) && can("stock.transfer");
+  const labelRef = useRef<HTMLDivElement>(null);
+  const [uncertain, setUncertain] = useState(false);
   const qc = useQueryClient();
   const stocks = useQuery({
     queryKey: ["fabric-stock"],
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("fabric_stock_catalog", {});
       if (error) throw error;
@@ -56,6 +62,7 @@ export function FabricTransfer() {
   });
   const catalog = useQuery({
     queryKey: ["location-ledger", "catalog"],
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("inventory_catalog");
       if (error) throw error;
@@ -64,6 +71,7 @@ export function FabricTransfer() {
   });
   const locations = useQuery({
     queryKey: ["location-ledger", "locations"],
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("inventory_locations");
       if (error) throw error;
@@ -72,6 +80,7 @@ export function FabricTransfer() {
   });
   const balances = useQuery({
     queryKey: ["location-ledger", "balances"],
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("inventory_location_balances");
       if (error) throw error;
@@ -89,12 +98,13 @@ export function FabricTransfer() {
     quantity: number;
     source: string;
     destination: string;
+    barcode: string;
   } | null>(null);
   const request = useRef<{ signature: string; id: string } | null>(null);
   const stock = stocks.data?.find((s) => s.id === stockId);
   const history = useQuery({
     queryKey: ["stock-transfer-history", stockId],
-    enabled: isOwner,
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("stock_transfer_history", {
         ...(stockId ? { p_stock: stockId } : {}),
@@ -134,7 +144,7 @@ export function FabricTransfer() {
     }
   const transfer = useMutation({
     mutationFn: async () => {
-      if (!isOwner) throw new Error("Owner required");
+      if (!allowed) throw new Error("Stock transfer permission required");
       if (!stock || !source || !destination || source === destination || !reason.trim())
         throw new Error("Select Fabric Stock, distinct locations and a reason");
       const planned = prepareFabricTransfer(thans, choices, false);
@@ -150,14 +160,30 @@ export function FabricTransfer() {
         p_items: planned.lines,
         p_reason: reason.trim(),
       });
-      if (error) throw error;
-      setPosted({ id: data, quantity: planned.total_mm, source, destination });
+      if (error) {
+        if (definiteDatabaseRejection(error)) {
+          request.current = null;
+          setUncertain(false);
+        } else setUncertain(true);
+        throw error;
+      }
+      setPosted({
+        id: data,
+        quantity: planned.total_mm,
+        source,
+        destination,
+        barcode: stock.barcode,
+      });
+      setUncertain(false);
       setChoices({});
       setReason("");
       request.current = null;
     },
     onSuccess: () => toast.success("Stock Transfer posted; refreshing current balances"),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Transfer failed"),
+    onError: (e) => {
+      if (request.current) setUncertain(true);
+      toast.error(e instanceof Error ? e.message : "Transfer failed");
+    },
     onSettled: async () => {
       await Promise.all(
         [
@@ -167,28 +193,33 @@ export function FabricTransfer() {
           ["stock-transfer-history"],
           ["thaans"],
           ["dashboard-metrics"],
+          ["direct-fabric-sale"],
+          ["stock-registration"],
         ].map((queryKey) => qc.invalidateQueries({ queryKey })),
       );
     },
   });
   const pending =
     transfer.isPending ||
+    uncertain ||
     stocks.isPending ||
     catalog.isPending ||
     locations.isPending ||
     balances.isPending;
   const chooseStock = (id: string) => {
     setStockId(id);
+    if (!isOwner)
+      setSource(locations.data?.find((l) => l.active && l.kind === "workshop")?.id ?? "");
     setChoices({});
     setPosted(null);
   };
   const selectClass = "h-11 w-full rounded border bg-background p-2";
-  if (!isOwner) return null;
+  if (!allowed) return <p>Stock transfer permission required. Contact the Owner.</p>;
   return (
     <div className="space-y-4">
       <Panel
-        title="Workshop ↔ Showroom Fabric Stock Transfer"
-        description="Select or scan one Fabric Barcode, then choose the internal Thans and quantities to move."
+        title="Stock Transfer"
+        description="Scan the original barcode and transfer all or part of its metres to a Showroom floor. Posting updates both balances immediately; every piece keeps the same barcode."
       >
         <div className="space-y-3">
           {stocks.error || catalog.error || locations.error || balances.error ? (
@@ -235,6 +266,13 @@ export function FabricTransfer() {
             <>
               <p className="break-all font-mono text-xs">{stock.barcode}</p>
               <p>Total available: {quantityText(stock.available_mm, "mm")}</p>
+              <div className="flex flex-wrap gap-3 text-sm">
+                {stock.locations.map((l) => (
+                  <span key={l.id}>
+                    {l.name}: {quantityText(l.quantity_mm, "mm")}
+                  </span>
+                ))}
+              </div>
               <form
                 className="space-y-3"
                 onSubmit={(e) => {
@@ -261,7 +299,13 @@ export function FabricTransfer() {
                       >
                         <option value="">Select {label.toLowerCase()}</option>
                         {locations.data
-                          ?.filter((l) => l.active)
+                          ?.filter(
+                            (l) =>
+                              l.active &&
+                              (isOwner ||
+                                l.kind ===
+                                  (label === "Source" ? "workshop" : "showroom_sublocation")),
+                          )
                           .map((l) => (
                             <option key={l.id} value={l.id}>
                               {l.name}
@@ -317,6 +361,16 @@ export function FabricTransfer() {
                                 (t.source_mm <= 0 && !choices[t.thaan_id])
                               }
                             />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={pending || t.source_mm <= 0}
+                              onClick={() =>
+                                setChoices({ ...choices, [t.thaan_id]: String(t.source_mm / 1000) })
+                              }
+                            >
+                              All available
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -353,7 +407,7 @@ export function FabricTransfer() {
                 />
                 <Button
                   disabled={
-                    pending ||
+                    (pending && !uncertain) ||
                     !preview ||
                     !source ||
                     !destination ||
@@ -362,7 +416,7 @@ export function FabricTransfer() {
                     Boolean(stocks.error || catalog.error || balances.error || locations.error)
                   }
                 >
-                  Post Stock Transfer
+                  {uncertain ? "Retry same transfer" : "Post Stock Transfer"}
                 </Button>
               </form>
             </>
@@ -373,6 +427,39 @@ export function FabricTransfer() {
                 Posted {quantityText(posted.quantity, "mm")} from {locName(posted.source)} to{" "}
                 {locName(posted.destination)}.
               </p>
+              <div ref={labelRef} className="bg-white p-3 text-black">
+                <svg
+                  viewBox={`0 0 ${fabricBarcodeBars(posted.barcode).length + 40} 65`}
+                  className="h-16 max-w-full"
+                  role="img"
+                  aria-label={`Barcode ${posted.barcode}`}
+                >
+                  <rect width="100%" height="65" fill="white" />
+                  {[...fabricBarcodeBars(posted.barcode)].map((bit, index) =>
+                    bit === "1" ? (
+                      <rect key={index} x={20 + index} y="4" width="1" height="55" fill="black" />
+                    ) : null,
+                  )}
+                </svg>
+                <p>{posted.barcode}</p>
+                <p>
+                  {quantityText(posted.quantity, "mm")} · {locName(posted.destination)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!can("stock.print_barcode")}
+                onClick={() => {
+                  try {
+                    if (labelRef.current) printFabricLabel(labelRef.current, posted.barcode);
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Printing failed");
+                  }
+                }}
+              >
+                Print same barcode for outgoing piece
+              </Button>
               <p className="break-all text-xs">Transfer {posted.id}</p>
               <p>
                 {transfer.isPending

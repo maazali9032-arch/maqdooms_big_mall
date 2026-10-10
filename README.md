@@ -1783,6 +1783,11 @@ applied and verified live; prior stock and migrations are preserved. See
 [implementation history](MAQDOOMS_Big_Mall_ERP_Implementation_History.md).
 The updated application still needs publishing to the deployed branch.
 
+The subsequent [Workshop transfer and Counter fabric pricing revision](docs/STOCK_TRANSFER_PRICING.md)
+is also implemented and migrated live. Transfers keep the original barcode and
+update location balances immediately; fabric POS uses Counter-entered prices per
+metre. Owner can manage individual user action permissions in Manage Access.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

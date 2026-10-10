@@ -24,6 +24,7 @@ import { Route as AuthenticatedTailoringRouteImport } from './routes/_authentica
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as AuthenticatedInventoryIndexRouteImport } from './routes/_authenticated/inventory.index'
 import { Route as AuthenticatedInventoryReceivingRouteImport } from './routes/_authenticated/inventory.receiving'
+import { Route as AuthenticatedInventoryTransfersRouteImport } from './routes/_authenticated/inventory.transfers'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -101,6 +102,12 @@ const AuthenticatedInventoryReceivingRoute =
     path: '/inventory/receiving',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedInventoryTransfersRoute =
+  AuthenticatedInventoryTransfersRouteImport.update({
+    id: '/inventory/transfers',
+    path: '/inventory/transfers',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/tailoring': typeof AuthenticatedTailoringRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
+  '/inventory/transfers': typeof AuthenticatedInventoryTransfersRoute
   '/inventory/': typeof AuthenticatedInventoryIndexRoute
 }
 export interface FileRoutesByTo {
@@ -132,6 +140,7 @@ export interface FileRoutesByTo {
   '/tailoring': typeof AuthenticatedTailoringRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
+  '/inventory/transfers': typeof AuthenticatedInventoryTransfersRoute
   '/inventory': typeof AuthenticatedInventoryIndexRoute
 }
 export interface FileRoutesById {
@@ -150,6 +159,7 @@ export interface FileRoutesById {
   '/_authenticated/tailoring': typeof AuthenticatedTailoringRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/_authenticated/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
+  '/_authenticated/inventory/transfers': typeof AuthenticatedInventoryTransfersRoute
   '/_authenticated/inventory/': typeof AuthenticatedInventoryIndexRoute
 }
 export interface FileRouteTypes {
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/tailoring'
     | '/whatsapp'
     | '/inventory/receiving'
+    | '/inventory/transfers'
     | '/inventory/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/tailoring'
     | '/whatsapp'
     | '/inventory/receiving'
+    | '/inventory/transfers'
     | '/inventory'
   id:
     | '__root__'
@@ -201,6 +213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tailoring'
     | '/_authenticated/whatsapp'
     | '/_authenticated/inventory/receiving'
+    | '/_authenticated/inventory/transfers'
     | '/_authenticated/inventory/'
   fileRoutesById: FileRoutesById
 }
@@ -317,6 +330,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInventoryReceivingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/inventory/transfers': {
+      id: '/_authenticated/inventory/transfers'
+      path: '/inventory/transfers'
+      fullPath: '/inventory/transfers'
+      preLoaderRoute: typeof AuthenticatedInventoryTransfersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -332,6 +352,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTailoringRoute: typeof AuthenticatedTailoringRoute
   AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
   AuthenticatedInventoryReceivingRoute: typeof AuthenticatedInventoryReceivingRoute
+  AuthenticatedInventoryTransfersRoute: typeof AuthenticatedInventoryTransfersRoute
   AuthenticatedInventoryIndexRoute: typeof AuthenticatedInventoryIndexRoute
 }
 
@@ -347,6 +368,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTailoringRoute: AuthenticatedTailoringRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
   AuthenticatedInventoryReceivingRoute: AuthenticatedInventoryReceivingRoute,
+  AuthenticatedInventoryTransfersRoute: AuthenticatedInventoryTransfersRoute,
   AuthenticatedInventoryIndexRoute: AuthenticatedInventoryIndexRoute,
 }
 

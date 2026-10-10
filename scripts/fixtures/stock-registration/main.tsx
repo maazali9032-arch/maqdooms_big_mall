@@ -24,12 +24,28 @@ export function Fixture() {
       value={{
         isOwner: role === "owner",
         roles: [role],
-        permissions: role === "stock_entry" ? ["inventory.receive"] : [],
+        permissions:
+          role === "stock_entry"
+            ? [
+                "inventory.receive",
+                "stock.print_barcode",
+                "inventory.fill_missing_cp",
+                "stock.transfer",
+              ]
+            : [],
         userId: "fixture",
         fullName: "Fixture Staff",
         email: "fixture@example.test",
         loading: false,
-        can: (key) => role === "owner" || (role === "stock_entry" && key === "inventory.receive"),
+        can: (key) =>
+          role === "owner" ||
+          (role === "stock_entry" &&
+            [
+              "inventory.receive",
+              "stock.print_barcode",
+              "inventory.fill_missing_cp",
+              "stock.transfer",
+            ].includes(key)),
       }}
     >
       <button

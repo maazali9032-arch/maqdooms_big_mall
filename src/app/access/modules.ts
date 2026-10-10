@@ -7,6 +7,7 @@ export type ModuleKey =
   | "dashboard"
   | "inventory"
   | "stock_entry"
+  | "stock_transfer"
   | "pos"
   | "tailoring"
   | "customers"
@@ -20,6 +21,7 @@ export type ModuleKey =
 export const MODULE_PATHS: Record<ModuleKey, string> = {
   dashboard: "/dashboard",
   stock_entry: "/inventory/receiving",
+  stock_transfer: "/inventory/transfers",
   inventory: "/inventory",
   pos: "/pos",
   tailoring: "/tailoring",
@@ -36,7 +38,7 @@ const ALL = Object.keys(MODULE_PATHS) as ModuleKey[];
 
 export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
-  stock_entry: ["stock_entry", "inventory", "settings"],
+  stock_entry: ["stock_entry", "stock_transfer", "inventory", "settings"],
   counter: ["pos", "settings"],
   ecommerce_manager: ["inventory", "ecommerce", "whatsapp", "settings"],
   tailor: ["tailoring", "settings"],
@@ -50,6 +52,11 @@ export function allowedModules(roles: string[]): Set<ModuleKey> {
 }
 
 export function moduleForPath(pathname: string): ModuleKey | null {
+  if (
+    pathname === MODULE_PATHS.stock_transfer ||
+    pathname.startsWith(`${MODULE_PATHS.stock_transfer}/`)
+  )
+    return "stock_transfer";
   if (pathname === MODULE_PATHS.stock_entry || pathname.startsWith(`${MODULE_PATHS.stock_entry}/`))
     return "stock_entry";
   for (const key of ALL) {
@@ -65,6 +72,11 @@ export function moduleForPath(pathname: string): ModuleKey | null {
  * in Postgres.
  */
 export function canAccessPath(roles: string[], permissions: string[], pathname: string): boolean {
+  if (pathname === "/inventory/transfers" || pathname.startsWith("/inventory/transfers/"))
+    return (
+      roles.includes("owner") ||
+      (roles.includes("stock_entry") && permissions.includes("stock.transfer"))
+    );
   const module = moduleForPath(pathname);
   if (module !== null && !allowedModules(roles).has(module)) return false;
   if (pathname === "/inventory/receiving" || pathname.startsWith("/inventory/receiving/")) {

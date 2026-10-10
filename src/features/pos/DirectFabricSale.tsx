@@ -8,9 +8,12 @@ import { Panel } from "@/shared/components/page";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { formatMoney } from "@/shared/utils/units";
+import { formatMoney as displayMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
 import { fabricSaleCut } from "./fabric-sale-input";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
+
+const formatMoney = (paise: number | null | undefined) => displayMoney(paise, true);
 
 type Stock = {
   id: string;
@@ -28,7 +31,6 @@ type Stock = {
 type Cut = {
   inventory_item_id: string;
   quantity: number;
-  sp_version_id: string;
   label: string;
   amount: number;
   sp: number;
@@ -89,6 +91,7 @@ export function DirectFabricSale() {
   const [stockId, setStockId] = useState("");
   const [source, setSource] = useState("");
   const [choices, setChoices] = useState<Record<string, string>>({});
+  const [price, setPrice] = useState("");
   const [cart, setCart] = useState<Cut[]>([]);
   const [customer, setCustomer] = useState("");
   const [reference, setReference] = useState("");
@@ -118,14 +121,14 @@ export function DirectFabricSale() {
         .map((c) => ({
           inventory_item_id: c.inventory_item_id,
           quantity: c.quantity,
-          sp_version_id: c.sp_version_id,
+          sp_paise_per_m: c.sp,
         }))
         .sort((a, b) => a.inventory_item_id.localeCompare(b.inventory_item_id));
       const signature = JSON.stringify({ source, items, customer, reference: reference.trim() });
       if (request.current && request.current.signature !== signature)
         throw new Error("Retry or resolve the pending sale before changing it");
       request.current ??= { id: crypto.randomUUID(), signature };
-      const { data, error } = await supabase.rpc("complete_direct_fabric_sale", {
+      const { data, error } = await supabase.rpc("complete_counter_fabric_sale", {
         p_request_id: request.current.id,
         p_source: source,
         p_items: items,
@@ -181,11 +184,14 @@ export function DirectFabricSale() {
     }
     setStockId(found.id);
     setChoices({});
+    setPrice("");
   }
   function addCuts() {
     try {
-      if (!stock || !source || stock.sp_paise_per_m === null || !stock.sp_version_id)
-        throw new Error("Select location and stock with Owner SP");
+      if (!can("pos.enter_price")) throw new Error("Per-metre price entry permission required");
+      const enteredPrice = fabricMoneyInput(price);
+      if (!stock || !source || enteredPrice === null)
+        throw new Error("Select location and enter the sale price per metre");
       const additions: Cut[] = [];
       for (const cut of stock.cuts) {
         const value = choices[cut.inventory_item_id]?.trim();
@@ -195,14 +201,13 @@ export function DirectFabricSale() {
         const plan = fabricSaleCut(
           value,
           cut.locations.find((l) => l.id === source)?.quantity_mm ?? 0,
-          stock.sp_paise_per_m,
+          enteredPrice,
         );
         additions.push({
           ...plan,
           inventory_item_id: cut.inventory_item_id,
-          sp_version_id: stock.sp_version_id,
           label: `${stock.fabric_name} / ${stock.batch_code}`,
-          sp: stock.sp_paise_per_m,
+          sp: enteredPrice,
           thaan_id: cut.thaan_id,
         });
       }
@@ -251,7 +256,7 @@ export function DirectFabricSale() {
             Scan
           </Button>
           <Button variant="outline" disabled={frozen} onClick={() => void stocks.refetch()}>
-            Refresh SP / stock
+            Refresh stock
           </Button>
         </div>
         <Label htmlFor="direct-sale-source">Stock location</Label>
@@ -282,12 +287,27 @@ export function DirectFabricSale() {
             <p>
               {stock.fabric_name} / {stock.batch_code} — {stock.barcode}
             </p>
-            <p>
-              Current SP:{" "}
-              {stock.sp_paise_per_m === null
-                ? "Owner must set SP before sale"
-                : `${formatMoney(stock.sp_paise_per_m)} / m`}
-            </p>
+            <div className="flex flex-wrap gap-3 text-sm">
+              {stock.cuts.flatMap((cut) =>
+                cut.locations.map((l) => (
+                  <span key={`${cut.inventory_item_id}-${l.id}`}>
+                    {l.name}: {l.quantity_mm / 1000} m
+                  </span>
+                )),
+              )}
+            </div>
+            <Label htmlFor="counter-price-per-metre">Selling price per metre (₹)</Label>
+            <Input
+              id="counter-price-per-metre"
+              inputMode="decimal"
+              value={price}
+              disabled={frozen || !can("pos.enter_price")}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setPaid(false);
+              }}
+              placeholder="Enter price for this sale"
+            />
             {stock.cuts.map((cut, index) => (
               <div key={cut.inventory_item_id} className="flex items-center gap-3">
                 <Label htmlFor={`cut-${cut.inventory_item_id}`} className="flex-1">
@@ -306,9 +326,27 @@ export function DirectFabricSale() {
                     setChoices({ ...choices, [cut.inventory_item_id]: e.target.value })
                   }
                 />
+                <span aria-live="polite">
+                  {(() => {
+                    try {
+                      const sp = fabricMoneyInput(price);
+                      return sp === null || !choices[cut.inventory_item_id]?.trim()
+                        ? ""
+                        : formatMoney(
+                            fabricSaleCut(
+                              choices[cut.inventory_item_id] ?? "",
+                              cut.locations.find((l) => l.id === source)?.quantity_mm ?? 0,
+                              sp,
+                            ).amount,
+                          );
+                    } catch {
+                      return "Check metres / price";
+                    }
+                  })()}
+                </span>
               </div>
             ))}
-            <Button disabled={frozen || stock.sp_paise_per_m === null} onClick={addCuts}>
+            <Button disabled={frozen || !price.trim() || !can("pos.enter_price")} onClick={addCuts}>
               Add cuts to sale
             </Button>
           </div>
@@ -375,7 +413,13 @@ export function DirectFabricSale() {
           </p>
         )}
         <Button
-          disabled={checkout.isPending || !cart.length || !paid || !can("pos.sell")}
+          disabled={
+            checkout.isPending ||
+            !cart.length ||
+            !paid ||
+            !can("pos.sell") ||
+            !can("pos.enter_price")
+          }
           onClick={() => checkout.mutate()}
         >
           {checkout.isPending

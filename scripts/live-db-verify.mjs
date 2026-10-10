@@ -444,6 +444,49 @@ try {
         )[0].allowed,
         role + " Phase 15 legacy audit writes sealed",
       );
+      if (
+        (
+          await tx`select to_regprocedure('public.complete_counter_fabric_sale(uuid,uuid,jsonb,uuid,boolean,text)') f`
+        )[0].f
+      ) {
+        await denied(
+          tx,
+          "select public.complete_counter_fabric_sale(null,null,'[]'::jsonb,null,true,null)",
+          role + " invalid Counter price sale denied read-only",
+        );
+        await denied(
+          tx,
+          "select public.owner_set_user_permission(null,'stock.transfer',true)",
+          role + " invalid/unauthorized access mutation denied read-only",
+        );
+        await denied(
+          tx,
+          "select public.registration_fill_cp_internal(null,null,1)",
+          role + " private CP helper sealed",
+        );
+        await denied(
+          tx,
+          "select public.post_inventory_transfer(null,null,null,'[]'::jsonb,'invalid')",
+          role + " invalid transfer denied read-only",
+        );
+        if (
+          role === "owner" ||
+          (role === "stock_entry" &&
+            (await tx`select public.has_perm(auth.uid(),'stock.transfer') allowed`)[0].allowed)
+        ) {
+          const transfers = (await tx`select public.stock_transfer_history(null,50) data`)[0].data;
+          check(
+            Array.isArray(transfers) &&
+              (role === "owner" || transfers.every((t) => t.created_by === person.id)),
+            role + " transfer history scoped",
+          );
+        } else
+          await denied(
+            tx,
+            "select public.stock_transfer_history(null,50)",
+            role + " transfer history denied",
+          );
+      }
       if ((await tx`select to_regclass('public.stock_registration_batches') rel`)[0].rel) {
         if (role === "owner" || role === "stock_entry") {
           const entries = (await tx`select public.stock_registration_catalog() data`)[0].data;
@@ -625,12 +668,24 @@ try {
   const fixtureManifest = (
     await sql`select to_regclass('supabase_migrations.erp_test_stock_fixtures') as rel`
   )[0].rel;
+  if (fixtureManifest)
+    check(
+      (
+        await sql`select count(*)::int n from supabase_migrations.erp_test_stock_fixtures f join public.inventory_items i on i.id=f.inventory_item_id`
+      )[0].n === 18,
+      "18 historical authorized test authorities retained; new receipts are separate",
+    );
+  const authorizedZero = fixtureManifest
+    ? " AND NOT (i.legacy_quantity_snapshot=0 AND EXISTS (SELECT 1 FROM supabase_migrations.erp_test_stock_fixtures f WHERE f.inventory_item_id=i.id AND f.recorded_quantity=0))"
+    : "";
   check(
-    (await sql`select count(*)::int as n from public.inventory_items`)[0].n ===
-      (fixtureManifest ? 18 : 0),
-    fixtureManifest
-      ? "18 explicitly authorized test inventory items"
-      : "No guessed legacy opening stock",
+    (
+      await sql.unsafe(
+        "select count(*)::int n from public.inventory_items i where not exists(select 1 from public.inventory_movements m where m.inventory_item_id=i.id and (m.kind='INWARD' or (m.kind='ADJUSTMENT' and m.reference='OPENING:'||i.id::text and m.destination_location_id is not null)))" +
+          authorizedZero,
+      )
+    )[0].n === 0,
+    "Every authority has receipt/opening evidence or explicitly authorized zero fixture",
   );
   check(
     (

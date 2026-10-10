@@ -24,6 +24,13 @@ const sql = postgres(process.env.LOVABLE_DB_MIGRATION_URL, {
   onnotice: () => {},
 });
 const report = { started_at: new Date().toISOString(), applied: [], verified: [] };
+const pricingMetadataTables = new Set(["permissions", "role_permissions", "erp_audit_records"]);
+const preserve = (before, after, pricing = false) => {
+  for (const [table, value] of Object.entries(before)) {
+    if (pricing && pricingMetadataTables.has(table)) continue;
+    assert.deepEqual(after[table], value, "Existing rows changed: " + table);
+  }
+};
 const reportPath = path.join(os.tmpdir(), "maqdooms-live-rollout-results.json");
 const queries = {
   columns: `select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position`,
@@ -129,14 +136,28 @@ const execute = async (file, expected) => {
   // so verification and migration metadata share the runner's transaction.
   const statements = text.replace(/^BEGIN;\s*$/m, "").replace(/^COMMIT;\s*$/m, "");
   const baseline = await fingerprint();
+  const pricing = file.includes("_stock_transfer_counter_pricing");
   await sql.begin(async (tx) => {
+    const metadata = {};
+    if (pricing)
+      for (const table of pricingMetadataTables)
+        metadata[table] = await tx.unsafe(`select to_jsonb(t) value from public.${table} t`);
     await tx.unsafe(statements);
     if (expected) compare(expected, await catalog((q) => tx.unsafe(q)));
-    assert.deepEqual(
-      await fingerprint(tx),
-      baseline,
-      "Existing public rows changed inside migration transaction",
-    );
+    preserve(baseline, await fingerprint(tx), pricing);
+    if (pricing)
+      for (const [table, rows] of Object.entries(metadata)) {
+        const current = new Set(
+          (await tx.unsafe(`select to_jsonb(t)::text value from public.${table} t`)).map((r) =>
+            JSON.stringify(JSON.parse(r.value)),
+          ),
+        );
+        for (const row of rows)
+          assert(
+            current.has(JSON.stringify(row.value)),
+            "Existing metadata/history rewritten: " + table,
+          );
+      }
     await record(tx, file, text, {
       schema: expected
         ? "matches canonical reference including RLS/grants"
@@ -145,7 +166,7 @@ const execute = async (file, expected) => {
     });
   });
   report.applied.push(file);
-  assert.deepEqual(await fingerprint(), baseline, "Existing public rows changed unexpectedly");
+  preserve(baseline, await fingerprint(), pricing);
   report.verified.push(file);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   console.log("APPLIED AND VERIFIED:", file, "(existing public rows unchanged)");
@@ -163,7 +184,8 @@ try {
     .sort();
   const expected = {};
   for (const f of files) {
-    if (f.includes("_stock_registration")) continue;
+    if (f.includes("_stock_registration") || f.includes("_stock_transfer_counter_pricing"))
+      continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
     await reference.exec(await fs.readFile(path.join("supabase/migrations", f), "utf8"));
     const phase = f.match(/phase(\d+)_/);
@@ -272,17 +294,31 @@ try {
     (
       await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${registrationFile}`
     )[0].n > 0;
+  const pricingFile = files.find((f) => f.includes("_stock_transfer_counter_pricing"));
+  let pricingExpected;
+  if (pricingFile) {
+    await reference.exec(await fs.readFile(path.join("supabase/migrations", pricingFile), "utf8"));
+    pricingExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const pricingRecorded =
+    pricingFile &&
+    (
+      await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${pricingFile}`
+    )[0].n > 0;
   compare(
-    registrationRecorded
-      ? registrationExpected
-      : currentPhase === 8 && !guardRecorded
-        ? phase8Base
-        : expected[currentPhase],
+    pricingRecorded
+      ? pricingExpected
+      : registrationRecorded
+        ? registrationExpected
+        : currentPhase === 8 && !guardRecorded
+          ? phase8Base
+          : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
   report.current_phase_verified = currentPhase;
   report.stock_registration_verified = Boolean(registrationRecorded);
+  report.stock_transfer_counter_pricing_verified = Boolean(pricingRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -303,8 +339,9 @@ try {
     if (phase14File) await execute(phase14File, expected[14]);
     if (phase15File) await execute(phase15File, expected[15]);
     if (registrationFile) await execute(registrationFile, registrationExpected);
+    if (pricingFile) await execute(pricingFile, pricingExpected);
     report.after = await fingerprint();
-    assert.deepEqual(report.after, report.before, "Existing business rows not preserved");
+    preserve(report.before, report.after, Boolean(pricingFile));
     console.log(
       "All implemented phase schemas and permissions verified; all pre-existing public rows preserved.",
     );

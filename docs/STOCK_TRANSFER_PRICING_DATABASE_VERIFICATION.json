@@ -1,0 +1,10 @@
+{
+  "verified_at": "2026-10-10T21:30:59.294Z",
+  "checks": 132,
+  "chains": [
+    "supabase demo",
+    "drizzle demo",
+    "supabase clean"
+  ],
+  "mode": "disposable local databases only"
+}
