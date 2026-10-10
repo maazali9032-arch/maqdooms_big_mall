@@ -3895,3 +3895,64 @@ REMAINING:
 
 NEXT PHASE:
 - None in the 16-phase plan. Stopped; await Owner acceptance/deployment instructions.
+
+## 2026-10-10 — Post-Phase 16 maintenance: Vercel TanStack Start security block
+
+**Authorization / objective:** Owner supplied Vercel's failed install log and
+authorized fixing CVE-2026-102989 / GHSA-qx66-fv34-fjm8. Vercel rejected the
+locked `@tanstack/react-start@1.168.32` and transitive
+`@tanstack/start-server-core@1.169.17` before compiling the application. Verified
+the [official advisory](https://github.com/TanStack/router/security/advisories/GHSA-qx66-fv34-fjm8)
+and npm package manifests before changing dependencies. This is maintenance of
+the completed phases, not a new ERP business phase.
+
+**Actually changed:**
+
+- `package.json`, `package-lock.json`: pin Start **1.168.60**, React Router
+  **1.170.41**, Router Plugin **1.168.42**. Router/plugin versions align with
+  patched Start's own dependency graph; no forced incompatible override. Every
+  locked/installed server-core copy resolves to patched **1.169.39**. npm ls
+  confirms router/start/plugin/core dependencies deduplicate. Existing unrelated
+  dirty lockfile metadata for fast-deep-equal was preserved.
+- `src/routes/__root.tsx`: use patched Router's `ErrorComponentProps` (error is
+  unknown). Preserve real Error messages; safely display fallback text for other
+  thrown values. Existing telemetry/retry behavior remains.
+- New `scripts/verify-tanstack-security-build.mjs`: reproducible disposable fresh
+  npm ci / Vercel-preset build with patched-core verification. Copies no private
+  .env files, writes only whitelisted public frontend configuration into the
+  disposable build and clears DB migration URL. Checks install/build exits and
+  Vercel output config. Optional reuse uses only the named disposable prefix.
+- New `docs/TANSTACK_START_SECURITY_BUILD.json` and
+  `docs/TANSTACK_START_SECURITY_UI_VERIFICATION.json`; this permanent history.
+  Earlier Phase 16 verification evidence was preserved as historical evidence.
+
+**Database / business / permissions:** No database changes or migrations. No
+schema, RLS, grant, seed/backfill, live data, costing/pricing, inventory or other
+ERP business rule change. No manual database operation. No applied migration,
+deployment configuration or environment file was rewritten. The unsafe Vercel
+`DANGEROUSLY_DEPLOY_VULNERABLE_TANSTACK_START_XSS` bypass was not enabled.
+
+**Verification actually completed:**
+
+- npm install regenerated the lockfile; npm ls and inspection of all lock entries
+  confirm patched Start/server-core and aligned, deduplicated Router/plugin.
+- Fresh isolated **npm ci passes** (442 packages). Standard production build
+  passes; updated source rebuilt from that clean installation with
+  **NITRO_PRESET=vercel passes**, generating `.vercel/output/config.json` and
+  server/static output. Preset used only in the verifier's subprocess environment;
+  no deployment or persistent hosting configuration change.
+- TypeScript noEmit and scoped ESLint pass, with eight existing fast-refresh
+  warnings. Compatibility type failure was fixed before reporting success.
+- **24 actual-component browser fixture checks** and **nine exact report money/
+  quantity/India-date checks** pass with the patched dependencies. Browser reads
+  are synthetic; no live transaction/authentication fixture executed.
+- git diff --check passes. Existing package-lock edit preserved. No commit/push
+  or published git history rewrite performed.
+
+**Limitations / remaining:** Actual Vercel redeployment is not performed; updated
+source/lockfile must reach the deployed branch. npm audit still reports six
+separate advisories: four moderate through Drizzle Kit/esbuild, one high in
+source-map-js and one critical in shell-quote. The targeted TanStack advisory is
+no longer present. Unrelated dependency migrations/downgrades and npm audit
+fix --force were intentionally not applied. Prior four legacy Owner decisions,
+staff/hardware/concurrency acceptance and other Phase 16 limits remain unchanged.
