@@ -28,6 +28,12 @@ const denied = async (tx, query, label) => {
   check(rejected, label);
 };
 try {
+  const baselineCosts = Number(
+    (await sql`select count(*) as n from public.fabric_stock_costs`)[0].n,
+  );
+  const baselineLegacyCosts = Number(
+    (await sql`select count(*) as n from public.thaan_costs`)[0].n,
+  );
   const people =
     await sql`select p.id,array_agg(r.role_key order by r.role_key) as roles from public.profiles p join public.user_roles r on r.user_id=p.id where p.active group by p.id`;
   for (const role of ["owner", "counter", "tailor", "stock_entry"]) {
@@ -45,7 +51,10 @@ try {
       const costs = Number((await tx`select count(*) as n from public.fabric_stock_costs`)[0].n);
       const legacyCosts = Number((await tx`select count(*) as n from public.thaan_costs`)[0].n);
       if (role === "owner")
-        check(costs === 10 && legacyCosts === 16, "Owner sees preserved CP rows");
+        check(
+          costs === baselineCosts && legacyCosts === baselineLegacyCosts,
+          "Owner sees all current CP rows",
+        );
       else check(costs === 0 && legacyCosts === 0, role + " cannot read CP rows");
       check(
         !(
@@ -435,6 +444,54 @@ try {
         )[0].allowed,
         role + " Phase 15 legacy audit writes sealed",
       );
+      if ((await tx`select to_regclass('public.stock_registration_batches') rel`)[0].rel) {
+        if (role === "owner" || role === "stock_entry") {
+          const entries = (await tx`select public.stock_registration_catalog() data`)[0].data;
+          check(Array.isArray(entries), role + " Stock Registration catalog authorized");
+          if (role === "stock_entry")
+            check(
+              !JSON.stringify(entries).match(/\"cp_paise_per_m\":\s*(?!null)[0-9\"]/),
+              "Stock Entry no ongoing CP values",
+            );
+        } else
+          await denied(
+            tx,
+            "select public.stock_registration_catalog()",
+            role + " Stock Registration denied",
+          );
+        for (const table of [
+          "stock_registration_batches",
+          "stock_registration_fabric_types",
+          "stock_registration_variants",
+          "stock_registration_requests",
+        ]) {
+          check(
+            !(
+              await tx.unsafe(
+                "select has_table_privilege(current_user,'public." +
+                  table +
+                  "','INSERT,UPDATE,DELETE,TRUNCATE') allowed",
+              )
+            )[0].allowed,
+            role + " cannot directly rewrite " + table,
+          );
+        }
+        await denied(
+          tx,
+          "select public.registration_insert_thans(null,'[]'::jsonb)",
+          role + " private registration helper denied",
+        );
+        await denied(
+          tx,
+          "select public.register_delivery_batch(null,'Raymonds')",
+          role + " invalid registration request denied read-only",
+        );
+        if (role !== "owner")
+          check(
+            (await tx`select count(*)::int n from public.stock_registration_requests`)[0].n === 0,
+            role + " cannot retrieve financial registration payloads",
+          );
+      }
       results.push({
         role,
         effective_roles: person.roles,
@@ -446,6 +503,23 @@ try {
   }
   await sql.begin("read only", async (tx) => {
     await tx.unsafe("set local role anon");
+    if ((await tx`select to_regclass('public.stock_registration_batches') rel`)[0].rel) {
+      await denied(
+        tx,
+        "select public.stock_registration_catalog()",
+        "Anonymous registration denied",
+      );
+      await denied(
+        tx,
+        "select public.register_delivery_batch(null,'Raymonds')",
+        "Anonymous registration write denied",
+      );
+      await denied(
+        tx,
+        "select public.registration_insert_thans(null,'[]'::jsonb)",
+        "Anonymous registration helper denied",
+      );
+    }
     await denied(tx, "select * from public.thaans limit 1", "Anonymous stock table denied");
     await denied(tx, "select public.customer_tailoring_catalog()", "Anonymous Phase 7 API denied");
     await denied(

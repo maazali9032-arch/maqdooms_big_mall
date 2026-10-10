@@ -211,6 +211,13 @@
       "when": 1791072360000,
       "tag": "0029_phase15_owner_reporting_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791676800000,
+      "tag": "0030_stock_registration",
+      "breakpoints": true
     }
   ]
 }

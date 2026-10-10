@@ -49,6 +49,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "Operations",
     items: [
       { to: "/inventory", label: "Inventory", icon: Boxes, module: "inventory" },
+      { to: "/inventory/receiving", label: "Stock Entry", icon: Boxes, module: "stock_entry" },
       { to: "/pos", label: "Counter / POS", icon: ShoppingCart, module: "pos" },
       { to: "/tailoring", label: "Tailoring", icon: Scissors, module: "tailoring" },
       { to: "/customers", label: "Customers", icon: Users, module: "customers" },
@@ -97,19 +98,21 @@ function RouteGuard({ children }: { children: ReactNode }) {
     );
   }
   if (!userId) return <Navigate to="/auth" replace />;
-  if (denied) return <Navigate to={homePath(roles)} replace />;
+  if (denied) return <Navigate to={homePath(roles, permissions)} replace />;
   return <>{children}</>;
 }
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const { roles } = useSession();
+  const { roles, permissions } = useSession();
   const allowed = allowedModules(roles);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
     <nav className="scrollbar-subtle space-y-5 px-3 py-5" aria-label="Primary navigation">
       {NAV_SECTIONS.map((section) => {
-        const visibleItems = section.items.filter((item) => allowed.has(item.module));
+        const visibleItems = section.items.filter(
+          (item) => allowed.has(item.module) && canAccessPath(roles, permissions, item.to),
+        );
         if (visibleItems.length === 0) return null;
         return (
           <section key={section.label} aria-labelledby={`nav-${section.label}`}>
@@ -121,7 +124,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             </p>
             <div className="space-y-0.5">
               {visibleItems.map((item) => {
-                const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+                const active =
+                  (pathname === item.to || pathname.startsWith(`${item.to}/`)) &&
+                  !(item.to === "/inventory" && pathname.startsWith("/inventory/receiving"));
                 const Icon = item.icon;
                 return (
                   <Link
@@ -195,7 +200,7 @@ function SidebarFooter() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { fullName, roles, email } = useSession();
+  const { fullName, roles, email, permissions } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -207,9 +212,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     const term = search.trim().toLowerCase();
     if (!term) return [];
     return ALL_NAV.filter(
-      (item) => allowed.has(item.module) && item.label.toLowerCase().includes(term),
+      (item) =>
+        allowed.has(item.module) &&
+        canAccessPath(roles, permissions, item.to) &&
+        item.label.toLowerCase().includes(term),
     ).slice(0, 5);
-  }, [allowed, search]);
+  }, [allowed, search, roles, permissions]);
 
   async function signOut() {
     await queryClient.cancelQueries();

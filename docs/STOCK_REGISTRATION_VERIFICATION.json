@@ -1,0 +1,25 @@
+{
+  "verified_at": "2026-10-10T20:52:02.4171333Z",
+  "migration": "20261011000000_stock_registration.sql",
+  "mirror": "0030_stock_registration.sql",
+  "sha256": "d08171f1b88d4523ae92435382650941d548c6fff02dadb207ed0b16d6629a6f",
+  "live_applied": [
+    "20261011000000_stock_registration.sql"
+  ],
+  "schema_extension_verified": true,
+  "preserved_tables": 75,
+  "preserved_rows": 378.0,
+  "local_assertions": 5611,
+  "live_security_checks": 367,
+  "live_api_checks": 10,
+  "production_build": "passed: Vercel preset",
+  "typescript": "passed",
+  "scoped_lint": "0 errors; 8 existing warnings",
+  "deployed": false,
+  "remaining": [
+    "Publish application",
+    "Staff and physical printer/scanner acceptance",
+    "Large-history and multi-connection concurrency verification",
+    "Four pre-existing Owner job-domain/assignment decisions"
+  ]
+}

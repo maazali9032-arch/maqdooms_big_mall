@@ -6,6 +6,7 @@
 export type ModuleKey =
   | "dashboard"
   | "inventory"
+  | "stock_entry"
   | "pos"
   | "tailoring"
   | "customers"
@@ -18,6 +19,7 @@ export type ModuleKey =
 
 export const MODULE_PATHS: Record<ModuleKey, string> = {
   dashboard: "/dashboard",
+  stock_entry: "/inventory/receiving",
   inventory: "/inventory",
   pos: "/pos",
   tailoring: "/tailoring",
@@ -34,7 +36,7 @@ const ALL = Object.keys(MODULE_PATHS) as ModuleKey[];
 
 export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
-  stock_entry: ["inventory", "settings"],
+  stock_entry: ["stock_entry", "inventory", "settings"],
   counter: ["pos", "settings"],
   ecommerce_manager: ["inventory", "ecommerce", "whatsapp", "settings"],
   tailor: ["tailoring", "settings"],
@@ -48,6 +50,8 @@ export function allowedModules(roles: string[]): Set<ModuleKey> {
 }
 
 export function moduleForPath(pathname: string): ModuleKey | null {
+  if (pathname === MODULE_PATHS.stock_entry || pathname.startsWith(`${MODULE_PATHS.stock_entry}/`))
+    return "stock_entry";
   for (const key of ALL) {
     const p = MODULE_PATHS[key];
     if (pathname === p || pathname.startsWith(`${p}/`)) return key;
@@ -70,8 +74,14 @@ export function canAccessPath(roles: string[], permissions: string[], pathname: 
 }
 
 /** First permitted module in sidebar order — the user's landing page. */
-export function homePath(roles: string[]): string {
+export function homePath(roles: string[], permissions?: string[]): string {
   const allowed = allowedModules(roles);
-  const first = ALL.find((m) => m !== "settings" && allowed.has(m)) ?? "settings";
+  const first =
+    ALL.find(
+      (m) =>
+        m !== "settings" &&
+        allowed.has(m) &&
+        (permissions === undefined || canAccessPath(roles, permissions, MODULE_PATHS[m])),
+    ) ?? "settings";
   return MODULE_PATHS[first];
 }

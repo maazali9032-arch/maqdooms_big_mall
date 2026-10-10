@@ -3956,3 +3956,150 @@ source-map-js and one critical in shell-quote. The targeted TanStack advisory is
 no longer present. Unrelated dependency migrations/downgrades and npm audit
 fix --force were intentionally not applied. Prior four legacy Owner decisions,
 staff/hardware/concurrency acceptance and other Phase 16 limits remain unchanged.
+
+## 2026-10-11 — Owner-approved Stock Entry / individual Than barcode revision
+
+PHASE:
+- Post-Phase 16 business revision expressly approved by the Owner; no Phase 17.
+
+STATUS:
+- Implemented, tested, and new migration applied/verified in the live database.
+- Application publishing/deployment and real staff/hardware acceptance pending.
+
+IMPLEMENTED:
+- Dedicated Stock Entry navigation and receiving screen: provider history or typed
+  name, separate delivery batches, multiple named Fabric Types, individually sized
+  physical Thans, optional CP, later append and barcode-specific missing-CP fill.
+- First and last two English letters of provider's first word generate its prefix;
+  collision-checked random eight-digit type number; a…z, aa, ab… suffix sequence
+  for physical Thans. First Than always a; full unique code printed as Code128.
+- New receipt creates actual Workshop stock/ledger immediately with known length;
+  unknown CP stays null. Stock Entry may fill missing CP for their own newly
+  registered Than; recorded CP visibility and corrections remain Owner-controlled.
+- Parent grouping metadata wraps existing operational fabric/stock/Than records.
+  Every new unique barcode resolves exactly one physical Than. Previous shared
+  barcodes, IDs, old receiving screens' historical records and financial snapshots
+  retain their original identities and meaning.
+
+MODIFIED:
+- New `src/features/inventory/StockRegistration.tsx`; receiving route uses it.
+- `src/app/access/modules.ts`, `src/app/layouts/AppShell.tsx`,
+  `src/routes/index.tsx`, `src/routes/_authenticated/route.tsx`: permission-aware
+  Stock Entry sidebar/home route, active-link and revoked-permission behavior.
+- `src/integrations/supabase/types.ts`: five checked registration RPC signatures.
+- Master Plan Section 33 records this explicit Owner-approved override for new
+  registrations; prior requirements retained as historical context.
+- `scripts/live-db-rollout.mjs`: cumulative extension replay/catalog comparison,
+  sequential tracked application and complete pre-existing row preservation.
+- `scripts/live-db-verify.mjs`: registration role matrix/helper/write sealing;
+  Owner CP assertion now checks the actual privileged current baseline, rather
+  than assuming the old fixed count of ten. Current baseline was eleven before
+  this migration; no CP row was added by this rollout.
+- Phase 1–15 test scripts exclude this later extension from historical phase file
+  counts; all original assertions retained. Full new tests replay both complete
+  chains and fresh empty state including the extension.
+- New stock-registration test, navigation-test, label-test, ui-test, api-test and
+  verify-stock-registration scripts; isolated UI fixture under
+  `scripts/fixtures/stock-registration/`. README, this history and
+  `docs/STOCK_REGISTRATION.md` document actual behavior and limitations.
+- New STOCK_REGISTRATION_DATABASE_TESTS, UI_VERIFICATION, REGRESSION_UI,
+  BUILD_VERIFICATION, LIVE_VERIFICATION, SCHEMA_RECHECK, SECURITY_VERIFICATION,
+  API_VERIFICATION and VERIFICATION JSON evidence files in docs.
+
+REUSED:
+- Existing authentication, inventory.receive permission, Workshop location,
+  transaction/catalog/scan APIs, stock ledger, CP versioning, Owner audits,
+  printing, transfer, direct sale, Customer Tailoring and cost/report protections.
+
+DATABASE CHANGES:
+- New version-controlled `supabase/migrations/20261011000000_stock_registration.sql`
+  and byte-identical `drizzle/migrations/0030_stock_registration.sql`; appended
+  journal index 30. SHA256 for both:
+  `d08171f1b88d4523ae92435382650941d548c6fff02dadb207ed0b16d6629a6f`.
+- Purpose: additive grouped delivery registration and one physical Than per new
+  printed barcode, without recoding old stock or modifying old transaction APIs.
+- Tables: stock_registration_batches (PK/FK receiving_batches, provider snapshot),
+  stock_registration_fabric_types (UUID PK, batch FK, unique code, name, advancing
+  ordinal), stock_registration_variants (UUID PK, parent FK, unique code and
+  parent/ordinal, unique stock/Than links and composite correspondence FK),
+  stock_registration_requests (request PK, generated audit id, action, private
+  retry payload, result, actor). Creator/profile FKs and timestamps retained.
+- Constraints: provider/code regexes, positive ordinal, immutable identity and
+  original received length. Unique constraints create their corresponding indexes;
+  explicit registration_types_batch_idx indexes batch/created_at/id.
+- Sequence: registration_batch_number with collision-safe B-number allocation.
+- Eleven functions: registration_group_guard,
+  registration_operational_identity_guard, registration_provider_prefix,
+  registration_variant_suffix, registration_request_result,
+  registration_insert_thans, register_delivery_batch, register_fabric_type,
+  append_registered_thans, fill_registered_thaan_cp, stock_registration_catalog.
+- Triggers: audit on all four tables; immutable provider/variant/request metadata;
+  immutable group identity and nondecreasing ordinal; registered identity guards
+  on fabrics/fabric_stock/thaans. No second physical Than under registered stock.
+- Runtime APIs atomically create operational leaf fabric, barcode, stock, Than,
+  inventory authority, inward movement and optional CP revision. Missing CP fill
+  creates only its initial version. Request/parent locks protect retries/appends.
+- RLS: Owner-only SELECT policies on four raw tables; authenticated SELECT grants
+  remain subject to RLS. Raw mutation/TRUNCATE and sequence privileges revoked
+  from browser roles; service_role retained. Private helper execution revoked;
+  five checked APIs granted authenticated, denied anonymous. Fixed search paths
+  on security-definer functions; catalog projects no recorded CP to Stock Entry.
+- Data/backfill: NONE on rollout. No seed edits, recoding, opening balance guesses,
+  manual DB edits, or applied migration rewriting. Existing historical migrations
+  and all existing business rows preserved.
+- Actual live apply completed 2026-10-10 20:49:11 UTC (2026-10-11 02:19:11 IST).
+  Existing 75 public tables / 378 rows were fingerprinted before/after and match
+  exactly. Four new tables start empty. Prior 30 migrations skipped as recorded;
+  only new migration applied atomically and recorded in both migration ledgers.
+  Full schema/functions/indexes/RLS/grants compared against local chain, then an
+  independent read-only recheck confirmed stock_registration_verified=true.
+
+SECURITY / PERMISSIONS:
+- Active Owner or authorized Stock Entry can register; Stock Entry scope is own
+  deliveries/Thans. Requests bind actor/action/payload; exact retries return the
+  original result. Private CP payloads and completed CP remain inaccessible.
+- Counter/Tailor/anonymous registration denied; raw writes/helper calls denied.
+  Existing transactions preserve prior CP/SP restrictions and costing behavior.
+
+TESTS:
+- 5,611 local assertions pass: historical cumulative DB regressions 5,262, new DB
+  assertions 231, navigation 11, independent barcode decoding 18, new component UI
+  16, historical barcode/money 40, report values 9, existing Phase 16 UI 24.
+- Demo Supabase, mirrored Drizzle and clean-chain replay pass. Tested provider
+  reuse, suffix extension beyond z, different lengths, delayed CP, zero vs unknown
+  CP, exact retries, ownership/role denial, invalid-row/audit rollback, immutable
+  identities, transfer/direct-sale compatibility, Customer Tailoring CP quoting,
+  original unknown-cost sale snapshot retention, Owner reporting and audit.
+- Mobile/browser fixtures pass at 320/390/768/1440px, including actual AppShell
+  sidebar/redirects and scan-specific fill. All fixtures local/synthetic.
+- 367 complete live security checks pass plus ten live anonymous PostgREST
+  discovery/permission checks. No live business fixture executed. Initial final
+  security check stopped at the obsolete fixed CP count; corrected verifier passed
+  fully against the actual baseline, without adjusting database data.
+- TypeScript, scoped lint and git diff --check pass. Historical verification
+  documents preserved; current evidence saved separately.
+
+BUILD:
+- Final Vercel-preset production build passes from the earlier clean patched
+  installation; server-core 1.169.39 and generated Vercel output verified.
+- Eight existing fast-refresh warnings and existing shared chunk size warning
+  remain. No dependency, deployment configuration, .env, commit or push change.
+
+BUSINESS RULES VERIFIED:
+- Distinct delivery batch per provider arrival, fresh type codes, sequential
+  individual Than suffixes, exact individual lengths, unique printed barcodes,
+  immediate known stock receipt, optional initial/later own CP, Owner-only CP
+  reporting, historical barcode/data preservation and compatible stock usage.
+
+REMAINING:
+- Publish/deploy application; actual staff/physical printer/scanner acceptance,
+  large history benchmark and multi-connection concurrency verification.
+- Provider first word requires three English letters; one submission supports up
+  to 500 Thans with further appends. Length is required; unknown-length barcode
+  registration is not implemented. No automatic transliteration guessed.
+- Four pre-existing legacy job-domain/assignment decisions still need Owner input.
+  Factory custody, two-stage transfer receipt and other image differences were
+  intentionally not changed by this registration approval.
+
+NEXT PHASE:
+- None. This approved revision is complete; await Owner review/deployment direction.

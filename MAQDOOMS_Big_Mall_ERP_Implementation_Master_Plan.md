@@ -1384,3 +1384,39 @@ The completed ERP must preserve these principles:
 14. **Implement in dependency order.**
 15. **Do not proceed to the next phase until the current phase is verified.**
 16. **The owner-facing PDF is not the complete software specification; this document includes the complete software requirements.**
+
+# 33. OWNER-APPROVED STOCK ENTRY REVISION — 11 OCTOBER 2026
+
+The Owner's later instructions in this conversation supersede Sections 4–7 only
+for new Stock Entry registrations as follows. Existing IDs, barcodes and completed
+financial/inventory history remain preserved; earlier migration files are not rewritten.
+
+- Authorized Stock Entry staff have a dedicated **Stock Entry** sidebar option.
+- Each provider delivery creates a unique batch ID/code. Provider names can repeat;
+  select a provider from history or type a new name without reusing the delivery.
+- Hierarchy: **Provider / Delivery Batch → Fabric Type → coded physical Than
+  variants**. In this revised workflow each suffix entry is one physical Than,
+  not a colour grouping containing multiple Thans. Colour is not required.
+- Provider prefix is uppercase first letter + last two letters of the first word:
+  Raymonds → RDS, Arvind → AND. A new Fabric Type in any batch receives a fresh,
+  random, collision-checked numeric code. Current implementation uses eight digits.
+- Physical Than suffixes automatically increase a…z, aa, ab… and start with a even
+  when only one Than exists. Adding more Thans to an existing Fabric Type retains
+  its numeric code and continues suffixes; new batches/types receive new identities.
+- Every full physical Than code is its permanent printed/scanned barcode. Each
+  Than records its own positive length. Existing shared Fabric + Batch barcodes
+  remain valid for their earlier stock; they are not replaced or backfilled.
+- CP / Lagat per metre is optional during registration and remains unknown when
+  omitted. Authorized Stock Entry can fill missing CP on their own newly registered
+  Than by scanning that exact barcode after receipt. This does not authorize ongoing
+  CP reporting, reading other staff's costs or overwriting an already recorded CP.
+  Owner cost/SP controls and protected historical financial snapshots remain.
+- Known physical quantities enter the existing Workshop ledger exactly once;
+  Godown in the Owner's sketches refers to the existing central Workshop here.
+  Separate Godown/factory locations and two-stage transfer receipts were discussed
+  but are not authorized by this Stock Entry change.
+- One submission processes at most 500 Thans; further submissions append more.
+  This technical request limit is not a small fixed total variant limit.
+
+Implementation uses additive version-controlled migrations and records actual
+changes, verification and limits in the permanent Implementation History.

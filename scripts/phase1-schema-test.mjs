@@ -94,6 +94,7 @@ async function replay(directory, withDemo = true) {
       .filter(
         (file) =>
           file.endsWith(".sql") &&
+          !file.includes("_stock_registration") &&
           !file.includes("_live_") &&
           !file.includes("phase2_") &&
           !file.includes("phase3_") &&

@@ -1,0 +1,32 @@
+{
+  "verified_at": "2026-10-10T20:50:21.008Z",
+  "checks": 10,
+  "mode": "anonymous invalid-input requests; no business writes",
+  "results": [
+    {
+      "rpc": "register_delivery_batch",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "register_fabric_type",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "append_registered_thans",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "fill_registered_thaan_cp",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "stock_registration_catalog",
+      "status": 401,
+      "code": "42501"
+    }
+  ]
+}

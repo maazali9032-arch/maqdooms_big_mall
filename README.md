@@ -1774,6 +1774,15 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
+### Current Stock Entry revision
+
+The Owner-approved provider/delivery → Fabric Type → individually barcoded Than
+workflow is implemented. Migration `20261011000000_stock_registration.sql` is
+applied and verified live; prior stock and migrations are preserved. See
+[implementation and verification](docs/STOCK_REGISTRATION.md) and the permanent
+[implementation history](MAQDOOMS_Big_Mall_ERP_Implementation_History.md).
+The updated application still needs publishing to the deployed branch.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

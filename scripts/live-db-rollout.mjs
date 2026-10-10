@@ -1,4 +1,4 @@
-/** Controlled live Phase 1–15 rollout. No business fixtures are executed live.
+/** Controlled live Phase 1–15 + approved Stock Registration rollout. No business fixtures are executed live.
  * Usage: node scripts/live-db-rollout.mjs <absolute PGlite module path> [--apply]
  * Reads ignored .env. Never logs credentials or business rows.
  * Stops on schema/data mismatch; every application and ledger entry is atomic.
@@ -163,6 +163,7 @@ try {
     .sort();
   const expected = {};
   for (const f of files) {
+    if (f.includes("_stock_registration")) continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
     await reference.exec(await fs.readFile(path.join("supabase/migrations", f), "utf8"));
     const phase = f.match(/phase(\d+)_/);
@@ -257,12 +258,31 @@ try {
     await reference.exec(await fs.readFile(path.join("supabase/migrations", phase15File), "utf8"));
     expected[15] = await catalog(async (q) => (await reference.query(q)).rows);
   }
+  const registrationFile = files.find((f) => f.includes("_stock_registration"));
+  let registrationExpected;
+  if (registrationFile) {
+    await reference.exec(
+      await fs.readFile(path.join("supabase/migrations", registrationFile), "utf8"),
+    );
+    registrationExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const registrationRecorded =
+    registrationFile &&
+    (await sql`select to_regclass('supabase_migrations.erp_execution_history') rel`)[0].rel &&
+    (
+      await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${registrationFile}`
+    )[0].n > 0;
   compare(
-    currentPhase === 8 && !guardRecorded ? phase8Base : expected[currentPhase],
+    registrationRecorded
+      ? registrationExpected
+      : currentPhase === 8 && !guardRecorded
+        ? phase8Base
+        : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
   report.current_phase_verified = currentPhase;
+  report.stock_registration_verified = Boolean(registrationRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -282,6 +302,7 @@ try {
     if (phase13File) await execute(phase13File, expected[13]);
     if (phase14File) await execute(phase14File, expected[14]);
     if (phase15File) await execute(phase15File, expected[15]);
+    if (registrationFile) await execute(registrationFile, registrationExpected);
     report.after = await fingerprint();
     assert.deepEqual(report.after, report.before, "Existing business rows not preserved");
     console.log(

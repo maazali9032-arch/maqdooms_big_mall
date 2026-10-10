@@ -1138,6 +1138,20 @@ export type Database = {
       };
     };
     Functions: {
+      register_delivery_batch: { Args: { p_request: string; p_provider: string }; Returns: string };
+      register_fabric_type: {
+        Args: { p_request: string; p_batch: string; p_name: string; p_rows: Json };
+        Returns: string;
+      };
+      append_registered_thans: {
+        Args: { p_request: string; p_fabric_type: string; p_rows: Json };
+        Returns: string;
+      };
+      fill_registered_thaan_cp: {
+        Args: { p_request: string; p_barcode: string; p_cp: number };
+        Returns: string;
+      };
+      stock_registration_catalog: { Args: { p_batch?: string; p_barcode?: string }; Returns: Json };
       finalize_production_cost: {
         Args: {
           p_request: string;

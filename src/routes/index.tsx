@@ -10,12 +10,16 @@ export const Route = createFileRoute("/")({
     const { data: bootstrap } = await supabase.rpc("bootstrap_current_user", {
       _full_name: (data.user.user_metadata?.["full_name"] as string) ?? null,
     });
-    const access = bootstrap as { active?: boolean; roles?: string[] } | null;
+    const access = bootstrap as {
+      active?: boolean;
+      roles?: string[];
+      permissions?: string[];
+    } | null;
     if (access?.active === false) {
       await supabase.auth.signOut();
       throw redirect({ to: "/auth" });
     }
-    throw redirect({ to: homePath(access?.roles ?? []) });
+    throw redirect({ to: homePath(access?.roles ?? [], access?.permissions ?? []) });
   },
   component: () => null,
 });

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FabricStock } from "@/features/inventory/FabricStock";
+import { StockRegistration } from "@/features/inventory/StockRegistration";
 import { PageHeader } from "@/shared/components/page";
 
 export const Route = createFileRoute("/_authenticated/inventory/receiving")({
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/inventory/receiving")({
       {
         name: "description",
         content:
-          "Receive internal Thans into Workshop with one Fabric + Batch barcode. SP can be added later.",
+          "Provider delivery batches, Fabric Types and individually barcoded Thans with optional CP.",
       },
     ],
   }),
@@ -20,9 +20,9 @@ function ReceivingPage() {
     <>
       <PageHeader
         title="Fabric Stock Entry"
-        description="Enter Fabric, Batch, Than lengths and CP / Lagat. Generate and print one Fabric Barcode."
+        description="Provider / delivery batch → Fabric Type → individually coded Thans. Enter CP now or fill missing CP later by scanning."
       />
-      <FabricStock receiving />
+      <StockRegistration />
     </>
   );
 }

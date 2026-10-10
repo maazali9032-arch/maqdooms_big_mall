@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated")({
     const roles = access.roles ?? [];
     const permissions = access.permissions ?? [];
     if (!canAccessPath(roles, permissions, location.pathname)) {
-      throw redirect({ to: homePath(roles) });
+      throw redirect({ to: homePath(roles, permissions) });
     }
     return { user: data.user, roles, permissions };
   },
