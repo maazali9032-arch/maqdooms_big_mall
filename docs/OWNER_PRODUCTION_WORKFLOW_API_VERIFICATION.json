@@ -1,0 +1,37 @@
+{
+  "verified_at": "2026-10-11T09:05:52.890Z",
+  "checks": 12,
+  "results": [
+    {
+      "rpc": "create_owner_production_shared",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "finished_product_transfer_scan",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "owns_production_job",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "finished_product_inventory",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "finished_product_movement_history",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "transfer_finished_products",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "mode": "anonymous invalid-input discovery/denial; no live transaction fixtures"
+}

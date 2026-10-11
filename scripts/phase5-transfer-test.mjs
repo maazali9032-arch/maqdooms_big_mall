@@ -84,7 +84,7 @@ for (const [directory, demo] of [
     const files = (await readdir(directory))
       .filter(
         (f) =>
-          f.endsWith(".sql") && !f.includes("_salesperson_tailoring_pricing") && !f.includes("_stock_transfer_counter_pricing") &&
+          f.endsWith(".sql") && !f.includes("_owner_production_workflow") && !f.includes("_salesperson_tailoring_pricing") && !f.includes("_stock_transfer_counter_pricing") &&
           !f.includes("_stock_registration") &&
           (process.argv.includes("--include-phase15") || !f.includes("phase15_")) &&
           (process.argv.includes("--include-phase14") || !f.includes("phase14_")) &&

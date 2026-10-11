@@ -1,0 +1,30 @@
+{
+  "verified_at": "2026-10-11T09:11:50.220121+00:00",
+  "status": "implemented and migrated live; frontend not published",
+  "migration": "20261011000300_owner_production_workflow.sql",
+  "sha256": "4d3094ce572b83ae665f43d16a7d9705b00605e4f88dcbb54a2c00c215089902",
+  "checks": {
+    "new_database": 222,
+    "new_browser": 28,
+    "new_navigation": 12,
+    "historical_database": 5493,
+    "salesperson_current_chain": 153,
+    "previous_transfer_database": 132,
+    "previous_transfer_browser": 15,
+    "phase16_browser": 24,
+    "live_cumulative_security": 419,
+    "live_dedicated": 33,
+    "live_api": 12
+  },
+  "validation": {
+    "typescript": "pass",
+    "scoped_lint": "pass",
+    "vercel_build": "pass"
+  },
+  "limitations": [
+    "Frontend publication pending",
+    "No live business fixtures or concurrent transaction tests",
+    "Four prior legacy job decisions unchanged",
+    "No partial/different-count receipt workflow added"
+  ]
+}

@@ -1794,6 +1794,11 @@ Counter enters one final fabric-and-stitching total. Publish the compatible UI a
 assign Salesperson to active staff before new billing; historical records remain
 unattributed where no Salesperson was recorded.
 
+The [Owner Production workflow revision](docs/OWNER_PRODUCTION_WORKFLOW.md) adds
+fabric barcode allocation, shared Tailor assignments, Stock Entry/Exit finished-piece
+floor transfers and Owner production totals. It is implemented and migrated live;
+publish the updated frontend to use the new controls.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

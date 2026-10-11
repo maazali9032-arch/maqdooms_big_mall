@@ -43,6 +43,14 @@ type Piece = {
     kind: string;
     active: boolean;
   }[];
+  production_summary?: {
+    planned: number;
+    produced: number;
+    sold: number;
+    remaining: number;
+    archived: number;
+  };
+  tailors?: { code: string; name: string }[];
   production_cost_paise?: number | null;
   production_cost?: Cost;
 };
@@ -244,6 +252,16 @@ export function FinishedProductSale() {
                 · {piece.available ? "Available" : piece.status} · {piece.location}
                 {!piece.location_active ? " (inactive)" : ""}
               </p>
+              {isOwner && piece.production_summary && (
+                <p>
+                  Production totals · Planned: {piece.production_summary.planned} · Produced:{" "}
+                  {piece.production_summary.produced} · Sold: {piece.production_summary.sold} ·
+                  Remaining in stock: {piece.production_summary.remaining}
+                  {piece.production_summary.archived > 0
+                    ? ` · Archived: ${piece.production_summary.archived}`
+                    : ""}
+                </p>
+              )}
               <p>Identical pieces available: {piece.identical_available}</p>
               <div className="flex flex-wrap gap-3">
                 {piece.locations.map((l) => (

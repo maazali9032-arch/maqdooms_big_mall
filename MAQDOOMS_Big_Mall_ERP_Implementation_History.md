@@ -4410,3 +4410,123 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner review/publishing direction.
+
+
+## 2026-10-11 — Approved Owner Production workflow revision
+
+PHASE:
+- Post-Phase-16 Owner-approved Production workflow update. Explicit comparison,
+  five decisions and implementation authorization; Sections 30/31 followed.
+
+STATUS:
+- Implemented, tested and migrated live. Stopped at this approved workflow boundary.
+
+IMPLEMENTED:
+- Existing Thaan barcode scan/location availability and explicit material selection
+  in Owner Production; shared same-Factory/Section Tailor assignment per Production ID.
+- Job-specific sharing/access and complete participant names in production/material/
+  finished-piece history; no per-Tailor piece quotas or lead-Tailor workflow invented.
+- Finished Product barcode scanning and immediate Workshop-to-selected-Showroom-floor
+  transfer by separately permitted Stock Entry/Exit staff; optional same-code reprint.
+- Owner barcode scan planned/actual produced/sold/remaining/archived totals.
+
+MODIFIED:
+- src/features/tailoring/OwnerProduction.tsx, FinishedProducts.tsx, MaterialIssues.tsx;
+  src/features/inventory/FinishedProductInventory.tsx; src/features/pos/FinishedProductSale.tsx;
+  src/app/access/modules.ts; src/routes/_authenticated/inventory.transfers.tsx;
+  src/integrations/supabase/types.ts. Route contains permitted fabric/finished panels.
+- scripts/live-db-rollout.mjs and live-db-verify.mjs: new cumulative reference/recorded
+  migration gate, metadata-safe application and revised permitted staff reads.
+- Historical Phase 1–15/stock test loaders now exclude this later revision to retain
+  their original business boundaries; new full-chain integration verifies new rules.
+- New scripts/owner-production-workflow-{test,ui-test,live-test,api-test,navigation-test}.mjs
+  and scripts/fixtures/owner-production-workflow/{main.tsx,client.ts,index.html}.
+- Master Plan Section 36, README revision link, docs/OWNER_PRODUCTION_WORKFLOW.md,
+  OWNER_PRODUCTION_WORKFLOW_* verification JSONs and this permanent history.
+
+REUSED:
+- Existing Product/Design catalogues, unique Production IDs, source-location ledger,
+  additional material issues, whole-job completion/full Workshop receipt, per-piece
+  material traceability/unique Product Barcodes, complete costing/equal CP allocation,
+  Owner SP, finished-product sale/Salesperson attribution and immutable audit/history.
+
+DATABASE CHANGES:
+- New canonical 20261011000300_owner_production_workflow.sql and identical
+  drizzle/migrations/0033_owner_production_workflow.sql; journal idx 33.
+  SHA256: 4d3094ce572b83ae665f43d16a7d9705b00605e4f88dcbb54a2c00c215089902.
+- New production_job_tailors: job/assignment composite PK, job and assignment FKs,
+  recorded_by profile FK, recorded_at default now; production_shared_assignment_idx
+  on assignment/job. No existing columns, primary IDs or foreign keys changed.
+- New insert guard validates open job/current active Tailor/same Factory and Section;
+  immutable update/delete trigger. New Owner/assigned Tailor table SELECT policy,
+  shared job/event/material-issue read policies, inherited requirement/line visibility.
+- Six new functions: guard_production_shared_assignment, owns_production_job,
+  production_tailor_names, production_piece_summary, create_owner_production_shared,
+  finished_product_transfer_scan. Three private helpers revoked from browser roles;
+  participation helper authenticated-only for policies; creation Owner-only.
+- Eleven replacements in new migration: progress_owner_production,
+  owner_production_history, finished_product_catalog, material_issue_jobs,
+  material_issue_history, post_inventory_transfer, guard_finished_product_transfer_path,
+  transfer_finished_products, finished_product_inventory,
+  finished_product_movement_history, finished_product_sale_scan.
+  Changes add scoped participants, safe scan/counts and permitted direct floor moves;
+  existing locks, exact-unit validation, ledger writes, actor-bound retries and grants
+  retained. Old one-Tailor creation API retained for compatibility.
+- New permission stock.transfer_finished and Stock Entry role default; standard
+  metadata audit events only. No automatic individual overrides or role assignments.
+- No data backfill, legacy assignment rewrite, seed, price/CP/quantity/location change,
+  manufactured piece, test fixture or undocumented manual operation in live DB.
+- Applied transactionally after live connection/baseline check. Verification timestamp
+  2026-10-11 09:05:34.939 UTC / 14:35:34.939 IST. Original 80 tables / 455 rows checked
+  inside bounded-lock migration transaction; old business row fingerprints and every
+  original metadata row retained. One new empty table; 34 migration versions recorded.
+- Subsequent independent read-only schema/RLS/grant recheck confirms the new revision.
+  Canonical/mirror hash matches the ledger; all previously applied migrations retained.
+  Application proof and separate schema recheck saved under revision filenames.
+
+SECURITY / PERMISSIONS:
+- Owner controls finished transfer separately from fabric transfer and label printing.
+  Only Owner or permitted active Stock Entry can use operational transfer APIs; staff
+  may only move available whole Workshop pieces to an active Showroom floor.
+- Shared Tailors can view/progress their own shared job with existing manage-jobs
+  permission; another job of the compatibility-anchor Tailor stays inaccessible.
+  No broad change to owns_tailor_assignment or Customer Tailoring visibility.
+- CP/production costs remain Owner-only. Stock transfer projections/labels contain no
+  CP/SP/costs; Counter gets Owner SP/availability; raw shared-link writes sealed.
+
+TESTS:
+- 222 new DB checks pass on canonical demo, mirror demo and clean replay, covering
+  preservation, exact remainder/additional quantities, shared access/isolation,
+  complete receipt/unique piece identity, costing/paise equality, safe direct transfer,
+  permission bypass denial, sale attribution/counts and rollback/idempotence.
+- 28 new browser checks pass, including scans, shared selection, interrupted/frozen
+  exact retries, barcode preview, direct floor transfer/no receiving step, Owner
+  totals, denied permission and responsive 320/390/768/1440px with no browser errors.
+- 12 new transfer navigation and 10 existing Salesperson navigation checks pass.
+- 5,493 original-boundary historical DB checks, 153 full-current-chain Salesperson
+  checks, 132 preceding transfer DB checks, 15 transfer UI and 24 Phase 16 UI pass.
+- 419 cumulative live security, 33 dedicated read-only live checks and 12 anonymous
+  PostgREST registration/denial checks pass. No live business fixture created.
+
+BUILD:
+- TypeScript noEmit, scoped lint (zero errors), final Vercel-preset production build
+  and git diff --check pass. Patched TanStack core 1.169.39 retained. No dependency,
+  environment or deployment configuration edits; no commit, push or publication.
+
+BUSINESS RULES VERIFIED:
+- Original fabric barcode -> explicit issued metres -> shared Production ID -> actual
+  Workshop pieces -> unique individual Product Barcodes -> equal actual CP -> manual
+  Owner SP -> immediate staff floor transfer -> exact-piece attributed POS sale.
+- Remainder stays in stock, receipt never deducts fabric again, totals use actual
+  received/available pieces and financial history remains protected.
+
+REMAINING:
+- Publish compatible frontend; review staff transfer permission in Manage Access.
+- Real staff/scanner/printer/live populated-job and concurrent-session acceptance;
+  four prior legacy job classification/assignment decisions remain untouched.
+- Full receipt still requires all planned job pieces; partial/different-count receipts
+  not added. No personal Tailor quotas, guessed loss/wastage, automatic unused-material
+  return, variable per-piece CP, auto SP or multi-Factory production inferred.
+
+NEXT PHASE:
+- None started. Await Owner review and next instructions.

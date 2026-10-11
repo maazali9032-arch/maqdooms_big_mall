@@ -1,0 +1,44 @@
+{
+  "verified_at": "2026-10-11T09:07:49.689Z",
+  "checks": 33,
+  "passed": true,
+  "ledger": {
+    "version": "20261011000300",
+    "filename": "20261011000300_owner_production_workflow.sql",
+    "sha256": "4d3094ce572b83ae665f43d16a7d9705b00605e4f88dcbb54a2c00c215089902",
+    "mode": "applied",
+    "verification": {
+      "schema": "matches canonical reference including RLS/grants",
+      "verified_at": "2026-10-11T09:05:34.939Z"
+    }
+  },
+  "versions": 34,
+  "live_shared_assignments": 0,
+  "roles_verified": [
+    {
+      "role": "owner",
+      "transfer_permission": true,
+      "verified": true
+    },
+    {
+      "role": "stock_entry",
+      "transfer_permission": true,
+      "verified": true
+    },
+    {
+      "role": "counter",
+      "transfer_permission": false,
+      "verified": true
+    },
+    {
+      "role": "tailor",
+      "transfer_permission": false,
+      "verified": true
+    }
+  ],
+  "limitations": [
+    "No live business fixture or stock transaction created",
+    "Shared-Tailor populated behavior verified in disposable PostgreSQL",
+    "Physical printer/scanner and real concurrent transactions not exercised"
+  ]
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSession } from "@/app/providers/session";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDateTime } from "@/shared/utils/format";
+import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 
 type Piece = {
@@ -51,7 +52,13 @@ type Request = {
 };
 
 export function FinishedProductInventory() {
-  const { isOwner } = useSession();
+  const { isOwner, roles, can } = useSession();
+  const allowed = isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
+  const formId = useId();
+  const label = useRef<HTMLDivElement>(null);
+  const [barcode, setBarcode] = useState("");
+  const [scanned, setScanned] = useState<Piece | null>(null);
+  const [scannedPieces, setScannedPieces] = useState<Piece[]>([]);
   const qc = useQueryClient();
   const [source, setSource] = useState("");
   const [destination, setDestination] = useState("");
@@ -63,7 +70,7 @@ export function FinishedProductInventory() {
   const [posted, setPosted] = useState<string | null>(null);
   const inventory = useInfiniteQuery({
     queryKey: ["finished-product-inventory"],
-    enabled: isOwner,
+    enabled: allowed,
     initialPageParam: "",
     queryFn: async ({ pageParam }) => {
       const { data, error } = await supabase.rpc("finished_product_inventory", {
@@ -77,7 +84,7 @@ export function FinishedProductInventory() {
   });
   const locations = useQuery({
     queryKey: ["location-ledger", "locations"],
-    enabled: isOwner,
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("inventory_locations");
       if (error) throw error;
@@ -86,7 +93,7 @@ export function FinishedProductInventory() {
   });
   const history = useQuery({
     queryKey: ["finished-product-movements", pieceHistory],
-    enabled: isOwner,
+    enabled: allowed,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("finished_product_movement_history", {
         ...(pieceHistory ? { p_piece: pieceHistory } : {}),
@@ -98,7 +105,7 @@ export function FinishedProductInventory() {
   });
   const transfer = useMutation({
     mutationFn: async () => {
-      if (!isOwner) throw new Error("Owner required");
+      if (!allowed) throw new Error("Authorized finished-product transfer staff required");
       if (
         !pending &&
         (!selected.length || selected.length > 200 || !source || !destination || !reason.trim())
@@ -119,6 +126,9 @@ export function FinishedProductInventory() {
       }
       setPending(null);
       setSelected([]);
+      setScanned(null);
+      setScannedPieces([]);
+      setBarcode("");
       setReason("");
       setPosted(data);
     },
@@ -142,18 +152,57 @@ export function FinishedProductInventory() {
       );
     },
   });
-  if (!isOwner) return null;
-  const rows = inventory.data?.pages.flat() ?? [];
+  const scanPiece = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("finished_product_transfer_scan", {
+        p_barcode: code,
+      });
+      if (error) throw error;
+      const piece = (data as unknown as Piece[])[0];
+      if (!piece) throw new Error("No Finished Product matches this barcode");
+      if (!piece.available || !piece.location_active)
+        throw new Error("This piece is not available at an active location");
+      if (!isOwner && locations.data?.find((l) => l.id === piece.location_id)?.kind !== "workshop")
+        throw new Error("Staff can transfer only from Workshop");
+      if (selected.length && source !== piece.location_id)
+        throw new Error("All selected pieces must share one source");
+      if (selected.length >= 200 && !selected.includes(piece.id))
+        throw new Error("Transfer up to 200 pieces at a time");
+      return piece;
+    },
+    onSuccess: (piece) => {
+      if (source !== piece.location_id) setDestination("");
+      setSource(piece.location_id);
+      setScanned(piece);
+      setScannedPieces((current) => [...current.filter((p) => p.id !== piece.id), piece]);
+      setSelected((current) => (current.includes(piece.id) ? current : [...current, piece.id]));
+      setBarcode("");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  if (!allowed) return null;
+  const loaded = inventory.data?.pages.flat() ?? [];
+  const rows = [
+    ...loaded.filter((p) => !scannedPieces.some((s) => s.id === p.id)),
+    ...scannedPieces,
+  ];
   const src = locations.data?.find((l) => l.id === source);
   const destinations =
     locations.data?.filter(
       (l) =>
         l.active &&
-        ((src?.kind === "workshop" && l.kind === "showroom") ||
-          (src?.kind === "showroom" && (l.kind === "workshop" || l.parent_id === src.id)) ||
-          (src?.kind === "showroom_sublocation" && l.id === src.parent_id)),
+        ((src?.kind === "workshop" &&
+          ((l.kind === "showroom_sublocation" &&
+            locations.data?.some(
+              (parent) => parent.id === l.parent_id && parent.kind === "showroom" && parent.active,
+            )) ||
+            (isOwner && l.kind === "showroom"))) ||
+          (isOwner &&
+            src?.kind === "showroom" &&
+            (l.kind === "workshop" || l.parent_id === src.id)) ||
+          (isOwner && src?.kind === "showroom_sublocation" && l.id === src.parent_id)),
     ) ?? [];
-  const frozen = Boolean(pending) || transfer.isPending;
+  const frozen = Boolean(pending) || transfer.isPending || scanPiece.isPending;
   const loadingError = inventory.error || locations.error;
   const filtered = rows.filter(
     (p) =>
@@ -172,6 +221,66 @@ export function FinishedProductInventory() {
           {loadingError ? (
             <p role="alert">Inventory could not load. Refresh before posting.</p>
           ) : null}
+          <form
+            className="flex flex-wrap gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!frozen && barcode.trim()) scanPiece.mutate(barcode.trim());
+            }}
+          >
+            <Input
+              aria-label="Finished Product transfer barcode"
+              placeholder="Scan existing Product Barcode"
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              disabled={frozen}
+            />
+            <Button
+              disabled={frozen || !barcode.trim() || locations.isPending || !!locations.error}
+            >
+              Scan piece to transfer
+            </Button>
+          </form>
+          {scanned && (
+            <p>
+              {scanned.barcode} · {scanned.product} / {scanned.design} · {scanned.job_code} ·{" "}
+              {scanned.location}
+            </p>
+          )}
+          {scanned && can("stock.print_barcode") && (
+            <div>
+              <div ref={label} className="max-w-sm rounded border p-3">
+                <p>
+                  {scanned.product} / {scanned.design} · Piece {scanned.piece_number}
+                </p>
+                <svg
+                  role="img"
+                  aria-label={`Product Barcode ${scanned.barcode}`}
+                  viewBox={`0 0 ${fabricBarcodeBars(scanned.barcode).length + 20} 54`}
+                  className="h-16 w-full"
+                  shapeRendering="crispEdges"
+                >
+                  <rect width="100%" height="100%" fill="white" />
+                  {[...fabricBarcodeBars(scanned.barcode)].map((bit, i) =>
+                    bit === "1" ? (
+                      <rect key={i} x={i + 10} width="1" height="54" fill="black" />
+                    ) : null,
+                  )}
+                </svg>
+                <p className="break-all">{scanned.barcode}</p>
+                <p>{scanned.job_code}</p>
+              </div>
+              <Button
+                variant="outline"
+                disabled={frozen}
+                onClick={() => {
+                  if (label.current) printFabricLabel(label.current, "Finished Product Barcode");
+                }}
+              >
+                Reprint same Product Barcode
+              </Button>
+            </div>
+          )}
           <Input
             aria-label="Filter loaded Finished Products"
             placeholder="Filter loaded pieces by barcode, Product, Design or job"
@@ -181,9 +290,9 @@ export function FinishedProductInventory() {
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="product-transfer-source">Source location</Label>
+              <Label htmlFor={`${formId}-source`}>Source location</Label>
               <select
-                id="product-transfer-source"
+                id={`${formId}-source`}
                 className="h-11 w-full rounded border bg-background p-2"
                 value={source}
                 disabled={frozen}
@@ -191,11 +300,13 @@ export function FinishedProductInventory() {
                   setSource(e.target.value);
                   setDestination("");
                   setSelected([]);
+                  setScanned(null);
+                  setScannedPieces([]);
                 }}
               >
                 <option value="">All locations / select source to transfer</option>
                 {locations.data
-                  ?.filter((l) => l.active)
+                  ?.filter((l) => l.active && (isOwner || l.kind === "workshop"))
                   .map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.name}
@@ -204,9 +315,9 @@ export function FinishedProductInventory() {
               </select>
             </div>
             <div>
-              <Label htmlFor="product-transfer-destination">Destination location</Label>
+              <Label htmlFor={`${formId}-destination`}>Destination location</Label>
               <select
-                id="product-transfer-destination"
+                id={`${formId}-destination`}
                 className="h-11 w-full rounded border bg-background p-2"
                 value={destination}
                 disabled={frozen || !source}
@@ -319,6 +430,7 @@ export function FinishedProductInventory() {
           <Button
             disabled={
               transfer.isPending ||
+              scanPiece.isPending ||
               (!pending &&
                 (Boolean(loadingError) ||
                   !selected.length ||

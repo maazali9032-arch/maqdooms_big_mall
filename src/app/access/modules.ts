@@ -83,7 +83,8 @@ export function canAccessPath(roles: string[], permissions: string[], pathname: 
   if (pathname === "/inventory/transfers" || pathname.startsWith("/inventory/transfers/"))
     return (
       roles.includes("owner") ||
-      (roles.includes("stock_entry") && permissions.includes("stock.transfer"))
+      (roles.includes("stock_entry") &&
+        (permissions.includes("stock.transfer") || permissions.includes("stock.transfer_finished")))
     );
   const module = moduleForPath(pathname);
   if (module !== null && !allowedModules(roles).has(module)) return false;

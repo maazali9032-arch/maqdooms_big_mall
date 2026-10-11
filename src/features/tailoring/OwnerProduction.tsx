@@ -36,6 +36,7 @@ type Job = {
   factory: string;
   section: string | null;
   tailor: string;
+  tailors?: { assignment_id: string; code: string; name: string }[];
   requirements: {
     id: string;
     quantity: number;
@@ -49,6 +50,7 @@ type Job = {
 type Fabric = {
   fabric_name: string;
   batch_code: string;
+  barcode: string;
   cuts: {
     inventory_item_id: string;
     thaan_id: string;
@@ -127,17 +129,34 @@ export function OwnerProduction() {
       return data as unknown as Consumable[];
     },
   });
+  const scanFabric = useMutation({
+    mutationFn: async (code: string) => {
+      if (!code) throw new Error("Scan a fabric Thaan barcode");
+      const { data, error } = await supabase.rpc("direct_fabric_sale_catalog", { p_barcode: code });
+      if (error) throw error;
+      const fabric = (data as unknown as Fabric[]).find((f) => f.barcode === code);
+      if (!fabric) throw new Error("No available fabric matches this barcode");
+      return fabric;
+    },
+    onMutate: () => setScannedFabric(null),
+    onSuccess: (fabric) => setScannedFabric(fabric),
+    onError: (e) => toast.error(e.message),
+  });
   const [product, setProduct] = useState("");
   const [design, setDesign] = useState("");
   const [quantity, setQuantity] = useState("");
   const [factory, setFactory] = useState("");
   const [section, setSection] = useState("");
-  const [assignment, setAssignment] = useState("");
+  const [assignedTailors, setAssignedTailors] = useState<string[]>([]);
+  const [fabricBarcode, setFabricBarcode] = useState("");
+  const [scannedFabric, setScannedFabric] = useState<Fabric | null>(null);
   const [source, setSource] = useState("");
   const [notes, setNotes] = useState("");
   const [reason, setReason] = useState("");
   const [lines, setLines] = useState([{ item: "", quantity: "" }]);
-  const [pending, setPending] = useState<Functions["create_owner_production"]["Args"] | null>(null);
+  const [pending, setPending] = useState<
+    Functions["create_owner_production_shared"]["Args"] | null
+  >(null);
   const [config, setConfig] = useState({
     kind: "product",
     id: "",
@@ -155,9 +174,9 @@ export function OwnerProduction() {
     Functions["progress_owner_production"]["Args"] | null
   >(null);
   const create = useMutation({
-    mutationFn: async (args: Functions["create_owner_production"]["Args"]) => {
+    mutationFn: async (args: Functions["create_owner_production_shared"]["Args"]) => {
       setPending(args);
-      const { data, error } = await supabase.rpc("create_owner_production", args);
+      const { data, error } = await supabase.rpc("create_owner_production_shared", args);
       if (error) throw error;
       return data;
     },
@@ -165,6 +184,9 @@ export function OwnerProduction() {
       setPending(null);
       setLines([{ item: "", quantity: "" }]);
       setQuantity("");
+      setAssignedTailors([]);
+      setFabricBarcode("");
+      setScannedFabric(null);
       setNotes("");
       setReason("");
       refresh();
@@ -232,7 +254,9 @@ export function OwnerProduction() {
           fabric: false,
         })),
     );
-  for (const f of fabrics.data ?? [])
+  for (const f of scannedFabric
+    ? [...(fabrics.data ?? []).filter((f) => f.barcode !== scannedFabric.barcode), scannedFabric]
+    : (fabrics.data ?? []))
     for (const c of f.cuts)
       for (const l of c.locations)
         if (l.id === source && l.quantity_mm > 0)
@@ -255,9 +279,11 @@ export function OwnerProduction() {
         !design ||
         !source ||
         !reason.trim() ||
-        !assignments.data?.some(
-          (a) =>
-            a.id === assignment && a.factory_id === factory && (a.section_id ?? "none") === section,
+        !assignedTailors.length ||
+        !assignedTailors.every((id) =>
+          assignments.data?.some(
+            (a) => a.id === id && a.factory_id === factory && (a.section_id ?? "none") === section,
+          ),
         )
       )
         throw new Error(
@@ -284,7 +310,7 @@ export function OwnerProduction() {
         p_product: product,
         p_design: design,
         p_quantity: Number(quantity),
-        p_assignment: assignment,
+        p_assignments: [...assignedTailors].sort(),
         p_source: source,
         p_items: payload,
         p_notes: notes || null,
@@ -436,7 +462,93 @@ export function OwnerProduction() {
       )}
       {isOwner && (
         <div className="space-y-3">
-          <fieldset disabled={create.isPending || !!pending} className="grid gap-3 md:grid-cols-2">
+          <fieldset
+            disabled={create.isPending || !!pending || scanFabric.isPending}
+            className="grid gap-3 md:grid-cols-2"
+          >
+            <select
+              aria-label="Production material source"
+              className={selectClass}
+              value={source}
+              onChange={(e) => {
+                setSource(e.target.value);
+                setLines([{ item: "", quantity: "" }]);
+              }}
+            >
+              <option value="">Source location</option>
+              {locations.data
+                ?.filter((l) => l.active)
+                .map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+            </select>
+            <div className="space-y-2 md:col-span-2">
+              <Input
+                aria-label="Production fabric barcode"
+                placeholder="Scan existing Thaan barcode"
+                value={fabricBarcode}
+                onChange={(e) => {
+                  setFabricBarcode(e.target.value);
+                  setScannedFabric(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    scanFabric.mutate(fabricBarcode.trim());
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                disabled={scanFabric.isPending || !fabricBarcode.trim()}
+                onClick={() => scanFabric.mutate(fabricBarcode.trim())}
+              >
+                Scan production fabric
+              </Button>
+              {scannedFabric && (
+                <div className="rounded border p-3">
+                  <p>
+                    {scannedFabric.fabric_name} · {scannedFabric.batch_code} ·{" "}
+                    {scannedFabric.barcode}
+                  </p>
+                  {scannedFabric.cuts.map((cut) => (
+                    <div key={cut.thaan_id}>
+                      {cut.locations.map((l) => (
+                        <p key={l.id}>
+                          {locations.data?.find((x) => x.id === l.id)?.name ?? l.id}:{" "}
+                          {quantityText(Number(l.quantity_mm), "mm")}
+                        </p>
+                      ))}
+                      <Button
+                        variant="outline"
+                        disabled={
+                          !source ||
+                          !cut.locations.some((l) => l.id === source && l.quantity_mm > 0)
+                        }
+                        onClick={() => {
+                          if (lines.some((l) => l.item === cut.inventory_item_id)) {
+                            toast.error("This Thaan is already selected");
+                            return;
+                          }
+                          const next = { item: cut.inventory_item_id, quantity: "" };
+                          setLines(
+                            lines.length === 1 && !lines[0]?.item ? [next] : [...lines, next],
+                          );
+                        }}
+                      >
+                        Allocate scanned Thaan {cut.thaan_id.slice(0, 8)}
+                      </Button>
+                    </div>
+                  ))}
+                  <p>
+                    Select its source location, then enter only the metres needed. The remainder
+                    stays in stock.
+                  </p>
+                </div>
+              )}
+            </div>
             <select
               aria-label="Production Product"
               className={selectClass}
@@ -480,7 +592,7 @@ export function OwnerProduction() {
               onChange={(e) => {
                 setFactory(e.target.value);
                 setSection("");
-                setAssignment("");
+                setAssignedTailors([]);
               }}
             >
               <option value="">Factory</option>
@@ -498,7 +610,7 @@ export function OwnerProduction() {
               value={section}
               onChange={(e) => {
                 setSection(e.target.value);
-                setAssignment("");
+                setAssignedTailors([]);
               }}
             >
               <option value="">Section</option>
@@ -508,37 +620,29 @@ export function OwnerProduction() {
                 </option>
               ))}
             </select>
-            <select
-              aria-label="Production Tailor"
-              className={selectClass}
-              value={assignment}
-              onChange={(e) => setAssignment(e.target.value)}
-            >
-              <option value="">Tailor</option>
+            <fieldset className="rounded border p-3">
+              <legend>Production Tailors</legend>
               {hierarchyTailors(options, factory, section).map((a) => (
-                <option key={a.id} value={a.id}>
+                <label key={a.id} className="flex items-center gap-2 py-1">
+                  <input
+                    type="checkbox"
+                    aria-label={`Assign ${a.tailor_code} · ${a.tailor_name}`}
+                    checked={assignedTailors.includes(a.id)}
+                    onChange={(e) =>
+                      setAssignedTailors(
+                        e.target.checked
+                          ? [...assignedTailors, a.id]
+                          : assignedTailors.filter((id) => id !== a.id),
+                      )
+                    }
+                  />
                   {a.tailor_code} · {a.tailor_name}
-                </option>
+                </label>
               ))}
-            </select>
-            <select
-              aria-label="Production material source"
-              className={selectClass}
-              value={source}
-              onChange={(e) => {
-                setSource(e.target.value);
-                setLines([{ item: "", quantity: "" }]);
-              }}
-            >
-              <option value="">Source location</option>
-              {locations.data
-                ?.filter((l) => l.active)
-                .map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}
-                  </option>
-                ))}
-            </select>
+              <p className="text-sm text-muted-foreground">
+                Select one or more Tailors to share this job.
+              </p>
+            </fieldset>
             <Input
               aria-label="Production notes"
               placeholder="Notes"
@@ -550,10 +654,10 @@ export function OwnerProduction() {
               other materials use their listed unit.
             </p>
             {lines.map((line, index) => (
-              <div key={index} className="flex gap-2 md:col-span-2">
+              <div key={index} className="flex flex-wrap gap-2 md:col-span-2">
                 <select
                   aria-label={`Production material ${index + 1}`}
-                  className={selectClass}
+                  className={`${selectClass} min-w-0 sm:flex-1`}
                   value={line.item}
                   onChange={(e) =>
                     setLines(
@@ -603,7 +707,7 @@ export function OwnerProduction() {
               onChange={(e) => setReason(e.target.value)}
             />
           </fieldset>
-          <Button disabled={create.isPending} onClick={submit}>
+          <Button disabled={create.isPending || scanFabric.isPending} onClick={submit}>
             {pending ? "Retry same Production Job" : "Create Production Job and issue materials"}
           </Button>
           {pending && <p>Request awaiting confirmation. Retry with the same values.</p>}

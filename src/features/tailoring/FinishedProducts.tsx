@@ -53,6 +53,14 @@ type Piece = {
   available: boolean;
   quantity_at_location: number | null;
   sp_paise: number | null;
+  production_summary?: {
+    planned: number;
+    produced: number;
+    sold: number;
+    remaining: number;
+    archived: number;
+  };
+  tailors?: { code: string; name: string }[];
   production_cost_paise?: number | null;
   materials: {
     name: string;
@@ -335,7 +343,7 @@ export function FinishedProducts() {
             </p>
             <p>
               {p.production_job} · {p.job_status} · {p.factory} → {p.section ?? "No Section"} →{" "}
-              {p.tailor}
+              {p.tailors?.map((t) => `${t.code} · ${t.name}`).join(", ") || p.tailor}
             </p>
             <p>
               {p.location} · {p.status} · {p.available ? "In stock" : "Unavailable"} · Ledger
@@ -352,6 +360,16 @@ export function FinishedProducts() {
                 {p.production_cost_paise == null
                   ? "Not finalized"
                   : "₹" + (Number(p.production_cost_paise) / 100).toFixed(2)}
+              </p>
+            )}
+            {isOwner && p.production_summary && (
+              <p>
+                Production totals · Planned: {p.production_summary.planned} · Produced:{" "}
+                {p.production_summary.produced} · Sold: {p.production_summary.sold} · Remaining in
+                stock: {p.production_summary.remaining}
+                {p.production_summary.archived > 0
+                  ? ` · Archived: ${p.production_summary.archived}`
+                  : ""}
               </p>
             )}
             <p className="font-medium">Actual material usage for this piece</p>

@@ -1212,6 +1212,7 @@ export type Database = {
         Returns: Json;
       };
       owner_erp_overview: { Args: { p_from?: string; p_to?: string }; Returns: Json };
+      finished_product_transfer_scan: { Args: { p_barcode: string }; Returns: Json };
       finished_product_sale_scan: { Args: { p_barcode: string }; Returns: Json };
       complete_finished_product_sale: {
         Args: {
@@ -1269,6 +1270,20 @@ export type Database = {
           p_design: string;
           p_quantity: number;
           p_assignment: string;
+          p_source: string;
+          p_items: Json;
+          p_notes: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      create_owner_production_shared: {
+        Args: {
+          p_request: string;
+          p_product: string;
+          p_design: string;
+          p_quantity: number;
+          p_assignments: Json;
           p_source: string;
           p_items: Json;
           p_notes: string | null;

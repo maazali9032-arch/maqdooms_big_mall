@@ -1480,3 +1480,41 @@ Customer Tailoring CP + charge pricing rule for newly booked Counter orders.
   Owner-controlled product SP and production-cost rules remain unchanged.
 - Owner can revoke or grant Salesperson work viewing, Salesperson selection and
   final tailoring-total entry through the existing individual permissions controls.
+
+
+# 36. OWNER-APPROVED PRODUCTION WORKFLOW REVISION
+
+Approved 11 October 2026 after the nine-stage Owner Production comparison and
+explicit implementation authorization. These later decisions supersede the earlier
+single-Tailor assignment and mandatory adjacent finished-product floor transfer.
+
+- Owner scans an existing fabric Thaan barcode, reviews actual location balances,
+  selects its source and explicitly enters the required metres. Creating the
+  Production Job and issuing its initial materials are atomic; unallocated metres
+  remain at their original stock location. Production quantity is a separate piece
+  count, never an automatic fabric multiplier.
+- One Product/Design, one Factory/Section and one or multiple selected active Tailors
+  share the same Production ID. Do not require assigned piece counts per Tailor or
+  invent a lead-Tailor workflow. Every assigned Tailor may view the job; existing
+  manage-jobs permission controls status changes.
+- Additional fabric/materials are explicitly issued against the same open/in-progress
+  Production ID. Completed jobs do not accept more material issues.
+- All pieces arrive together. Keep the full Workshop receipt against the job quantity
+  and record explicit actual material use separately for each physical piece.
+- Generate a separate unique finished-product barcode only when the pieces are
+  received into Workshop. The existing fabric barcode remains the source identity;
+  Production ID connects the job. Finalized CP and Owner-entered SP attach afterward
+  to each individual finished-product record; never rewrite its barcode.
+- Owner approved total actual production cost divided by the finished-piece count
+  for identical products. Include fabric, additional materials, production/tailoring,
+  Design/Embroidery and applicable other costs. Preserve exact paise total with at
+  most a one-paise rounding difference between piece allocations. Keep actual
+  per-piece material traceability. Reuse the existing complete-cost/SP workflow.
+- Authorized Stock Entry/Exit staff scan individual finished-product barcodes and
+  transfer available Workshop pieces directly to a selected active Showroom floor.
+  Posting immediately updates stock/location/history; no receiving confirmation,
+  approval or receipt step. Owner controls a separate finished-transfer permission.
+  Existing fabric-transfer permission and financial role restrictions remain.
+- Owner product scanning must show planned pieces, actual produced pieces, sold
+  pieces and remaining physical stock, with archived pieces distinguished where
+  applicable. Counter sees exact product availability and Owner SP without CP.

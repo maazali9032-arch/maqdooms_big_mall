@@ -24,6 +24,7 @@ type Job = {
   factory_name: string;
   section_name: string | null;
   tailor_name: string;
+  tailors?: { code: string; name: string }[];
   tailor_code: string;
 };
 type Issue = {
@@ -39,6 +40,7 @@ type Issue = {
   factory_name: string;
   section_name: string | null;
   tailor_name: string;
+  tailors?: { code: string; name: string }[];
   tailor_code: string;
   lines: {
     id: string;
@@ -243,7 +245,7 @@ export function MaterialIssues() {
             {job && (
               <p>
                 {job.factory_name} → {job.section_name ?? "No Section"} → {job.tailor_code} ·{" "}
-                {job.tailor_name}
+                {job.tailors?.map((t) => `${t.code} ${t.name}`).join(", ") || job.tailor_name}
               </p>
             )}
             <div className="grid gap-3 md:grid-cols-2">
@@ -402,7 +404,7 @@ export function MaterialIssues() {
             </p>
             <p>
               {i.factory_name} → {i.section_name ?? "No Section"} → {i.tailor_code} ·{" "}
-              {i.tailor_name}
+              {i.tailors?.map((t) => `${t.code} ${t.name}`).join(", ") || i.tailor_name}
             </p>
             <p>
               {formatDateTime(i.issued_at)} · From {i.source_name} · Issued by{" "}

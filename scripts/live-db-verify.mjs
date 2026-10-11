@@ -312,13 +312,18 @@ try {
           )[0].allowed,
           role + " Phase 12 raw writes sealed: " + table,
         );
-      if (role === "owner") {
+      if (
+        role === "owner" ||
+        (role === "stock_entry" &&
+          (await tx`select public.has_perm(auth.uid(),'stock.transfer_finished') as allowed`)[0]
+            .allowed)
+      ) {
         for (const call of [
           "select public.finished_product_inventory() as data",
           "select public.finished_product_movement_history() as data",
         ]) {
           const rows = (await tx.unsafe(call))[0].data;
-          check(Array.isArray(rows), "Owner Phase 13 operational API works");
+          check(Array.isArray(rows), role + " permitted Finished Product operational API works");
           check(
             !/cp_paise|sp_paise|production_cost|amount_paise/.test(JSON.stringify(rows)),
             "Phase 13 operational projection excludes finance",
