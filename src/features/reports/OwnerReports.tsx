@@ -66,10 +66,22 @@ function valueText(key: string, value: unknown, row: Record<string, unknown>) {
   return String(value);
 }
 
-export function OwnerReports({ auditOnly = false }: { auditOnly?: boolean }) {
+export function OwnerReports({
+  auditOnly = false,
+  initialDataset,
+}: {
+  auditOnly?: boolean;
+  initialDataset?: string;
+}) {
   const { isOwner } = useSession();
   const qc = useQueryClient();
-  const [dataset, setDataset] = useState(auditOnly ? "audit" : "stock");
+  const [dataset, setDataset] = useState(
+    auditOnly
+      ? "audit"
+      : datasets.some(([key]) => key === initialDataset)
+        ? initialDataset!
+        : "stock",
+  );
   const [from, setFrom] = useState("");
   const [through, setThrough] = useState("");
   const [search, setSearch] = useState("");

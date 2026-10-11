@@ -1,3 +1,5 @@
+import { SalesHistory } from "@/features/pos/SalesHistory";
+import { useWorkflowRoute } from "@/shared/components/use-workflow-route";
 import { WorkflowTabs } from "@/shared/components/workflow-tabs";
 import { FinishedProductSale } from "@/features/pos/FinishedProductSale";
 import { createFileRoute } from "@tanstack/react-router";
@@ -772,6 +774,7 @@ We look forward to serving you again.`}
 }
 
 function PosPage() {
+  const navigation = useWorkflowRoute();
   return (
     <>
       <PageHeader
@@ -779,12 +782,14 @@ function PosPage() {
         description="Choose Direct Fabric Sale, Finished Product Sale, Customer Tailoring or Material Issue."
       />
       <WorkflowTabs
+        {...navigation}
         items={[
           { id: "fabric", label: "Direct Fabric Sale", content: <DirectFabricSale /> },
           { id: "products", label: "Finished Product Sale", content: <FinishedProductSale /> },
           { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
           { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
           { id: "scan", label: "Product genealogy", content: <FinishedProducts /> },
+          { id: "history", label: "Sales History", content: <SalesHistory /> },
           { id: "legacy", label: "Legacy records", content: <LegacyPosPage /> },
         ]}
       />

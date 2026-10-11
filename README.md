@@ -1799,6 +1799,11 @@ fabric barcode allocation, shared Tailor assignments, Stock Entry/Exit finished-
 floor transfers and Owner production totals. It is implemented and migrated live;
 publish the updated frontend to use the new controls.
 
+The sidebar now groups permitted workflows into expandable business sections.
+Overview stays open; opening another group closes the previous one. Workflow links
+open their corresponding tabs directly on desktop and mobile. Frontend publication
+is still required.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

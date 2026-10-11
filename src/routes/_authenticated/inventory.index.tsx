@@ -1,3 +1,4 @@
+import { useWorkflowRoute } from "@/shared/components/use-workflow-route";
 import { FinishedProductInventory } from "@/features/inventory/FinishedProductInventory";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -201,6 +202,7 @@ function ThaanTable({
 }
 
 function InventoryPage() {
+  const navigation = useWorkflowRoute();
   const { can, isOwner } = useSession();
   const showCost = can("inventory.view_cost");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
@@ -286,7 +288,23 @@ function InventoryPage() {
         <StatCard label="Depleted" value={m["depleted_thaans"] ?? 0} />
       </div>
 
-      <Tabs defaultValue="fabric-stock">
+      <Tabs
+        value={
+          [
+            "fabric-stock",
+            "thaans",
+            "locations",
+            "consumables",
+            "archived",
+            ...(showOperationalHistory ? ["movements"] : []),
+            ...(can("inventory.receive") ? ["batches"] : []),
+            ...(isOwner ? ["finished-products"] : []),
+          ].includes(navigation.activeId)
+            ? navigation.activeId
+            : "fabric-stock"
+        }
+        onValueChange={navigation.onChange}
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full overflow-x-auto sm:w-auto">
             <TabsTrigger value="fabric-stock">Fabric Stock &amp; scan</TabsTrigger>

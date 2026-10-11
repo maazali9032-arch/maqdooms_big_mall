@@ -1,3 +1,5 @@
+import { HierarchyManagement } from "@/features/tailoring/HierarchyManagement";
+import { useWorkflowRoute } from "@/shared/components/use-workflow-route";
 import { WorkflowTabs } from "@/shared/components/workflow-tabs";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -362,6 +364,7 @@ function LegacyTailoringPage() {
 }
 
 function TailoringPage() {
+  const navigation = useWorkflowRoute();
   const { isOwner } = useSession();
   return (
     <>
@@ -370,6 +373,7 @@ function TailoringPage() {
         description="Customer Tailoring and Owner Production remain separate workflows."
       />
       <WorkflowTabs
+        {...navigation}
         items={[
           { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
           { id: "production", label: "Owner Production", content: <OwnerProduction /> },
@@ -387,6 +391,20 @@ function TailoringPage() {
               ]
             : []),
           { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
+          ...(isOwner
+            ? [
+                {
+                  id: "hierarchy",
+                  label: "Factories, Sections & Tailors",
+                  content: <HierarchyManagement />,
+                },
+                {
+                  id: "catalog",
+                  label: "Products & Designs",
+                  content: <OwnerProduction catalogOnly />,
+                },
+              ]
+            : []),
           { id: "legacy", label: "Legacy records", content: <LegacyTailoringPage /> },
         ]}
       />

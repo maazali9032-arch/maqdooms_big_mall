@@ -1,26 +1,8 @@
 import { Link, Navigate, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
-import { allowedModules, canAccessPath, homePath, type ModuleKey } from "@/app/access/modules";
-import {
-  BarChart3,
-  RefreshCw,
-  Boxes,
-  ChevronDown,
-  ClipboardList,
-  Gauge,
-  KeyRound,
-  LogOut,
-  Menu,
-  MessageCircle,
-  Scissors,
-  Search,
-  Settings,
-  ShoppingCart,
-  Store,
-  UserRound,
-  Users,
-} from "lucide-react";
+import { canAccessPath, homePath } from "@/app/access/modules";
+import { ChevronDown, RefreshCw, LogOut, Menu, Search, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_LABELS, useSession } from "@/app/providers/session";
@@ -37,55 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { initials } from "@/shared/utils/format";
 
-type NavItem = { to: string; label: string; icon: typeof Gauge; module: ModuleKey };
-type NavSection = { label: string; items: NavItem[] };
-
-const NAV_SECTIONS: NavSection[] = [
-  {
-    label: "Overview",
-    items: [{ to: "/dashboard", label: "Dashboard", icon: Gauge, module: "dashboard" }],
-  },
-  {
-    label: "Operations",
-    items: [
-      { to: "/inventory", label: "Inventory", icon: Boxes, module: "inventory" },
-      { to: "/inventory/receiving", label: "Stock Entry", icon: Boxes, module: "stock_entry" },
-      {
-        to: "/inventory/transfers",
-        label: "Stock Transfer",
-        icon: Boxes,
-        module: "stock_transfer",
-      },
-      { to: "/pos", label: "Counter / POS", icon: ShoppingCart, module: "pos" },
-      { to: "/my-work", label: "My Work", icon: UserRound, module: "salesperson_work" },
-      { to: "/tailoring", label: "Tailoring", icon: Scissors, module: "tailoring" },
-      { to: "/customers", label: "Customers", icon: Users, module: "customers" },
-    ],
-  },
-  {
-    label: "Commerce",
-    items: [
-      { to: "/ecommerce", label: "E-commerce", icon: Store, module: "ecommerce" },
-      { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle, module: "whatsapp" },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      { to: "/reports", label: "Reports", icon: BarChart3, module: "reports" },
-      { to: "/audit", label: "Audit Trail", icon: ClipboardList, module: "audit" },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { to: "/access", label: "Manage Access", icon: KeyRound, module: "access" },
-      { to: "/settings", label: "Settings", icon: Settings, module: "settings" },
-    ],
-  },
-];
-
-const ALL_NAV = NAV_SECTIONS.flatMap((section) => section.items);
+import { activeSidebarItem, navKey, sidebarSections, type NavSection } from "@/app/access/sidebar";
 
 /** Blocks pages outside the user's role modules (same source as the sidebar). */
 function RouteGuard({ children }: { children: ReactNode }) {
@@ -109,40 +43,53 @@ function RouteGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const { roles, permissions } = useSession();
-  const allowed = allowedModules(roles);
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-
+function NavLinks({
+  sections,
+  activeKey,
+  openGroup,
+  onGroupChange,
+  onNavigate,
+}: {
+  sections: NavSection[];
+  activeKey: string | undefined;
+  openGroup: string | null;
+  onGroupChange: (group: string | null) => void;
+  onNavigate?: () => void;
+}) {
+  const instance = useId();
   return (
-    <nav className="scrollbar-subtle space-y-5 px-3 py-5" aria-label="Primary navigation">
-      {NAV_SECTIONS.map((section) => {
-        const visibleItems = section.items.filter(
-          (item) => allowed.has(item.module) && canAccessPath(roles, permissions, item.to),
-        );
-        if (visibleItems.length === 0) return null;
+    <nav className="scrollbar-subtle space-y-2 px-3 py-5" aria-label="Primary navigation">
+      {sections.map((section, index) => {
+        const pinned = section.label === "Overview";
+        const open = pinned || openGroup === section.label;
+        const control = `${instance}-group-${index}`;
         return (
-          <section key={section.label} aria-labelledby={`nav-${section.label}`}>
-            <p
-              id={`nav-${section.label}`}
-              className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-sidebar-primary"
+          <section key={section.label}>
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls={control}
+              disabled={pinned}
+              onClick={() => onGroupChange(open ? null : section.label)}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-[11px] font-semibold tracking-wide text-sidebar-primary hover:bg-white/[0.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-primary disabled:cursor-default"
             >
-              {section.label}
-            </p>
-            <div className="space-y-0.5">
-              {visibleItems.map((item) => {
-                const active =
-                  (pathname === item.to || pathname.startsWith(`${item.to}/`)) &&
-                  !(
-                    item.to === "/inventory" &&
-                    (pathname.startsWith("/inventory/receiving") ||
-                      pathname.startsWith("/inventory/transfers"))
-                  );
+              <span>{section.label}</span>
+              {!pinned && (
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")}
+                />
+              )}
+            </button>
+            <div id={control} hidden={!open} className="space-y-0.5 pb-2">
+              {section.items.map((item) => {
+                const active = activeKey === navKey(item);
                 const Icon = item.icon;
                 return (
                   <Link
-                    key={item.to}
+                    key={navKey(item)}
                     to={item.to}
+                    hash={item.hash ?? ""}
                     aria-current={active ? "page" : undefined}
                     onClick={onNavigate}
                     className={cn(
@@ -161,7 +108,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
                       )}
                       strokeWidth={1.8}
                     />
-                    <span className="truncate">{item.label}</span>
+                    <span className="min-w-0">{item.label}</span>
                   </Link>
                 );
               })}
@@ -216,19 +163,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const allowed = allowedModules(roles);
+  const location = useRouterState({
+    select: (s) => ({ pathname: s.location.pathname, hash: s.location.hash }),
+  });
+  const sections = useMemo(() => sidebarSections(roles, permissions), [roles, permissions]);
+  const activeItem = activeSidebarItem(sections, location.pathname, location.hash);
+  const currentGroup =
+    sections.find((section) =>
+      section.items.some((item) => navKey(item) === (activeItem && navKey(activeItem))),
+    )?.label ?? null;
+  const [openGroup, setOpenGroup] = useState<string | null>(
+    currentGroup === "Overview" ? null : currentGroup,
+  );
+  useEffect(() => {
+    setOpenGroup(currentGroup === "Overview" ? null : currentGroup);
+  }, [currentGroup, location.pathname, location.hash]);
   const roleLabel = roles.map((r) => ROLE_LABELS[r] ?? r).join(", ") || "Staff";
 
   const searchMatches = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return [];
-    return ALL_NAV.filter(
-      (item) =>
-        allowed.has(item.module) &&
-        canAccessPath(roles, permissions, item.to) &&
-        item.label.toLowerCase().includes(term),
-    ).slice(0, 5);
-  }, [allowed, search, roles, permissions]);
+    return sections
+      .flatMap((section) => section.items)
+      .filter((item) => item.label.toLowerCase().includes(term))
+      .slice(0, 5);
+  }, [sections, search]);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -242,7 +201,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const first = searchMatches[0];
     if (first) {
       setSearch("");
-      void navigate({ to: first.to });
+      void navigate({ to: first.to, hash: first.hash ?? "" });
     } else if (search.trim()) {
       toast.info("No permitted module matches that search");
     }
@@ -259,7 +218,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="sticky top-0 hidden h-screen w-[256px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
         <Brand />
         <div className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto">
-          <NavLinks />
+          <NavLinks
+            sections={sections}
+            activeKey={activeItem && navKey(activeItem)}
+            openGroup={openGroup}
+            onGroupChange={setOpenGroup}
+          />
         </div>
         <SidebarFooter />
       </aside>
@@ -284,7 +248,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <Brand />
               <div className="max-h-[calc(100vh-88px)] overflow-y-auto">
-                <NavLinks onNavigate={() => setMobileOpen(false)} />
+                <NavLinks
+                  sections={sections}
+                  activeKey={activeItem && navKey(activeItem)}
+                  openGroup={openGroup}
+                  onGroupChange={setOpenGroup}
+                  onNavigate={() => setMobileOpen(false)}
+                />
               </div>
             </SheetContent>
           </Sheet>
@@ -309,11 +279,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                     return (
                       <button
                         type="button"
-                        key={item.to}
+                        key={navKey(item)}
                         className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
                         onClick={() => {
                           setSearch("");
-                          void navigate({ to: item.to });
+                          void navigate({ to: item.to, hash: item.hash ?? "" });
                         }}
                       >
                         <Icon className="size-4 text-primary" />

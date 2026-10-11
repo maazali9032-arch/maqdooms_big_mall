@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 import { PageHeader } from "@/shared/components/page";
 import { OwnerReports } from "@/features/reports/OwnerReports";
 
@@ -18,13 +18,14 @@ export const Route = createFileRoute("/_authenticated/reports")({
 });
 
 function ReportsPage() {
+  const hash = useRouterState({ select: (s) => s.location.hash });
   return (
     <>
       <PageHeader
         title="Owner reports"
         description="Canonical stock, transactions, production, financial history and Owner review controls."
       />
-      <OwnerReports />
+      <OwnerReports key={hash} initialDataset={hash} />
     </>
   );
 }

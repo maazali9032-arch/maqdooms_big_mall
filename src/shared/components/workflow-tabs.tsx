@@ -1,21 +1,33 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /** Mount on first use, then retain forms/carts and uncertain transaction retries. */
 export function WorkflowTabs({
   items,
+  activeId,
+  onChange,
 }: {
   items: { id: string; label: string; content: ReactNode }[];
+  activeId?: string;
+  onChange?: (id: string) => void;
 }) {
-  const [active, setActive] = useState(items[0]?.id ?? "");
-  const [visited, setVisited] = useState(new Set([items[0]?.id ?? ""]));
-  const selected = items.some((item) => item.id === active) ? active : (items[0]?.id ?? "");
+  const initial = items.some((item) => item.id === activeId) ? activeId! : (items[0]?.id ?? "");
+  const [active, setActive] = useState(initial);
+  const [visited, setVisited] = useState(new Set([initial]));
+  const requested = activeId ?? active;
+  const selected = items.some((item) => item.id === requested) ? requested : (items[0]?.id ?? "");
+  useEffect(() => {
+    setVisited((previous) =>
+      previous.has(selected) ? previous : new Set([...previous, selected]),
+    );
+  }, [selected]);
   return (
     <Tabs
       value={selected}
       onValueChange={(id) => {
         setActive(id);
         setVisited((previous) => new Set([...previous, id]));
+        onChange?.(id);
       }}
     >
       <div className="overflow-x-auto pb-2">

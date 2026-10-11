@@ -4530,3 +4530,90 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner review and next instructions.
+
+
+## 2026-10-11 — Grouped sidebar and direct workflow navigation
+
+PHASE:
+- Owner-approved UI navigation revision after Production workflow. Reviewed current
+  AppShell, route/module access, workflow tabs, Inventory/POS/Tailoring routes and
+  permanent history; followed Sections 30/31. No later business phase started.
+
+STATUS:
+- Implemented and verified locally. Frontend publication remains pending.
+
+IMPLEMENTED:
+- Clickable Overview, Stock & Inventory, Sales & Customers, Production, Commerce,
+  Reports & Tracking and Administration groups. Overview remains open when permitted;
+  at most one other group expands. Open group may be collapsed. Empty groups hidden.
+- Shared desktop/mobile open-group state, keyboard-operable buttons, expanded/control
+  attributes, unique IDs, current-page marking and drawer closure after link selection.
+- Direct hash links to Fabric Stock, Materials/Consumables, Finished Product Stock,
+  Customer Tailoring, Owner Production, Material Issues, Workshop Returns, Production
+  Costing/SP, Factory/Section/Tailor management, Product/Design catalogue and Locations.
+- Owner sees Salesperson Performance; Salesperson sees My Work. Owner Sales History
+  opens existing orders report. Counter history uses existing completed fabric/product
+  order APIs and links customer tailoring context to its separate booking workflow.
+
+MODIFIED:
+- src/app/layouts/AppShell.tsx: accordion groups, role-filtered workflow search/links,
+  active destination and automatic route-group opening. New src/app/access/sidebar.ts
+  supplies group metadata and exact path/hash selection using existing access checks.
+- src/shared/components/workflow-tabs.tsx: optional controlled workflow selection,
+  direct-link initial mount and retained visited drafts/retries. New use-workflow-route.ts
+  navigates existing page hashes without new routes or permissions.
+- Inventory, stock transfers, POS and Tailoring route components: select existing
+  authorized tabs from hash, synchronize tab changes and expose correct child options.
+  Transfers now choose Fabric or Finished Products according to action permissions.
+- OwnerProduction.tsx adds an Owner-only catalogue-only presentation using unchanged
+  configuration APIs; Tailoring adds Owner hierarchy/catalog tabs using existing code.
+- OwnerReports.tsx and reports.tsx select existing report dataset for direct Owner
+  Sales History link. New src/features/pos/SalesHistory.tsx projects completed bill
+  codes, customer, date, quantities, barcode and totals through existing safe APIs.
+- New scripts/sidebar-groups-ui-test.mjs and scripts/fixtures/sidebar-groups files;
+  SIDEBAR_GROUPS_* evidence files. Master Plan Section 37, this history and README.
+
+REUSED:
+- Existing role/module/action checks, authentication/RouteGuard, URL paths, business
+  components, query keys, catalogue/hierarchy/locations, pricing and history APIs.
+  Existing workflow transaction logic and retry payloads remain unchanged.
+
+DATABASE CHANGES:
+- None. No migration, schema, SQL function/trigger/policy/grant, stock, cost, price,
+  seed, configuration or production data change. No live database writes performed.
+
+SECURITY / PERMISSIONS:
+- Sidebar filters through existing allowedModules/canAccessPath plus existing Owner
+  and finished-transfer restrictions. No role or permission expanded. Owner-only
+  administration/costing links hidden from other roles; inaccessible tab hashes fall
+  back to a permitted workflow. Stock staff transfer/receiving denials and Salesperson
+  isolation remain enforced independently of navigation.
+
+TESTS:
+- 42 actual-component browser checks pass: pinned Overview, exclusive open group,
+  collapse/reopen/keyboard behavior, exact active deep link, actual catalogue-only
+  editing view, same-page draft preservation, inventory workflow/search navigation,
+  mobile 320/390/768 drawer closure and no overflow, unique IDs, existing Counter
+  history APIs, Owner administration restrictions, finished-only transfer access,
+  denied receive/transfer permissions and Salesperson isolation; no browser errors.
+- Prior Stock Entry 16, Salesperson/Tailoring 27, Owner Production 28 and Phase 16
+  workflow/report 24 browser checks pass. Historical proof files retained unchanged;
+  new run evidence saved under SIDEBAR_GROUPS names.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Final isolated
+  Vercel-preset production build passes (2026-10-11 10:17:39.790 UTC), preserving
+  patched TanStack server-core 1.169.39. No package/environment/deployment edits.
+
+BUSINESS RULES VERIFIED:
+- Existing workflow selection retains drafts and frozen retries; grouping changes
+  navigation only. No fabric/barcode/production/costing/sale rules modified.
+
+REMAINING:
+- Publish updated frontend; real staff acceptance of desktop/mobile navigation.
+- Dashboard stock cards/text, legacy records, four prior legacy job decisions and
+  data reconciliation intentionally not changed in this sidebar-only request.
+- No commit, push or deployment performed.
+
+NEXT PHASE:
+- None started. Await Owner's next instructions.

@@ -1518,3 +1518,16 @@ single-Tailor assignment and mandatory adjacent finished-product floor transfer.
 - Owner product scanning must show planned pieces, actual produced pieces, sold
   pieces and remaining physical stock, with archived pieces distinguished where
   applicable. Counter sees exact product availability and Owner SP without CP.
+
+
+# 37. OWNER-APPROVED GROUPED SIDEBAR
+
+Approved 11 October 2026. Group navigation into Overview, Stock & Inventory,
+Sales & Customers, Production, Commerce, Reports & Tracking and Administration.
+Overview stays expanded when the user's role permits Dashboard. Other group headers
+are clickable dropdowns: opening one closes the previously open non-Overview group;
+clicking an open group collapses it. Apply the same behavior to the mobile drawer.
+Show only existing role/permission-authorized options and hide empty groups.
+Each child option opens its corresponding existing workflow/tab directly. Keep
+same-page drafts and uncertain transaction retry payloads across tab navigation.
+This navigation revision does not change database permissions or business rules.

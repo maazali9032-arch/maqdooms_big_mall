@@ -59,9 +59,9 @@ type Fabric = {
 };
 type Item = { id: string; name: string; unit: string; quantity: number; fabric: boolean };
 
-export function OwnerProduction() {
+export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean }) {
   const { isOwner, roles, can } = useSession();
-  const allowed = isOwner || roles.includes("tailor");
+  const allowed = isOwner || (!catalogOnly && roles.includes("tailor"));
   const qc = useQueryClient();
   const refresh = () => {
     for (const key of [
@@ -324,7 +324,7 @@ export function OwnerProduction() {
   const options = assignments.data ?? [];
   return (
     <Panel
-      title="Owner Production"
+      title={catalogOnly ? "Products & Designs" : "Owner Production"}
       description="Internal manufacturing of identical products. A different Design requires a separate Production Job."
     >
       {[
@@ -342,7 +342,7 @@ export function OwnerProduction() {
           </p>
         ))}
       {isOwner && (
-        <details className="mb-4">
+        <details className="mb-4" open={catalogOnly ? true : undefined}>
           <summary>Product and Design configuration</summary>
           <fieldset disabled={configure.isPending || !!configPending} className="grid gap-2 py-3">
             <select
@@ -460,7 +460,7 @@ export function OwnerProduction() {
           </Button>
         </details>
       )}
-      {isOwner && (
+      {isOwner && !catalogOnly && (
         <div className="space-y-3">
           <fieldset
             disabled={create.isPending || !!pending || scanFabric.isPending}
@@ -713,7 +713,7 @@ export function OwnerProduction() {
           {pending && <p>Request awaiting confirmation. Retry with the same values.</p>}
         </div>
       )}
-      {(isOwner || can("tailoring.manage_jobs")) && (
+      {!catalogOnly && (isOwner || can("tailoring.manage_jobs")) && (
         <div className="my-4">
           <Input
             aria-label="Production status reason"
@@ -729,51 +729,53 @@ export function OwnerProduction() {
           )}
         </div>
       )}
-      <div className="mt-4 space-y-3">
-        {jobs.data?.map((j) => (
-          <article key={j.id} className="rounded border p-3">
-            <p className="font-medium">
-              {j.code} · {j.product} · {j.design} · {j.quantity} identical pieces
-            </p>
-            <p>
-              {j.factory} → {j.section ?? "No Section"} → {j.tailor} · {j.status}
-            </p>
-            {j.notes && <p>{j.notes}</p>}
-            <p>
-              Required quantities:{" "}
-              {j.requirements
-                .map(
-                  (r) =>
-                    `${r.name}${r.batch ? ` · ${r.batch}` : ""}${r.thaan_id ? ` · Than ${r.thaan_id.slice(0, 8)}` : ""}: ${quantityText(r.quantity, r.unit)}`,
-                )
-                .join("; ")}
-            </p>
-            {j.events.map((e, i) => (
-              <p key={i}>
-                {e.status} · {e.reason} · {new Date(e.recorded_at).toLocaleString()}
+      {!catalogOnly && (
+        <div className="mt-4 space-y-3">
+          {jobs.data?.map((j) => (
+            <article key={j.id} className="rounded border p-3">
+              <p className="font-medium">
+                {j.code} · {j.product} · {j.design} · {j.quantity} identical pieces
               </p>
-            ))}
-            {(isOwner || can("tailoring.manage_jobs")) &&
-              ["open", "in_progress"].includes(j.status) && (
-                <Button
-                  disabled={progress.isPending || !!statusPending || !statusReason.trim()}
-                  onClick={() =>
-                    progress.mutate({
-                      p_request: crypto.randomUUID(),
-                      p_job: j.id,
-                      p_expected_status: j.status,
-                      p_status: j.status === "open" ? "in_progress" : "completed",
-                      p_reason: statusReason.trim(),
-                    })
-                  }
-                >
-                  {j.status === "open" ? "Start production" : "Confirm job completed"}
-                </Button>
-              )}
-          </article>
-        ))}
-        {jobs.data?.length === 0 && <p>No Owner Production Jobs available.</p>}
-      </div>
+              <p>
+                {j.factory} → {j.section ?? "No Section"} → {j.tailor} · {j.status}
+              </p>
+              {j.notes && <p>{j.notes}</p>}
+              <p>
+                Required quantities:{" "}
+                {j.requirements
+                  .map(
+                    (r) =>
+                      `${r.name}${r.batch ? ` · ${r.batch}` : ""}${r.thaan_id ? ` · Than ${r.thaan_id.slice(0, 8)}` : ""}: ${quantityText(r.quantity, r.unit)}`,
+                  )
+                  .join("; ")}
+              </p>
+              {j.events.map((e, i) => (
+                <p key={i}>
+                  {e.status} · {e.reason} · {new Date(e.recorded_at).toLocaleString()}
+                </p>
+              ))}
+              {(isOwner || can("tailoring.manage_jobs")) &&
+                ["open", "in_progress"].includes(j.status) && (
+                  <Button
+                    disabled={progress.isPending || !!statusPending || !statusReason.trim()}
+                    onClick={() =>
+                      progress.mutate({
+                        p_request: crypto.randomUUID(),
+                        p_job: j.id,
+                        p_expected_status: j.status,
+                        p_status: j.status === "open" ? "in_progress" : "completed",
+                        p_reason: statusReason.trim(),
+                      })
+                    }
+                  >
+                    {j.status === "open" ? "Start production" : "Confirm job completed"}
+                  </Button>
+                )}
+            </article>
+          ))}
+          {jobs.data?.length === 0 && <p>No Owner Production Jobs available.</p>}
+        </div>
+      )}
     </Panel>
   );
 }
