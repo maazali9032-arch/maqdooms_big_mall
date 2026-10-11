@@ -17,6 +17,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEcommerceRouteImport } from './routes/_authenticated/ecommerce'
+import { Route as AuthenticatedMyWorkRouteImport } from './routes/_authenticated/my-work'
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -63,6 +64,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedEcommerceRoute = AuthenticatedEcommerceRouteImport.update({
   id: '/ecommerce',
   path: '/ecommerce',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMyWorkRoute = AuthenticatedMyWorkRouteImport.update({
+  id: '/my-work',
+  path: '/my-work',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPosRoute = AuthenticatedPosRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/my-work': typeof AuthenticatedMyWorkRoute
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/my-work': typeof AuthenticatedMyWorkRoute
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/_authenticated/my-work': typeof AuthenticatedMyWorkRoute
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/ecommerce'
+    | '/my-work'
     | '/pos'
     | '/reports'
     | '/settings'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/ecommerce'
+    | '/my-work'
     | '/pos'
     | '/reports'
     | '/settings'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/_authenticated/customers'
     | '/_authenticated/dashboard'
     | '/_authenticated/ecommerce'
+    | '/_authenticated/my-work'
     | '/_authenticated/pos'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
@@ -281,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEcommerceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/my-work': {
+      id: '/_authenticated/my-work'
+      path: '/my-work'
+      fullPath: '/my-work'
+      preLoaderRoute: typeof AuthenticatedMyWorkRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/pos': {
       id: '/_authenticated/pos'
       path: '/pos'
@@ -346,6 +365,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEcommerceRoute: typeof AuthenticatedEcommerceRoute
+  AuthenticatedMyWorkRoute: typeof AuthenticatedMyWorkRoute
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -362,6 +382,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEcommerceRoute: AuthenticatedEcommerceRoute,
+  AuthenticatedMyWorkRoute: AuthenticatedMyWorkRoute,
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,

@@ -88,6 +88,7 @@ try {
   await page.getByLabel("Fabric Barcode", { exact: true }).fill("RDS-12345678c");
   await page.getByRole("button", { name: "Scan", exact: true }).click();
   await page.getByLabel("Stock location", { exact: true }).selectOption("floor1");
+  await page.getByLabel("Salesperson ID", { exact: true }).selectOption("sales-one");
   await page.getByLabel("Selling price per metre (₹)", { exact: true }).fill("333.33");
   await page.getByPlaceholder("Cut metres", { exact: true }).fill("2.5");
   check(

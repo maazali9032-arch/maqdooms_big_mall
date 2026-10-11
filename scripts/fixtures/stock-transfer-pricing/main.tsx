@@ -25,7 +25,7 @@ export function Fixture() {
       ? deny
         ? []
         : ["stock.transfer", "stock.print_barcode"]
-      : ["pos.sell", "pos.enter_price"];
+      : ["pos.sell", "pos.enter_price", "pos.assign_salesperson"];
   return (
     <SessionContext.Provider
       value={{

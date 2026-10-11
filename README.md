@@ -1788,6 +1788,12 @@ is also implemented and migrated live. Transfers keep the original barcode and
 update location balances immediately; fabric POS uses Counter-entered prices per
 metre. Owner can manage individual user action permissions in Manage Access.
 
+The [Salesperson and Customer Tailoring total revision](docs/SALESPERSON_TAILORING.md)
+adds the sixth role, one credited Salesperson per bill and a private My Work screen.
+Counter enters one final fabric-and-stitching total. Publish the compatible UI and
+assign Salesperson to active staff before new billing; historical records remain
+unattributed where no Salesperson was recorded.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

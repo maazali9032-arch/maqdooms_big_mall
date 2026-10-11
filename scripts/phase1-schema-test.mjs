@@ -93,7 +93,7 @@ async function replay(directory, withDemo = true) {
     const files = (await readdir(directory))
       .filter(
         (file) =>
-          file.endsWith(".sql") && !file.includes("_stock_transfer_counter_pricing") &&
+          file.endsWith(".sql") && !file.includes("_salesperson_tailoring_pricing") && !file.includes("_stock_transfer_counter_pricing") &&
           !file.includes("_stock_registration") &&
           !file.includes("_live_") &&
           !file.includes("phase2_") &&

@@ -9,6 +9,7 @@ export type ModuleKey =
   | "stock_entry"
   | "stock_transfer"
   | "pos"
+  | "salesperson_work"
   | "tailoring"
   | "customers"
   | "ecommerce"
@@ -24,6 +25,7 @@ export const MODULE_PATHS: Record<ModuleKey, string> = {
   stock_transfer: "/inventory/transfers",
   inventory: "/inventory",
   pos: "/pos",
+  salesperson_work: "/my-work",
   tailoring: "/tailoring",
   customers: "/customers",
   ecommerce: "/ecommerce",
@@ -40,6 +42,7 @@ export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
   stock_entry: ["stock_entry", "stock_transfer", "inventory", "settings"],
   counter: ["pos", "settings"],
+  salesperson: ["salesperson_work", "settings"],
   ecommerce_manager: ["inventory", "ecommerce", "whatsapp", "settings"],
   tailor: ["tailoring", "settings"],
 };
@@ -72,6 +75,11 @@ export function moduleForPath(pathname: string): ModuleKey | null {
  * in Postgres.
  */
 export function canAccessPath(roles: string[], permissions: string[], pathname: string): boolean {
+  if (pathname === "/my-work" || pathname.startsWith("/my-work/"))
+    return (
+      roles.includes("owner") ||
+      (roles.includes("salesperson") && permissions.includes("salesperson.view_work"))
+    );
   if (pathname === "/inventory/transfers" || pathname.startsWith("/inventory/transfers/"))
     return (
       roles.includes("owner") ||

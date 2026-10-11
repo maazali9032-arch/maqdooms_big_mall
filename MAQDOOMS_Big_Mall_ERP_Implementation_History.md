@@ -4249,3 +4249,164 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner review or deployment direction.
+
+## 2026-10-11 — Salesperson role, bill attribution and Counter tailoring totals
+
+PHASE:
+- Owner-approved revision after Phase 16; Master Plan Section 35 records the new
+  role and manual Customer Tailoring total in place of CP + charge billing.
+
+STATUS:
+- Implemented and verified. Migration is committed live, its original hash recorded,
+  and independent cumulative schema, live permissions and public API checks pass.
+- Frontend publishing and assignment of real staff to Salesperson remain required.
+
+IMPLEMENTED:
+- Sixth role `salesperson`, reusing profiles/authentication/user_roles. A staff
+  member may also hold Counter; no separate login or salesperson identity table.
+- Mandatory one active Salesperson ID per new canonical bill, separate from POS
+  created_by. Linked Customer Tailoring job/order carry the same immutable ID.
+- My Work sidebar/page: own attributed bills, exact amounts/quantities/barcodes,
+  source and stitching progress. Owner views all and can filter; keyset pagination.
+- Counter enters one final Customer Tailoring total; no CP-derived quote/charge
+  selection. Known CP snapshots remain internal, unknown costs stay null, and later
+  stock CP fill does not rewrite them. No invented separate stitching cost.
+- POS carries selected fabric/source/customer/Salesperson into stitching before
+  completing a separate sale. Selected metres may go directly to stitching without
+  fabric SP. Booking atomically creates job, material issue and order; deducts once.
+- Exact requests freeze on uncertain results; price/attribution/branch cannot change
+  before retry. After success, Salesperson selection and manual total reset for the
+  next bill. Direct fabric price-per-metre rules and Finished Product SP retained.
+
+MODIFIED:
+- New `src/features/salesperson/SalespersonPicker.tsx`, `use-salespeople.ts`,
+  `SalespersonWork.tsx`, and `src/routes/_authenticated/my-work.tsx`.
+- `src/app/access/modules.ts`, `src/app/layouts/AppShell.tsx`,
+  `src/app/providers/session.tsx`, generated route tree: role label, own-work
+  landing/sidebar/permission guard; dual-role union preserved.
+- `src/features/pos/DirectFabricSale.tsx`, `FinishedProductSale.tsx`: required
+  Salesperson selection, attributed API calls/retries, work-cache invalidation.
+- `src/features/tailoring/CustomerTailoring.tsx`: entered total, carried selection,
+  Factory/Section/Tailor booking, unknown-cost display and attributed history.
+- CustomerTailoring and CustomerTailoringCustomer use unique form IDs so the
+  carried stitching form and a previously visited standalone tab cannot share
+  label targets. Completed sales/bookings clear rate/quantity/Salesperson state.
+- `customer-tailoring-bill.ts`: optional escaped Salesperson ID on printed bill;
+  existing exact paise formatting/private-field projection retained.
+- `src/integrations/supabase/types.ts`: checked API signatures. Master Plan,
+  README, this history and `docs/SALESPERSON_TAILORING.md` updated.
+- New salesperson-tailoring database/UI/API tests, navigation test and synthetic
+  fixture. Historical phase and preceding revision test loaders exclude this later
+  business override while retaining assertions. Transfer fixture now supplies the
+  newly mandatory Salesperson selection and required customer-hook exports.
+- `scripts/live-db-rollout.mjs`: cumulative extension verification/tracking;
+  transaction-local preservation baseline under bounded table locks, metadata row
+  preservation and no false failure from legitimate post-commit app writes.
+- `scripts/live-db-verify.mjs`: new booking, attributed sale, helper/private price,
+  Owner work/directory and role denial checks. Separate evidence files preserve
+  older phase/revision reports instead of overwriting historical evidence.
+
+REUSED:
+- Existing staff login, role assignment, action overrides, canonical orders/jobs,
+  location authority, Factory/Section/Tailor assignments, material issue/ledger
+  safeguards, immutable history, status management, audits and customer-safe print.
+
+DATABASE CHANGES:
+- New `supabase/migrations/20261011000200_salesperson_tailoring_pricing.sql`;
+  identical `drizzle/migrations/0032_salesperson_tailoring_pricing.sql`, journal
+  index 32. SHA256 both:
+  `d01a685bb6aa599c64c43c62e24d880c221789b6bdc580a7238073c8901c9cc5`.
+- Added nullable salesperson_user_id profiles FKs to orders and
+  customer_tailoring_jobs; old records remain null. Added salesperson_orders_idx
+  and salesperson_jobs_idx on user/created_at/id.
+- New counter_tailoring_prices: job_id PK/FK, generated audit id=job_id, entered
+  final total, nullable original CP total, private cuts JSON, recording profile/time.
+  Exact safe-range nonnegative money checks and array constraint; PK index.
+- New attribution BEFORE INSERT/UPDATE triggers enforce eligible Salesperson,
+  permanent attribution and job/order agreement. New price immutability and audit
+  triggers; no modification of older applied trigger/migration files.
+- Seven new functions/overloads: require_salesperson, guard_salesperson_attribution,
+  salesperson_options, salesperson_work, book_counter_tailoring and attributed
+  complete_counter_fabric_sale / complete_finished_product_sale overloads.
+- Replaced four functions through this new migration: guard_phase7_history keeps
+  consumable protections and validates either old quote or new private cuts;
+  customer_tailoring_history projects attribution; owner_customer_tailoring_costs
+  and owner_erp_report support both original and manual pricing snapshots.
+- RLS: Owner-only private snapshot SELECT; authenticated raw mutations/TRUNCATE
+  not granted; service_role retained. Helpers revoked from browser roles. New
+  checked APIs authenticated-only, fixed search paths; personal work filtered to
+  auth.uid() and permission, without granting raw orders/customers/private costs.
+- Added one role, three permissions (salesperson.view_work, pos.assign_salesperson,
+  pos.enter_tailoring_total) and three role defaults (Salesperson viewing, Counter
+  selection/total entry). Existing metadata audit triggers append seven audit rows.
+- Data/backfill: no automatic user-role assignment, staff ID replacement, guessed
+  historical attribution, price/cost/quantity/location/seed rewrite or manual DB edit.
+  Existing generated CP + charge price tables remain untouched.
+- Original live application committed and recorded at 2026-10-10 22:06:43 UTC /
+  2026-10-11 03:36:43 IST. Both migration ledgers contain the same new version/hash;
+  32 earlier versions were retained/skipped. Original baseline: 79 public tables /
+  441 rows. Original-column fingerprints and all pre-existing metadata rows passed
+  inside the migration transaction before its ledger entry/commit. Nullable columns
+  add no historical attribution. New snapshot table initially empty.
+- The first runner then failed its AFTER-COMMIT profile fingerprint comparison
+  because concurrent normal app activity changed profiles. It had already committed;
+  this was not a failed SQL execution or rollback. Initial commentary described it
+  incorrectly as rollback, then was explicitly corrected after inspecting the ledger.
+- No migration was rerun/rewritten to satisfy that check. Runner's later resume
+  matched hash/schema and skipped the recorded file. New runner locking/baseline
+  improvement is version-controlled for subsequent applications. Post-commit check
+  evidence is retained in SALESPERSON_TAILORING_POST_COMMIT_CHECK.json; current
+  schema recheck confirms salesperson_tailoring_verified=true.
+
+SECURITY / PERMISSIONS:
+- Pure Salesperson can only view own work/Settings; cannot bill, transfer, alter
+  jobs, list other staff or retrieve internal CP/cost/retry payloads. Owner sees all.
+- Counter operator and credited Salesperson remain distinct. Owner assigns roles
+  and can deny/reset work viewing, selection and final-total entry individually.
+- Historical credit survives deactivation; inactive/invalid/non-Salesperson IDs
+  cannot be selected for new bills. No new real staff account/role was assigned.
+
+TESTS:
+- 153 new database assertions pass across Supabase demo, Drizzle demo and clean
+  replay: historical preservation, eligible IDs, actor/credit separation, manual
+  total/no charge formula, unknown CP and later fill, exact/changed retries, stock
+  deduction once, immutable attribution/prices, own-work isolation, permissions,
+  status progress, pagination, deactivation and Finished Product bill attribution.
+- 27 actual-component browser checks pass: carry selected metres without fabric
+  SP, final total and Salesperson, frozen interrupted booking/retry, no parallel
+  fabric-sale/old-quote call, personal/Owner work and other-person isolation.
+  Tailoring/My Work fit 320/390/768/1440px; no browser errors.
+- Ten new navigation/dual-role checks pass. All 18 historical cumulative DB suites
+  pass (5,493 assertions); preceding transfer/pricing 132 DB and 15 UI checks pass;
+  Stock Entry browser 16 and Phase 16 browser 24 checks pass with current source.
+- All 418 live security checks and ten anonymous live API discovery/denial checks
+  pass. No live business transaction, fixture user or Salesperson login was created.
+- Exact verification evidence saved under separate SALESPERSON_TAILORING_* JSONs;
+  original phase/revision documents restored as historical evidence.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Eight existing
+  fast-refresh warnings remain; the new hook is separated to avoid adding one.
+- Final Vercel-preset production build passes from the earlier clean patched
+  installation; core 1.169.39 and Vercel output verified. No dependency/.env,
+  deployment configuration, commit/push or published history rewrite performed.
+
+BUSINESS RULES VERIFIED:
+- Six separate roles, optional dual-role staffing, one Salesperson per entire bill,
+  same attribution on linked job, separate authenticated operator, own/Owner work
+  access, entered final tailoring total, private CP and one fabric deduction.
+
+REMAINING:
+- Publish compatible frontend and Owner-assign Salesperson to appropriate active
+  accounts before new billing. Older clients cannot create uncredited canonical
+  bills; no default Salesperson is guessed. Existing historical records remain
+  available in original history/report APIs; My Work covers attributed records.
+- Real staff login, printer/scanner, large-history and multi-connection race
+  acceptance; four prior legacy job-domain/assignment Owner decisions remain.
+- No new commission/targets, historical attribution correction, new payment
+  collection, customer-owned/already-sold fabric reissue or multi-source bill model
+  inferred. Existing tailoring booking does not assert received payment; product
+  SP/production costs and direct fabric rate calculations remain unchanged.
+
+NEXT PHASE:
+- None started. Await Owner review/publishing direction.

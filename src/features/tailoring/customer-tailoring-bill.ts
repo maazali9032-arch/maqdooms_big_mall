@@ -1,4 +1,5 @@
 export type CustomerTailoringBill = {
+  salesperson_user_id?: string | null;
   order_code: string;
   garment: string;
   source_name: string;
@@ -25,7 +26,7 @@ export function customerTailoringBillHtml(bill: CustomerTailoringBill) {
   <style>body{font:16px system-ui;max-width:700px;margin:24px auto;padding:0 16px}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}@page{margin:12mm}@media print{body{margin:0;padding:0}thead{display:table-header-group}tr{break-inside:avoid}}</style></head>
   <body><h1>Maqdoom’s Big Mall</h1><h2>Customer Tailoring Order</h2><p>${escape(bill.order_code)}</p>
   <p>${escape(bill.customer_snapshot.name)} · ${escape(bill.customer_snapshot.phone)}<br>WhatsApp: ${escape(bill.customer_snapshot.whatsapp_phone)}</p>
-  <p>Garment: ${escape(bill.garment)}<br>Location: ${escape(bill.source_name)}<br>Date: ${escape(bill.created_at)}</p>
+  <p>Garment: ${escape(bill.garment)}<br>Location: ${escape(bill.source_name)}<br>Date: ${escape(bill.created_at)}${bill.salesperson_user_id ? `<br>Salesperson ID: ${escape(bill.salesperson_user_id)}` : ""}</p>
   <table><thead><tr><th>Fabric / Batch</th><th>Required quantity</th></tr></thead><tbody>${bill.issues.map((i) => `<tr><td>${escape(i.fabric_name)} / ${escape(i.batch_code)}</td><td>${escape(i.quantity_mm / 1000)} m</td></tr>`).join("")}</tbody></table>
   <h3>Final customer price: ₹${displayPrice}</h3></body></html>`;
 }

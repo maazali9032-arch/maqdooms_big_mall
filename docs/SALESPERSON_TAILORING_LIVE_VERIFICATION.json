@@ -1,0 +1,25 @@
+{
+  "verified_at": "2026-10-11T08:15:44.156Z",
+  "ledger": {
+    "version": "20261011000200",
+    "filename": "20261011000200_salesperson_tailoring_pricing.sql",
+    "sha256": "d01a685bb6aa599c64c43c62e24d880c221789b6bdc580a7238073c8901c9cc5",
+    "mode": "applied",
+    "verification": {
+      "schema": "matches canonical reference including RLS/grants",
+      "verified_at": "2026-10-10T22:06:43.734Z"
+    }
+  },
+  "schema_verified": true,
+  "original_tables": 79,
+  "original_rows": 441,
+  "preservation": "Original-column fingerprints and complete existing metadata row sets passed before ledger commit; later external profile activity caused a post-commit runner error, not rollback.",
+  "first_application_report": "SALESPERSON_TAILORING_POST_COMMIT_CHECK.json",
+  "schema_recheck": "SALESPERSON_TAILORING_SCHEMA_RECHECK.json",
+  "new_role_rows": 1,
+  "new_permission_rows": 3,
+  "new_default_grants": 3,
+  "new_audit_rows": 7,
+  "live_fixture_transactions": false,
+  "staff_role_assignments_by_agent": 0
+}

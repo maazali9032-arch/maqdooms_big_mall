@@ -1,0 +1,35 @@
+{
+  "verified_at": "2026-10-11T08:19:07.5534040Z",
+  "migration": "20261011000200_salesperson_tailoring_pricing.sql",
+  "mirror": "0032_salesperson_tailoring_pricing.sql",
+  "sha256": "d01a685bb6aa599c64c43c62e24d880c221789b6bdc580a7238073c8901c9cc5",
+  "live_status": "applied; matching hash in both ledgers; independent cumulative schema verified",
+  "initial_post_commit_check": "Concurrent profile activity; committed migration was not rolled back; evidence retained",
+  "original_tables": 79,
+  "original_rows": 441,
+  "historical_attribution_backfill": false,
+  "user_roles_assigned_by_agent": 0,
+  "new_database_checks": 153,
+  "new_browser_checks": 27,
+  "new_navigation_checks": 10,
+  "historical_database_checks": 5493,
+  "transfer_database_regression_checks": 132,
+  "transfer_browser_regression_checks": 15,
+  "stock_entry_browser_regression_checks": 16,
+  "phase16_browser_regression_checks": 24,
+  "live_security_checks": 418,
+  "live_api_checks": 10,
+  "typescript": "passed",
+  "scoped_lint": "0 errors; 8 existing warnings",
+  "vercel_build": "passed",
+  "deployed": false,
+  "required_setup": [
+    "Publish compatible frontend",
+    "Owner assigns Salesperson to appropriate active staff"
+  ],
+  "limitations": [
+    "No live dedicated Salesperson login or transaction fixtures",
+    "No multi-connection race or real printer/scanner acceptance",
+    "Four pre-existing Owner legacy job decisions"
+  ]
+}

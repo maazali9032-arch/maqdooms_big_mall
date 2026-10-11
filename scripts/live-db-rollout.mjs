@@ -24,7 +24,12 @@ const sql = postgres(process.env.LOVABLE_DB_MIGRATION_URL, {
   onnotice: () => {},
 });
 const report = { started_at: new Date().toISOString(), applied: [], verified: [] };
-const pricingMetadataTables = new Set(["permissions", "role_permissions", "erp_audit_records"]);
+const pricingMetadataTables = new Set([
+  "roles",
+  "permissions",
+  "role_permissions",
+  "erp_audit_records",
+]);
 const preserve = (before, after, pricing = false) => {
   for (const [table, value] of Object.entries(before)) {
     if (pricing && pricingMetadataTables.has(table)) continue;
@@ -135,16 +140,30 @@ const execute = async (file, expected) => {
   // SQL files retain original BEGIN/COMMIT. Strip only top-level wrapper lines
   // so verification and migration metadata share the runner's transaction.
   const statements = text.replace(/^BEGIN;\s*$/m, "").replace(/^COMMIT;\s*$/m, "");
-  const baseline = await fingerprint();
-  const pricing = file.includes("_stock_transfer_counter_pricing");
+  let baseline;
+  let verifiedAfter;
+  const pricing =
+    file.includes("_stock_transfer_counter_pricing") ||
+    file.includes("_salesperson_tailoring_pricing");
   await sql.begin(async (tx) => {
+    await tx.unsafe("set local lock_timeout='15s'");
+    await tx.unsafe(
+      "lock table " +
+        oldTables
+          .map((t) => 'public."' + t.table_name.replaceAll('"', '""') + '"')
+          .sort()
+          .join(",") +
+        " in share row exclusive mode",
+    );
+    baseline = await fingerprint(tx);
     const metadata = {};
     if (pricing)
       for (const table of pricingMetadataTables)
         metadata[table] = await tx.unsafe(`select to_jsonb(t) value from public.${table} t`);
     await tx.unsafe(statements);
     if (expected) compare(expected, await catalog((q) => tx.unsafe(q)));
-    preserve(baseline, await fingerprint(tx), pricing);
+    verifiedAfter = await fingerprint(tx);
+    preserve(baseline, verifiedAfter, pricing);
     if (pricing)
       for (const [table, rows] of Object.entries(metadata)) {
         const current = new Set(
@@ -166,7 +185,10 @@ const execute = async (file, expected) => {
     });
   });
   report.applied.push(file);
-  preserve(baseline, await fingerprint(), pricing);
+  report.before = baseline;
+  report.after = verifiedAfter;
+  report.preservation_basis =
+    "Full original-column fingerprints and metadata row sets checked inside locked migration transaction; normal post-commit app writes are permitted";
   report.verified.push(file);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   console.log("APPLIED AND VERIFIED:", file, "(existing public rows unchanged)");
@@ -184,7 +206,11 @@ try {
     .sort();
   const expected = {};
   for (const f of files) {
-    if (f.includes("_stock_registration") || f.includes("_stock_transfer_counter_pricing"))
+    if (
+      f.includes("_stock_registration") ||
+      f.includes("_stock_transfer_counter_pricing") ||
+      f.includes("_salesperson_tailoring_pricing")
+    )
       continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
     await reference.exec(await fs.readFile(path.join("supabase/migrations", f), "utf8"));
@@ -305,20 +331,36 @@ try {
     (
       await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${pricingFile}`
     )[0].n > 0;
+  const salespersonFile = files.find((f) => f.includes("_salesperson_tailoring_pricing"));
+  let salespersonExpected;
+  if (salespersonFile) {
+    await reference.exec(
+      await fs.readFile(path.join("supabase/migrations", salespersonFile), "utf8"),
+    );
+    salespersonExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const salespersonRecorded =
+    salespersonFile &&
+    (
+      await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${salespersonFile}`
+    )[0].n > 0;
   compare(
-    pricingRecorded
-      ? pricingExpected
-      : registrationRecorded
-        ? registrationExpected
-        : currentPhase === 8 && !guardRecorded
-          ? phase8Base
-          : expected[currentPhase],
+    salespersonRecorded
+      ? salespersonExpected
+      : pricingRecorded
+        ? pricingExpected
+        : registrationRecorded
+          ? registrationExpected
+          : currentPhase === 8 && !guardRecorded
+            ? phase8Base
+            : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
   report.current_phase_verified = currentPhase;
   report.stock_registration_verified = Boolean(registrationRecorded);
   report.stock_transfer_counter_pricing_verified = Boolean(pricingRecorded);
+  report.salesperson_tailoring_verified = Boolean(salespersonRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -340,8 +382,9 @@ try {
     if (phase15File) await execute(phase15File, expected[15]);
     if (registrationFile) await execute(registrationFile, registrationExpected);
     if (pricingFile) await execute(pricingFile, pricingExpected);
-    report.after = await fingerprint();
-    preserve(report.before, report.after, Boolean(pricingFile));
+    if (salespersonFile) await execute(salespersonFile, salespersonExpected);
+    if (report.applied.length) preserve(report.before, report.after, Boolean(pricingFile));
+    else report.after = await fingerprint();
     console.log(
       "All implemented phase schemas and permissions verified; all pre-existing public rows preserved.",
     );

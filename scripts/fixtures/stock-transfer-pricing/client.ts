@@ -26,6 +26,7 @@ export const supabase = {
   rpc: async (name: string, args: Args = {}) => {
     calls.push({ name, args });
     let data: unknown = [];
+    if (name === "salesperson_options") data = [{ id: "sales-one", name: "Sales One" }];
     if (name === "fabric_stock_catalog") data = [{ ...stock, locations: stockLocations }];
     if (name === "inventory_catalog")
       data = [{ item_kind: "fabric", item_id: "than", inventory_item_id: "item" }];

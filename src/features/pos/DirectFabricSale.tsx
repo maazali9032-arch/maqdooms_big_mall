@@ -12,6 +12,9 @@ import { formatMoney as displayMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
 import { fabricSaleCut } from "./fabric-sale-input";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
+import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
+import { CustomerTailoring, type TailoringSelection } from "@/features/tailoring/CustomerTailoring";
+import { customerTailoringCut } from "@/features/tailoring/customer-tailoring-input";
 
 const formatMoney = (paise: number | null | undefined) => displayMoney(paise, true);
 
@@ -94,6 +97,10 @@ export function DirectFabricSale() {
   const [price, setPrice] = useState("");
   const [cart, setCart] = useState<Cut[]>([]);
   const [customer, setCustomer] = useState("");
+  const [salesperson, setSalesperson] = useState("");
+  const [stitching, setStitching] = useState(false);
+  const [stitchingSelection, setStitchingSelection] = useState<TailoringSelection | null>(null);
+  const [bookedTailoring, setBookedTailoring] = useState("");
   const [reference, setReference] = useState("");
   const [paid, setPaid] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState("");
@@ -115,7 +122,7 @@ export function DirectFabricSale() {
   });
   const checkout = useMutation({
     mutationFn: async () => {
-      if (!cart.length || !source || !paid || !Number.isSafeInteger(total))
+      if (!cart.length || !source || !paid || !salesperson || !Number.isSafeInteger(total))
         throw new Error("Select cuts, source and confirm received payment");
       const items = cart
         .map((c) => ({
@@ -124,7 +131,13 @@ export function DirectFabricSale() {
           sp_paise_per_m: c.sp,
         }))
         .sort((a, b) => a.inventory_item_id.localeCompare(b.inventory_item_id));
-      const signature = JSON.stringify({ source, items, customer, reference: reference.trim() });
+      const signature = JSON.stringify({
+        source,
+        items,
+        customer,
+        salesperson,
+        reference: reference.trim(),
+      });
       if (request.current && request.current.signature !== signature)
         throw new Error("Retry or resolve the pending sale before changing it");
       request.current ??= { id: crypto.randomUUID(), signature };
@@ -134,7 +147,8 @@ export function DirectFabricSale() {
         p_items: items,
         p_customer: customer || null,
         p_payment_confirmed: true,
-        p_reference: reference.trim() || undefined,
+        p_reference: reference.trim(),
+        p_salesperson: salesperson,
       });
       if (error) {
         // PostgreSQL exceptions prove the transaction rolled back. Transport
@@ -151,6 +165,8 @@ export function DirectFabricSale() {
       request.current = null;
       setUncertain(false);
       setCart([]);
+      setSalesperson("");
+      setPrice("");
       setPaid(false);
       setChoices({});
       setSelectedOrder(id);
@@ -171,6 +187,7 @@ export function DirectFabricSale() {
           "movements",
           "dashboard-metrics",
           "customers",
+          "salesperson-work",
         ].map((key) => qc.invalidateQueries({ queryKey: [key] })),
       );
     },
@@ -223,6 +240,62 @@ export function DirectFabricSale() {
     }
   }
   const order = history.data?.find((o) => o.id === selectedOrder);
+  function stitchSelectedMetres() {
+    try {
+      if (!stock || !source || !salesperson)
+        throw new Error("Select fabric, source and Salesperson first");
+      if (cart.length)
+        throw new Error("Use the stitching option below to carry your existing cart");
+      const cuts = stock.cuts
+        .filter((c) => Boolean(choices[c.inventory_item_id]?.trim()))
+        .map((c) => ({
+          inventory_item_id: c.inventory_item_id,
+          thaan_id: c.thaan_id,
+          quantity: customerTailoringCut(
+            choices[c.inventory_item_id] ?? "",
+            c.locations.find((l) => l.id === source)?.quantity_mm ?? 0,
+          ),
+          label: `${stock.fabric_name} / ${stock.batch_code}`,
+        }));
+      if (!cuts.length) throw new Error("Enter metres for stitching");
+      setStitchingSelection({ source, cuts, customer, salesperson });
+      setStitching(true);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  }
+  if (stitching)
+    return (
+      <CustomerTailoring
+        initialSelection={
+          stitchingSelection ?? {
+            source,
+            cuts: cart.map((c) => ({
+              inventory_item_id: c.inventory_item_id,
+              thaan_id: c.thaan_id,
+              quantity: c.quantity,
+              label: c.label,
+            })),
+            customer,
+            salesperson,
+          }
+        }
+        onCancel={() => {
+          setStitching(false);
+          setStitchingSelection(null);
+        }}
+        onBooked={(id) => {
+          setBookedTailoring(id);
+          setCart([]);
+          setSalesperson("");
+          setChoices({});
+          setPrice("");
+          setPaid(false);
+          setStitching(false);
+          setStitchingSelection(null);
+        }}
+      />
+    );
   return (
     <Panel
       title="Direct Fabric Sale"
@@ -282,6 +355,15 @@ export function DirectFabricSale() {
               </option>
             ))}
         </select>
+        <SalespersonPicker
+          id="fabric-salesperson"
+          value={salesperson}
+          onChange={(value) => {
+            setSalesperson(value);
+            setPaid(false);
+          }}
+          disabled={frozen}
+        />
         {stock && (
           <div className="space-y-2">
             <p>
@@ -349,6 +431,19 @@ export function DirectFabricSale() {
             <Button disabled={frozen || !price.trim() || !can("pos.enter_price")} onClick={addCuts}>
               Add cuts to sale
             </Button>
+            <Button
+              variant="outline"
+              disabled={
+                frozen ||
+                !source ||
+                !salesperson ||
+                !can("pos.issue_to_tailoring") ||
+                !can("pos.enter_tailoring_total")
+              }
+              onClick={stitchSelectedMetres}
+            >
+              Use selected metres for stitching
+            </Button>
           </div>
         )}
         {cart.map((c) => (
@@ -370,6 +465,30 @@ export function DirectFabricSale() {
           </div>
         ))}
         <Label htmlFor="direct-sale-customer">Customer</Label>
+        <p>Customer wants stitching?</p>
+        <Button
+          variant="outline"
+          disabled={
+            frozen ||
+            !cart.length ||
+            !salesperson ||
+            !can("pos.issue_to_tailoring") ||
+            !can("pos.enter_tailoring_total")
+          }
+          onClick={() => setStitching(true)}
+        >
+          Yes — select Factory and Tailor
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          For fabric only, complete the sale below. For stitching, selected fabric is carried into
+          one linked order and deducted once.
+        </p>
+        {bookedTailoring && (
+          <p role="status" className="break-all">
+            Customer Tailoring booked: {bookedTailoring}. See Customer Tailoring history for the
+            bill and progress.
+          </p>
+        )}
         <select
           id="direct-sale-customer"
           className="w-full rounded border bg-background p-2"
@@ -418,7 +537,9 @@ export function DirectFabricSale() {
             !cart.length ||
             !paid ||
             !can("pos.sell") ||
-            !can("pos.enter_price")
+            !can("pos.enter_price") ||
+            !salesperson ||
+            !can("pos.assign_salesperson")
           }
           onClick={() => checkout.mutate()}
         >

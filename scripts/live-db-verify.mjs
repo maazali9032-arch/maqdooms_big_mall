@@ -444,6 +444,65 @@ try {
         )[0].allowed,
         role + " Phase 15 legacy audit writes sealed",
       );
+      if ((await tx`select to_regclass('public.counter_tailoring_prices') rel`)[0].rel) {
+        await denied(
+          tx,
+          "select public.book_counter_tailoring(null,null,'[]'::jsonb,1,null,null,null,'Test',null)",
+          role + " invalid priced tailoring denied read-only",
+        );
+        await denied(
+          tx,
+          "select public.complete_counter_fabric_sale(null,null,'[]'::jsonb,null,true,null,null)",
+          role + " invalid attributed fabric sale denied read-only",
+        );
+        await denied(
+          tx,
+          "select public.complete_finished_product_sale(null,null,'[]'::jsonb,null,true,null,null)",
+          role + " invalid attributed product sale denied read-only",
+        );
+        await denied(
+          tx,
+          "select public.require_salesperson(null)",
+          role + " private attribution helper denied",
+        );
+        check(
+          !(
+            await tx`select has_table_privilege(current_user,'public.counter_tailoring_prices','INSERT,UPDATE,DELETE,TRUNCATE') allowed`
+          )[0].allowed,
+          role + " raw new price writes sealed",
+        );
+        if (role === "owner") {
+          check(
+            Array.isArray((await tx`select public.salesperson_work() data`)[0].data),
+            "Owner attributed work available",
+          );
+          check(
+            Array.isArray((await tx`select public.salesperson_options() data`)[0].data),
+            "Owner Salesperson directory available",
+          );
+        } else {
+          if (
+            person.roles.includes("salesperson") &&
+            (await tx`select public.has_perm(auth.uid(),'salesperson.view_work') allowed`)[0]
+              .allowed
+          ) {
+            const work = (await tx`select public.salesperson_work() data`)[0].data;
+            check(
+              Array.isArray(work) && work.every((row) => row.salesperson_user_id === person.id),
+              role + " dual-role personal work stays scoped",
+            );
+          } else
+            await denied(
+              tx,
+              "select public.salesperson_work()",
+              role + " personal work requires Salesperson role",
+            );
+          check(
+            (await tx`select count(*)::int n from public.counter_tailoring_prices`)[0].n === 0,
+            role + " internal new CP snapshots hidden",
+          );
+        }
+      }
       if (
         (
           await tx`select to_regprocedure('public.complete_counter_fabric_sale(uuid,uuid,jsonb,uuid,boolean,text)') f`

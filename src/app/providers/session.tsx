@@ -183,6 +183,7 @@ export const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
   stock_entry: "Stock Entry",
   counter: "Counter",
+  salesperson: "Salesperson",
   tailor: "Tailor",
   ecommerce_manager: "E-commerce Manager",
 };

@@ -1449,3 +1449,34 @@ access and fixed Owner fabric-SP requirements for this workflow:
 - Historical stock, prices, immutable financial snapshots and migration files are
   preserved. Older sale APIs remain for historical compatibility. Finished Product
   pricing and Customer Tailoring CP/charges are outside this fabric pricing change.
+
+# 35. OWNER-APPROVED SALESPERSON AND CUSTOMER TAILORING TOTAL REVISION
+
+Approved 11 October 2026. These subsequent instructions supersede the earlier
+Customer Tailoring CP + charge pricing rule for newly booked Counter orders.
+
+- Add Salesperson as a separate sixth role alongside Owner, Counter / POS,
+  E-commerce Manager, Tailor and Stock Entry. Reuse existing profiles, authentication
+  and role assignments. A user can hold both Counter and Salesperson roles.
+- POS explicitly selects one active Salesperson ID for the entire bill. Its
+  credited Salesperson is separate from the authenticated operator in created_by.
+  Customer Tailoring carries the same Salesperson into the linked job and order.
+- Salesperson can log in to My Work to view only their attributed bills, fabric
+  quantities, customer-facing prices and linked stitching progress. Owner can view
+  and filter all attributed work. CP/internal costs and administrative access remain
+  protected; Salesperson alone cannot sell, transfer, edit jobs or choose other users.
+- Direct fabric sales still use the Counter-entered price per metre × metres.
+- For Customer Tailoring, Counter enters one final total for the entire fabric
+  and stitching order. No CP-derived quote or predefined tailoring charge determines
+  this amount. CP is preserved only as an internal snapshot where known; omitted CP
+  remains unknown and does not block a manually priced customer order.
+- Choose stitching before completing a separate fabric sale. Carry selected fabric,
+  quantities, source, customer and Salesperson into one atomic tailoring booking;
+  create its job, required material issue and bill while deducting fabric once.
+- Historical orders/jobs retain unknown Salesperson attribution. No automatic
+  assignments or historical price changes. Existing generated CP + charge pricing
+  tables remain unchanged; new manual totals use a separate private snapshot table.
+- Finished Product bills also record one selected Salesperson; their existing
+  Owner-controlled product SP and production-cost rules remain unchanged.
+- Owner can revoke or grant Salesperson work viewing, Salesperson selection and
+  final tailoring-total entry through the existing individual permissions controls.

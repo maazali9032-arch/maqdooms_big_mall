@@ -1139,6 +1139,25 @@ export type Database = {
     };
     Functions: {
       register_delivery_batch: { Args: { p_request: string; p_provider: string }; Returns: string };
+      salesperson_options: { Args: Record<PropertyKey, never>; Returns: Json };
+      salesperson_work: {
+        Args: { p_salesperson?: string; p_after?: string; p_after_id?: string; p_limit?: number };
+        Returns: Json;
+      };
+      book_counter_tailoring: {
+        Args: {
+          p_request: string;
+          p_source: string;
+          p_items: Json;
+          p_final_price: number;
+          p_customer: string;
+          p_assignment: string;
+          p_salesperson: string;
+          p_garment: string;
+          p_notes?: string;
+        };
+        Returns: string;
+      };
       register_fabric_type: {
         Args: { p_request: string; p_batch: string; p_name: string; p_rows: Json };
         Returns: string;
@@ -1196,12 +1215,13 @@ export type Database = {
       finished_product_sale_scan: { Args: { p_barcode: string }; Returns: Json };
       complete_finished_product_sale: {
         Args: {
+          p_salesperson: string;
           p_request: string;
           p_source: string;
           p_items: Json;
           p_customer: string | null;
           p_payment_confirmed: boolean;
-          p_reference?: string;
+          p_reference: string;
         };
         Returns: string;
       };
@@ -1378,12 +1398,13 @@ export type Database = {
       };
       complete_counter_fabric_sale: {
         Args: {
+          p_salesperson: string;
           p_request_id: string;
           p_source: string;
           p_items: Json;
           p_customer: string | null;
           p_payment_confirmed: boolean;
-          p_reference?: string;
+          p_reference: string;
         };
         Returns: string;
       };

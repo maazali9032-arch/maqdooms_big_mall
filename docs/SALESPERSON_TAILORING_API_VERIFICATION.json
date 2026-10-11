@@ -1,0 +1,32 @@
+{
+  "verified_at": "2026-10-11T08:05:01.612Z",
+  "checks": 10,
+  "results": [
+    {
+      "rpc": "salesperson_options",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "salesperson_work",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "book_counter_tailoring",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "complete_counter_fabric_sale",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "complete_finished_product_sale",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "mode": "anonymous invalid-input discovery/denial; no live transaction fixtures"
+}

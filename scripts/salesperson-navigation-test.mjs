@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { allowedModules, canAccessPath, homePath } from "../src/app/access/modules.ts";
+const permission = ["salesperson.view_work"];
+assert.equal(homePath(["salesperson"], permission), "/my-work");
+assert.equal(homePath(["salesperson"], []), "/settings");
+assert(canAccessPath(["salesperson"], permission, "/my-work"));
+assert(!canAccessPath(["salesperson"], [], "/my-work"));
+assert(!canAccessPath(["salesperson"], permission, "/pos"));
+assert(!canAccessPath(["counter"], permission, "/my-work"));
+assert(canAccessPath(["owner"], [], "/my-work"));
+assert(allowedModules(["counter", "salesperson"]).has("pos"));
+assert(allowedModules(["counter", "salesperson"]).has("salesperson_work"));
+assert.equal(homePath(["counter", "salesperson"], ["pos.sell", ...permission]), "/pos");
+console.log("PASS: 10 Salesperson navigation/role checks");

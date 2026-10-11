@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,9 @@ import { Panel } from "@/shared/components/page";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { formatMoney } from "@/shared/utils/units";
+import { formatMoney as displayMoney } from "@/shared/utils/units";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
+import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { formatDateTime } from "@/shared/utils/format";
 import { CustomerTailoringSetup } from "./CustomerTailoringSetup";
 import { hierarchySections, hierarchyTailors } from "./hierarchy-options";
@@ -41,7 +43,13 @@ type Catalogue = {
   charges: { id: string; name: string; code: string; amount_paise?: number }[];
 };
 type Cut = { inventory_item_id: string; thaan_id: string; quantity: number; label: string };
-type Quote = { quote_id: string; final_customer_price_paise: number };
+const formatMoney = (paise: number | null | undefined) => displayMoney(paise, true);
+export type TailoringSelection = {
+  source: string;
+  cuts: Cut[];
+  customer: string;
+  salesperson: string;
+};
 type Job = Omit<CustomerTailoringBill, "issues"> & {
   id: string;
   code: string;
@@ -63,13 +71,27 @@ type Job = Omit<CustomerTailoringBill, "issues"> & {
   })[];
 };
 type Costs = {
-  fabric_cp_total_paise: number;
-  tailoring_charge_paise: number;
-  cuts: { thaan_id: string; quantity: number; cp_paise_per_m: number; cp_amount_paise: number }[];
+  fabric_cp_total_paise: number | null;
+  tailoring_charge_paise: number | null;
+  cuts: {
+    thaan_id: string;
+    quantity: number;
+    cp_paise_per_m: number | null;
+    cp_amount_paise: number | null;
+  }[];
 };
 
-export function CustomerTailoring() {
+export function CustomerTailoring({
+  initialSelection,
+  onBooked,
+  onCancel,
+}: {
+  initialSelection?: TailoringSelection;
+  onBooked?: (id: string) => void;
+  onCancel?: () => void;
+} = {}) {
   const { isOwner, roles, can } = useSession();
+  const formId = useId();
   const mayBook = isOwner || roles.includes("counter");
   const qc = useQueryClient();
   const options = useQuery({
@@ -109,10 +131,12 @@ export function CustomerTailoring() {
   });
   const [barcode, setBarcode] = useState("");
   const [stockId, setStockId] = useState("");
-  const [source, setSource] = useState("");
+  const [source, setSource] = useState(initialSelection?.source ?? "");
   const [choices, setChoices] = useState<Record<string, string>>({});
-  const [cuts, setCuts] = useState<Cut[]>([]);
-  const [customer, setCustomer] = useState("");
+  const [cuts, setCuts] = useState<Cut[]>(initialSelection?.cuts ?? []);
+  const [customer, setCustomer] = useState(initialSelection?.customer ?? "");
+  const [salesperson, setSalesperson] = useState(initialSelection?.salesperson ?? "");
+  const [finalPrice, setFinalPrice] = useState("");
   const [factory, setFactory] = useState("");
   const [section, setSection] = useState("");
   const [assignment, setAssignment] = useState("");
@@ -124,10 +148,8 @@ export function CustomerTailoring() {
     )
       setAssignment("");
   }, [options.data, assignment, factory, section]);
-  const [charge, setCharge] = useState("");
   const [garment, setGarment] = useState("");
   const [notes, setNotes] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
   const [selectedJob, setSelectedJob] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const request = useRef<{ id: string; signature: string } | null>(null);
@@ -156,32 +178,21 @@ export function CustomerTailoring() {
         "movements",
         "dashboard-metrics",
         "customers",
+        "salesperson-work",
       ].map((key) => qc.invalidateQueries({ queryKey: [key] })),
     );
   }
-  const pricing = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.rpc("quote_customer_tailoring", {
-        p_source: source,
-        p_items: customerTailoringItems(cuts),
-        p_charge: charge,
-      });
-      if (error) throw error;
-      return data as unknown as Quote;
-    },
-    onSuccess: (q) => setQuote(q),
-    onError: (e) => {
-      setQuote(null);
-      toast.error(e.message);
-      void catalog.refetch();
-    },
-  });
   const create = useMutation({
     mutationFn: async () => {
-      if (!quote || !customer || !assignment || !garment.trim())
-        throw new Error("Select customer, assignment, garment and calculate final price");
+      if (!customer || !assignment || !garment.trim() || !source || !salesperson)
+        throw new Error("Select customer, Salesperson, assignment, garment and final total");
+      const enteredTotal = fabricMoneyInput(finalPrice);
+      const items = customerTailoringItems(cuts);
       const signature = JSON.stringify({
-        quote: quote.quote_id,
+        source,
+        items,
+        final_price: enteredTotal,
+        salesperson,
         customer,
         assignment,
         garment: garment.trim(),
@@ -190,9 +201,12 @@ export function CustomerTailoring() {
       if (request.current && request.current.signature !== signature)
         throw new Error("Resolve the pending job before edits");
       request.current ??= { id: crypto.randomUUID(), signature };
-      const { data, error } = await supabase.rpc("create_customer_tailoring", {
+      const { data, error } = await supabase.rpc("book_counter_tailoring", {
         p_request: request.current.id,
-        p_quote: quote.quote_id,
+        p_source: source,
+        p_items: items,
+        p_final_price: enteredTotal,
+        p_salesperson: salesperson,
         p_customer: customer,
         p_assignment: assignment,
         p_garment: garment.trim(),
@@ -202,7 +216,6 @@ export function CustomerTailoring() {
         if (error.code?.startsWith("P") || /^[234]/.test(error.code ?? "")) {
           request.current = null;
           setUncertain(false);
-          setQuote(null);
         } else setUncertain(true);
         throw error;
       }
@@ -213,9 +226,11 @@ export function CustomerTailoring() {
       setUncertain(false);
       setSelectedJob(id);
       setCuts([]);
+      setSalesperson("");
+      setFinalPrice("");
       setChoices({});
-      setQuote(null);
       toast.success("Customer Tailoring Job, Material Issue and Order recorded");
+      onBooked?.(id);
     },
     onError: (e) => {
       if (request.current) setUncertain(true);
@@ -237,7 +252,7 @@ export function CustomerTailoring() {
     },
     onError: (e) => toast.error(e.message),
   });
-  const frozen = pricing.isPending || create.isPending || uncertain;
+  const frozen = create.isPending || uncertain;
   function addCuts() {
     try {
       if (!stock || !source) throw new Error("Scan Fabric Barcode and choose source");
@@ -261,7 +276,6 @@ export function CustomerTailoring() {
       if (!additions.length) throw new Error("Enter required quantity");
       setCuts([...cuts, ...additions]);
       setChoices({});
-      setQuote(null);
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -276,9 +290,14 @@ export function CustomerTailoring() {
       {mayBook && (
         <Panel
           title="Customer Tailoring"
-          description="Scan a Fabric Barcode, select the customer and Factory → Section → Tailor, then calculate the final customer price."
+          description="Scan a Fabric Barcode, select the customer and Factory → Section → Tailor, then enter one final customer total."
         >
           <div className="space-y-3">
+            {onCancel && (
+              <Button variant="outline" disabled={frozen} onClick={onCancel}>
+                Back to fabric sale
+              </Button>
+            )}
             {(catalog.error || options.error || locations.error) && (
               <p role="alert" className="text-destructive">
                 {(catalog.error || options.error || locations.error)?.message}
@@ -318,22 +337,20 @@ export function CustomerTailoring() {
                 variant="outline"
                 disabled={frozen}
                 onClick={() => {
-                  setQuote(null);
                   void catalog.refetch();
                 }}
               >
                 Refresh
               </Button>
             </div>
-            <Label htmlFor="ct-source">Source location</Label>
+            <Label htmlFor={`${formId}-ct-source`}>Source location</Label>
             <select
-              id="ct-source"
+              id={`${formId}-ct-source`}
               className="w-full rounded border bg-background p-2"
               value={source}
               disabled={frozen || cuts.length > 0}
               onChange={(e) => {
                 setSource(e.target.value);
-                setQuote(null);
                 setChoices({});
               }}
             >
@@ -356,13 +373,13 @@ export function CustomerTailoring() {
                 </p>
                 {stock.cuts.map((c, index) => (
                   <div key={c.inventory_item_id} className="flex items-center gap-2">
-                    <Label className="flex-1" htmlFor={`ct-cut-${c.inventory_item_id}`}>
+                    <Label className="flex-1" htmlFor={`${formId}-ct-cut-${c.inventory_item_id}`}>
                       Than {index + 1} ({c.thaan_id.slice(0, 8)}) ·{" "}
                       {(c.locations.find((l) => l.id === source)?.quantity_mm ?? 0) / 1000} m
                       available
                     </Label>
                     <Input
-                      id={`ct-cut-${c.inventory_item_id}`}
+                      id={`${formId}-ct-cut-${c.inventory_item_id}`}
                       className="w-32"
                       placeholder="Required m"
                       inputMode="decimal"
@@ -389,7 +406,6 @@ export function CustomerTailoring() {
                   disabled={frozen}
                   onClick={() => {
                     setCuts(cuts.filter((x) => x !== c));
-                    setQuote(null);
                   }}
                 >
                   Remove
@@ -404,9 +420,9 @@ export function CustomerTailoring() {
               disabled={frozen}
               onChange={(e) => setGarment(e.target.value)}
             />
-            <Label htmlFor="ct-factory">Factory</Label>
+            <Label htmlFor={`${formId}-ct-factory`}>Factory</Label>
             <select
-              id="ct-factory"
+              id={`${formId}-ct-factory`}
               className="w-full rounded border bg-background p-2"
               value={factory}
               disabled={frozen}
@@ -423,9 +439,9 @@ export function CustomerTailoring() {
                 </option>
               ))}
             </select>
-            <Label htmlFor="ct-section">Section</Label>
+            <Label htmlFor={`${formId}-ct-section`}>Section</Label>
             <select
-              id="ct-section"
+              id={`${formId}-ct-section`}
               className="w-full rounded border bg-background p-2"
               value={section}
               disabled={frozen || !factory}
@@ -441,9 +457,9 @@ export function CustomerTailoring() {
                 </option>
               ))}
             </select>
-            <Label htmlFor="ct-tailor">Tailor</Label>
+            <Label htmlFor={`${formId}-ct-tailor`}>Tailor</Label>
             <select
-              id="ct-tailor"
+              id={`${formId}-ct-tailor`}
               className="w-full rounded border bg-background p-2"
               value={assignment}
               disabled={frozen || !section}
@@ -456,27 +472,21 @@ export function CustomerTailoring() {
                 </option>
               ))}
             </select>
-            <Label htmlFor="ct-charge">Applicable Tailoring Charge</Label>
-            <select
-              id="ct-charge"
-              className="w-full rounded border bg-background p-2"
-              value={charge}
+            <SalespersonPicker
+              id={`${formId}-ct-salesperson`}
+              value={salesperson}
+              onChange={setSalesperson}
               disabled={frozen}
-              onChange={(e) => {
-                setCharge(e.target.value);
-                setQuote(null);
-              }}
-            >
-              <option value="">Select charge</option>
-              {catalog.data?.charges.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {isOwner && c.amount_paise !== undefined
-                    ? ` · ${formatMoney(c.amount_paise)}`
-                    : ""}
-                </option>
-              ))}
-            </select>
+            />
+            <Label htmlFor={`${formId}-ct-final-price`}>Final customer total (₹)</Label>
+            <Input
+              id={`${formId}-ct-final-price`}
+              inputMode="decimal"
+              placeholder="Enter one total for fabric and stitching"
+              value={finalPrice}
+              disabled={frozen || !can("pos.enter_tailoring_total")}
+              onChange={(e) => setFinalPrice(e.target.value)}
+            />{" "}
             <Input
               aria-label="Customer Tailoring notes"
               placeholder="Job notes (optional)"
@@ -484,18 +494,6 @@ export function CustomerTailoring() {
               disabled={frozen}
               onChange={(e) => setNotes(e.target.value)}
             />
-            <Button
-              variant="outline"
-              disabled={frozen || !source || !cuts.length || !charge}
-              onClick={() => pricing.mutate()}
-            >
-              Calculate final customer price
-            </Button>
-            {quote && (
-              <p className="font-semibold">
-                Final customer price: {formatMoney(quote.final_customer_price_paise)}
-              </p>
-            )}
             {uncertain && (
               <p role="alert">
                 Response interrupted. Keep this page open and retry the unchanged job to resolve it
@@ -505,8 +503,12 @@ export function CustomerTailoring() {
             <Button
               disabled={
                 create.isPending ||
-                pricing.isPending ||
-                !quote ||
+                !finalPrice.trim() ||
+                !salesperson ||
+                !source ||
+                !cuts.length ||
+                !can("pos.enter_tailoring_total") ||
+                !can("pos.assign_salesperson") ||
                 !customer ||
                 !assignment ||
                 !garment.trim() ||
@@ -566,6 +568,9 @@ export function CustomerTailoring() {
               {selected.source_name} · {formatDateTime(selected.created_at)} · User{" "}
               {selected.created_by}
             </p>
+            <p className="break-all">
+              Salesperson ID: {selected.salesperson_user_id || "Unattributed historical order"}
+            </p>
             {selected.issues?.map((i) => (
               <div key={i.movement_id}>
                 <p>
@@ -608,8 +613,14 @@ export function CustomerTailoring() {
                 ) : costs.data ? (
                   <>
                     <p>
-                      Fabric CP total: {formatMoney(costs.data.fabric_cp_total_paise)} · Applicable
-                      Tailoring Charge: {formatMoney(costs.data.tailoring_charge_paise)}
+                      Fabric CP total:{" "}
+                      {costs.data.fabric_cp_total_paise === null
+                        ? "Unknown"
+                        : formatMoney(costs.data.fabric_cp_total_paise)}{" "}
+                      · Recorded Tailoring Charge:{" "}
+                      {costs.data.tailoring_charge_paise === null
+                        ? "No separate charge in Counter total"
+                        : formatMoney(costs.data.tailoring_charge_paise)}
                     </p>
                     {costs.data.cuts.map((c) => (
                       <p key={c.thaan_id}>
@@ -623,9 +634,9 @@ export function CustomerTailoring() {
                 )}
               </div>
             )}
-            <Label htmlFor="ct-job-status">Job status</Label>
+            <Label htmlFor={`${formId}-ct-job-status`}>Job status</Label>
             <select
-              id="ct-job-status"
+              id={`${formId}-ct-job-status`}
               className="w-full rounded border bg-background p-2"
               value={selected.status}
               disabled={status.isPending}

@@ -57,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
         module: "stock_transfer",
       },
       { to: "/pos", label: "Counter / POS", icon: ShoppingCart, module: "pos" },
+      { to: "/my-work", label: "My Work", icon: UserRound, module: "salesperson_work" },
       { to: "/tailoring", label: "Tailoring", icon: Scissors, module: "tailoring" },
       { to: "/customers", label: "Customers", icon: Users, module: "customers" },
     ],

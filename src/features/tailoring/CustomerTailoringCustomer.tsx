@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { useCustomers, useCreateCustomer } from "@/features/customers";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ export function CustomerTailoringCustomer({
   onChange: (id: string) => void;
   disabled: boolean;
 }) {
+  const customerSelectId = useId();
   const customers = useCustomers();
   const create = useCreateCustomer();
   const [name, setName] = useState("");
@@ -35,9 +36,9 @@ export function CustomerTailoringCustomer({
   }
   return (
     <div className="space-y-2">
-      <Label htmlFor="ct-customer">Customer</Label>
+      <Label htmlFor={customerSelectId}>Customer</Label>
       <select
-        id="ct-customer"
+        id={customerSelectId}
         className="w-full rounded border bg-background p-2"
         value={value}
         disabled={disabled}

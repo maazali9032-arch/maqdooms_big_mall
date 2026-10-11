@@ -1,0 +1,9 @@
+{
+  "verified_at": "2026-10-10T21:59:01.527Z",
+  "checks": 153,
+  "chains": [
+    "Supabase demo",
+    "Drizzle demo",
+    "Supabase clean"
+  ]
+}

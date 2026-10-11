@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { formatMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
+import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 
 type Cost = {
   versions: {
@@ -74,6 +75,7 @@ type Order = {
   }[];
 };
 type Request = {
+  p_salesperson: string;
   p_request: string;
   p_source: string;
   p_items: { piece_id: string; sp_version_id: string }[];
@@ -91,6 +93,7 @@ export function FinishedProductSale() {
   const [scan, setScan] = useState("");
   const [cart, setCart] = useState<Piece[]>([]);
   const [customer, setCustomer] = useState("");
+  const [salesperson, setSalesperson] = useState("");
   const [reference, setReference] = useState("");
   const [paid, setPaid] = useState(false);
   const [pending, setPending] = useState<Request | null>(null);
@@ -116,7 +119,7 @@ export function FinishedProductSale() {
   const sale = useMutation({
     mutationFn: async () => {
       if (!can("pos.sell") || !allowed) throw new Error("Sale permission required");
-      if (!pending && (!cart.length || !paid || !Number.isSafeInteger(total)))
+      if (!pending && (!cart.length || !paid || !salesperson || !Number.isSafeInteger(total)))
         throw new Error("Select pieces and confirm payment for the exact total");
       const request = pending ?? {
         p_request: crypto.randomUUID(),
@@ -127,6 +130,7 @@ export function FinishedProductSale() {
         p_customer: customer || null,
         p_payment_confirmed: true,
         p_reference: reference.trim(),
+        p_salesperson: salesperson,
       };
       setPending(request);
       const { data, error } = await supabase.rpc("complete_finished_product_sale", request);
@@ -137,6 +141,7 @@ export function FinishedProductSale() {
       setPending(null);
       setPosted(data);
       setCart([]);
+      setSalesperson("");
       setPaid(false);
       setReference("");
     },
@@ -154,6 +159,7 @@ export function FinishedProductSale() {
           ["finished-product-movements"],
           ["location-ledger"],
           ["customers"],
+          ["salesperson-work"],
           ["dashboard-metrics"],
         ].map((queryKey) => qc.invalidateQueries({ queryKey })),
       );
@@ -323,6 +329,12 @@ export function FinishedProductSale() {
             Final customer price equals Owner SP; no additional sales charges.
           </p>
           <Label htmlFor="product-sale-customer">Customer</Label>
+          <SalespersonPicker
+            id="product-salesperson"
+            value={salesperson}
+            onChange={setSalesperson}
+            disabled={frozen}
+          />
           <select
             id="product-sale-customer"
             className="h-11 w-full rounded border bg-background p-2"
@@ -369,6 +381,8 @@ export function FinishedProductSale() {
             disabled={
               sale.isPending ||
               !can("pos.sell") ||
+              !can("pos.assign_salesperson") ||
+              !salesperson ||
               (!pending && (!cart.length || !paid || !Number.isSafeInteger(total)))
             }
             onClick={() => sale.mutate()}
