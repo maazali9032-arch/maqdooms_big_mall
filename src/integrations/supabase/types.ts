@@ -1624,6 +1624,10 @@ export type Database = {
           id: string;
         }[];
       };
+      owner_user_permission_state: {
+        Args: { p_user: string };
+        Returns: Json;
+      };
       adjust_thaan: {
         Args: {
           p_delta_mm: number;

@@ -1,0 +1,24 @@
+{
+  "verified_at": "2026-10-12T19:36:22.773Z",
+  "migration": "20261013000000_delegated_thaan_permissions.sql",
+  "sha256": "88c02cc8adacf914d404b7225c1a58bbcccb0c5e312fd9e1427dd068868f6ff2",
+  "checks": 15,
+  "results": [
+    "Identical canonical and Drizzle migration bytes",
+    "Applied migration ledger and SHA256 match",
+    "All three independent permissions exist",
+    "No automatic role grants",
+    "Private helper: permission_role_restriction(uuid,text)",
+    "Private helper: can_edit_thaan_registration(uuid)",
+    "Private helper: can_view_thaan_cp(uuid)",
+    "Private helper: can_change_others_thaan_cp(uuid)",
+    "Anonymous permission-state access denied",
+    "Affected staff and active Owner present",
+    "Truthful enforced restriction: inventory.view_cost",
+    "Truthful enforced restriction: stock.adjust",
+    "Reported draft preserved without invented measurements",
+    "No silent per-user grants applied to reported record",
+    "Scanner respects current ungranted cross-registrant access"
+  ],
+  "operations": "Read-only; existing account grants and business data unchanged"
+}

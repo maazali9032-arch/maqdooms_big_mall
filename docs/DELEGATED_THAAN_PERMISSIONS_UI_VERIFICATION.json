@@ -1,0 +1,32 @@
+{
+  "checkedAt": "2026-10-12T19:34:02.722Z",
+  "checks": 24,
+  "results": [
+    "Role assignments clearly identified",
+    "Redundant lower user selector removed",
+    "Database-restricted CP default shows Denied despite stale stored role grant",
+    "Owner-only permission cannot offer an ineffective Allow override",
+    "Selected staff identity shown without second selection",
+    "Role defaults retained",
+    "Existing personal exceptions loaded",
+    "Permissions grouped by module",
+    "Action search filters modules",
+    "Empty search clearly explained",
+    "Concurrent permission writes disabled",
+    "Closing blocked during save",
+    "Deny RPC targets the selected staff member",
+    "Use role default removes only personal override",
+    "Failed save does not display unsaved override",
+    "Popup fits 390px without clipped controls",
+    "Popup fits 1440px without clipped controls",
+    "Opening another staff member resets search and isolates overrides",
+    "Allow RPC targets the new selected user",
+    "Last active Owner deactivation safeguard retained",
+    "Owner overrides disabled and explained",
+    "Failed load exposes no writable defaults",
+    "Retry restores verified existing permissions",
+    "No browser runtime errors"
+  ],
+  "browserErrors": [],
+  "transport": "Synthetic; no live account or database changes"
+}

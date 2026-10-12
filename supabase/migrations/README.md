@@ -253,3 +253,14 @@ business distinctions, role checks, results and limits are in
 `docs/PHASE15_REPORTING_AUDIT.md`, its four verification JSON files and the permanent
 Implementation History. Phase 16 is not started; older status entries remain
 historical records.
+
+## Cross-registrant Thaan permissions (13 October 2026)
+
+Applied and verified: `20261013000000_delegated_thaan_permissions.sql`; byte-identical
+Drizzle mirror `0037_delegated_thaan_permissions.sql`, journal idx 37. Adds three
+Owner-managed permission rows, private eligibility/CP helpers and an Owner permission
+state API; revises existing inventory/scanner/first-receipt authorization functions.
+No default role grants, schema tables/columns/indexes/RLS changes, backfill or business
+record changes. See `docs/DELEGATED_THAAN_PERMISSIONS.md`, versioned verification files
+and Implementation History for exact objects, hash and actual live results. Never
+modify this applied migration; create a subsequent migration for further changes.

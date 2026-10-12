@@ -18,3 +18,8 @@ scoped lint and isolated Vercel-preset production build.
 Evidence: ACCESS_PERMISSIONS_UI_VERIFICATION.json and
 ACCESS_PERMISSIONS_BUILD_VERIFICATION.json. The build proof confirms a local
 build only, not hosting deployment.
+
+The popup now displays database-enforced defaults and Current access, with explicit
+Owner-only/role restrictions. Stored role defaults are a catalogue; they do not bypass
+these checks. See DELEGATED_THAAN_PERMISSIONS.md for separate Owner grants allowing
+Stock Entry users to edit, view CP or change CP on another registrant's Workshop stock.

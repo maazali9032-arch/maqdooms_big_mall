@@ -57,6 +57,18 @@ try {
   await open("Stock Example");
   const dialog = page.getByRole("dialog");
   check(
+    (await page.getByLabel("View laagat / cost permission").isDisabled()) &&
+      (await page
+        .getByLabel("View laagat / cost permission")
+        .getByRole("option", { selected: true })
+        .textContent()) === "Use role default (Denied)",
+    "Database-restricted CP default shows Denied despite stale stored role grant",
+  );
+  check(
+    await page.getByLabel("Adjust stock permission").isDisabled(),
+    "Owner-only permission cannot offer an ineffective Allow override",
+  );
+  check(
     await dialog.getByText("stock@example.test", { exact: true }).isVisible(),
     "Selected staff identity shown without second selection",
   );
@@ -212,7 +224,7 @@ try {
   );
   check(errors.length === 0, "No browser runtime errors");
   await fs.writeFile(
-    "docs/ACCESS_PERMISSIONS_UI_VERIFICATION.json",
+    "docs/DELEGATED_THAAN_PERMISSIONS_UI_VERIFICATION.json",
     JSON.stringify(
       {
         checkedAt: new Date().toISOString(),

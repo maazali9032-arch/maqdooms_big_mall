@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
+import { verifyDelegation } from "./delegated-thaan-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 let checks = 0;
 const check = (value, label) => {
@@ -721,6 +722,7 @@ for (const [directory, demo] of [
       )),
       "No raw variant writes",
     );
+    await verifyDelegation({ q, one, denied, login, users, check });
     console.log(
       directory + " " + (demo ? "demo" : "clean") + ": Labels-first Stock Entry verified",
     );
@@ -729,7 +731,7 @@ for (const [directory, demo] of [
   }
 }
 await fs.writeFile(
-  "docs/WORKSHOP_INVENTORY_DATABASE_VERIFICATION.json",
+  "docs/DELEGATED_THAAN_DATABASE_VERIFICATION.json",
   JSON.stringify({ verified_at: new Date().toISOString(), checks, passed: true }, null, 2),
 );
 console.log(`PASS: ${checks} cumulative optional-detail Stock Entry checks`);

@@ -1622,3 +1622,27 @@ separate individual-permissions panel.
 - Changes save immediately using the existing Owner permission API. Preserve role
   eligibility, protected-data restrictions, Owner control and last-Owner safeguards.
 - No changes to database permissions, RLS, schema, or existing role defaults.
+
+# 42. OWNER-APPROVED CROSS-REGISTRANT THAAN ACCESS
+
+Approved 13 October 2026 after diagnosing the Stock Entry account's inability to
+edit an Owner-created draft. This revises the own-registration restriction only
+when the Owner explicitly grants the following independent actions:
+
+- Edit Thaans registered by other staff: permit Inventory detail editing and scanner
+  completion for another registrant's Workshop Thaans, including Owner registrations.
+- View CP on Thaans registered by other staff: expose only their fabric CP in these
+  authorised inventory/scanner workflows; no production costs or general cost access.
+- Change CP on Thaans registered by other staff: require the editing and CP-viewing
+  grants as well. Use audited corrections; preserve prior CP versions.
+
+No new permission is granted to staff by default. Existing Receive stock, Edit thaan,
+measurement and Workshop-balance correction requirements still apply. Preserve every
+creator ID, barcode, original measured length, business relationship and historical
+transaction. Unknown values remain blank until actual measurements are supplied.
+
+The Owner permission popup must show database-enforced defaults/current access and
+explicit role restrictions. Owner-only actions cannot offer an ineffective Allow
+selection. Keep existing ineffective overrides as history rather than silently
+rewriting them. The expandable role table is labelled Stored role defaults because
+raw catalogue grants alone do not represent effective database access.

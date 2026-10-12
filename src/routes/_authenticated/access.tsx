@@ -366,9 +366,9 @@ function AccessPage() {
             <KeyRound className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">Role – Permission Matrix</span>
+            <span className="block text-sm font-semibold">Stored role defaults</span>
             <span className="block text-xs text-muted-foreground">
-              Overview of what each role can access.
+              Stored role grants. Manage permissions shows actual access and database restrictions.
             </span>
           </span>
           <span className="text-xs font-medium text-primary group-open:hidden">View matrix →</span>

@@ -32,11 +32,16 @@ const userRoles = [
   { user_id: "counter", role_key: "counter" },
 ];
 const permissions = [
+  { key: "inventory.view_cost", label: "View laagat / cost", domain: "inventory" },
+  { key: "stock.adjust", label: "Adjust stock", domain: "stock" },
   { key: "stock.transfer", label: "Transfer stock", domain: "stock" },
   { key: "stock.print_barcode", label: "Print barcodes", domain: "stock" },
   { key: "audit.view", label: "View audit trail", domain: "audit" },
 ];
-const rolePermissions = [{ role_key: "stock_entry", permission_key: "stock.transfer" }];
+const rolePermissions = [
+  { role_key: "stock_entry", permission_key: "stock.transfer" },
+  { role_key: "stock_entry", permission_key: "inventory.view_cost" },
+];
 let overrides = [{ user_id: "stock", permission_key: "stock.print_barcode", granted: true }];
 export const controls = {
   failTable: "",
@@ -82,6 +87,37 @@ export const supabase = {
     return query;
   },
   async rpc(name: string, args: Record<string, unknown>) {
+    if (name === "owner_user_permission_state") {
+      const isOwner = userRoles.some((r) => r.user_id === args.p_user && r.role_key === "owner");
+      return {
+        error: null,
+        data: permissions.map((p) => {
+          const restriction =
+            !isOwner && ["inventory.view_cost", "stock.adjust", "audit.view"].includes(p.key)
+              ? "Owner-only: personal overrides cannot grant this action"
+              : null;
+          const role_default =
+            !restriction &&
+            (isOwner ||
+              rolePermissions.some(
+                (r) =>
+                  r.permission_key === p.key &&
+                  userRoles.some((u) => u.user_id === args.p_user && u.role_key === r.role_key),
+              ));
+          const override = overrides.find(
+            (o) => o.user_id === args.p_user && o.permission_key === p.key,
+          );
+          return {
+            key: p.key,
+            restriction,
+            role_default,
+            effective_allowed:
+              !restriction && (isOwner || (override ? override.granted : role_default)),
+            active: true,
+          };
+        }),
+      };
+    }
     controls.calls.push({ name, ...args });
     if (controls.holdSave)
       await new Promise<void>((resolve) => {

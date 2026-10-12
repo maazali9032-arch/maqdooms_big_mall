@@ -52,6 +52,7 @@ type Details = {
   measured: boolean;
   can_complete: boolean;
   cp_visible: boolean;
+  can_set_cp?: boolean;
   cp_missing: boolean;
   cp_paise_per_m: number | null;
   available_mm: number | null;
@@ -402,6 +403,7 @@ export function StockRegistration() {
                         </>
                       )}
                       {details.cp_missing &&
+                        details.can_set_cp !== false &&
                         (!details.measured || can("inventory.fill_missing_cp")) && (
                           <>
                             <Label htmlFor="measured-cp">CP per metre (optional)</Label>
@@ -438,6 +440,7 @@ export function StockRegistration() {
                     details.measured &&
                     details.colour &&
                     details.cp_missing &&
+                    details.can_set_cp !== false &&
                     can("inventory.fill_missing_cp") && (
                       <fieldset disabled={frozen} className="space-y-2">
                         <Label htmlFor="delayed-cp">Missing CP per metre</Label>

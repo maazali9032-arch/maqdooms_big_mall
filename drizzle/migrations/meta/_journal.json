@@ -260,6 +260,13 @@
       "when": 1791763320000,
       "tag": "0036_workshop_inventory_hierarchy",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791849600000,
+      "tag": "0037_delegated_thaan_permissions",
+      "breakpoints": true
     }
   ]
 }

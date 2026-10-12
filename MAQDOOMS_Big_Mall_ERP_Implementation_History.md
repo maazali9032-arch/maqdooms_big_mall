@@ -5239,3 +5239,116 @@ REMAINING:
 
 NEXT PHASE:
 - None. Only the approved permissions presentation refinement was implemented.
+
+## 13 October 2026 — Delegated Thaan editing and accurate permission status
+
+PHASE:
+- Owner-approved inventory/access revision; no additional numbered phase started.
+
+STATUS:
+- Implemented, tested and applied to the live database.
+
+OBJECTIVE / DECISIONS:
+- Stock Entry could not edit AND-47650840a because it was registered by the Owner.
+  Existing Edit thaan permission did not override the separate registrant check.
+- Add three independent Owner grants for cross-registrant editing, CP viewing and CP
+  changing. No default role grants or automatic changes to any real user's overrides.
+- Preserve original registrants; audit the actual editor. New CP visibility is limited
+  to fabric CP in Workshop/scanner APIs, not general cost or production-cost access.
+- Display authoritative effective permissions instead of raw role catalogue grants.
+
+IMPLEMENTED / MODIFIED:
+- New supabase/migrations/20261013000000_delegated_thaan_permissions.sql and identical
+  drizzle/migrations/0037_delegated_thaan_permissions.sql; append-only journal idx 37.
+- src/features/access/UserPermissions.tsx: Owner-only permission-state query, corrected
+  defaults/current access, explicit database restrictions, ignored-override explanation,
+  disabled misleading Allow controls, and loading/retry on state-read failure.
+- src/routes/_authenticated/access.tsx: label the expandable catalogue Stored role
+  defaults and distinguish it from effective access.
+- src/features/inventory/StockRegistration.tsx: scanner CP fields respect can_set_cp.
+- src/integrations/supabase/types.ts: public permission-state RPC type.
+- scripts/live-db-rollout.mjs: recognise the new cumulative migration, compare its
+  exact schema/functions/RLS/grants reference and preserve existing metadata row sets.
+- scripts/workshop-inventory-test.mjs plus new delegated-thaan-cases.mjs: cumulative
+  replay integration and cross-registrant grant/revoke/CP/measurement security cases.
+- scripts/delegated-thaan-live-test.mjs: read-only live checks. Access browser test and
+  synthetic fixture extended for truthful Owner-only cost/adjustment restrictions.
+- Master Plan Section 42; access/delegation guides, migration README, this history,
+  current permission-popup screenshots and DELEGATED_THAAN verification JSON files.
+
+REUSED:
+- Existing immutable registration IDs, creator fields, version/reason checks, request
+  receipts, CP versions, inventory ledger, audit tables, role checks and Owner UI.
+
+DATABASE CHANGES / MIGRATION RECORD:
+- Filename: 20261013000000_delegated_thaan_permissions.sql; mirror 0037 above.
+- SHA256: 88c02cc8adacf914d404b7225c1a58bbcccb0c5e312fd9e1427dd068868f6ff2.
+- Added three permissions rows: inventory.edit_others_thaans, inventory.view_others_cp,
+  inventory.correct_others_cp. Existing metadata rows remain unchanged.
+- New private SECURITY DEFINER helpers: permission_role_restriction(uuid,text),
+  can_edit_thaan_registration(uuid), can_view_thaan_cp(uuid),
+  can_change_others_thaan_cp(uuid). Fixed public search_path, no browser EXECUTE grants.
+- New Owner-only public API owner_user_permission_state(uuid) returns role defaults,
+  effective access, restrictions and active state. Anonymous EXECUTE denied.
+- Replaced has_perm and owner_set_user_permission definitions: central role restrictions
+  preserve prior Owner-only actions; new cross-registrant grants require Stock Entry;
+  rejected ineffective Allow requests; active Owner required for permission management.
+- Replaced workshop_fabric_inventory, edit_workshop_thaan, registered_thaan_details,
+  complete_barcode_thaan, save_registered_thaan_details, fill_registered_thaan_cp:
+  recognise explicit cross-registrant grants, separate CP restrictions and scanner flags.
+- Replaced guard_receiving_authorization function without changing trigger bindings:
+  narrow receipt-marked first-measurement exception; creator, barcode and historical
+  length protections preserved. No general bypass of legacy receipt protections.
+- No tables/columns/relationships/constraints/indexes added or removed. No RLS policy
+  changes, backfill, guessed quantities, seed changes or business-record modifications.
+- Live connection/current schema verified before rollout. New migration applied with
+  ledger/hash and canonical-schema verification in the runner's atomic transaction;
+  all previous migrations skipped, never edited/reapplied. Full original-column row
+  fingerprints and existing metadata row sets preserved.
+- Live apply finished 2026-10-12T19:35:21.402Z (13 October 2026, 01:05:21.402 IST).
+  Subsequent cumulative live-schema comparison also passes with this migration recorded.
+
+SECURITY / PERMISSIONS:
+- No real staff grants were automatically applied. stock_ent remains read-only on the
+  Owner-created draft until the Owner enables the explicit cross-registrant grant.
+- CP-view grant alone cannot edit CP; CP-change grant also requires authorised editing
+  and CP viewing. Revoke editing/visibility blocks the corresponding action immediately.
+- Receive/Edit/Measure/Workshop quantity permissions remain separate prerequisites.
+- Existing broad cost, legacy stock.adjust and return_from_tailor restrictions remain
+  Owner-only. Stored ineffective overrides remain preserved and are explained in UI.
+- Direct private-helper calls denied, anonymous public API access denied; permission
+  state is readable only by active Owners. No production user logins/fixtures generated.
+
+TESTS / VERIFICATION:
+- 444 cumulative disposable PostgreSQL checks pass: Supabase populated, identical
+  Drizzle populated and clean-chain replay. Includes 84 additional delegation checks.
+- Covers foreign-draft denial by default, edit-only receipt with hidden pre-entered CP,
+  scanner completion, independent CP grants, CP-history preservation, single receipt,
+  creator preservation, audit attribution, revocation, role restrictions and helper ACLs.
+- 24 permission-popup browser checks and 19 existing Workshop inventory browser checks
+  pass; no runtime errors. Desktop/mobile layouts and screenshots verified.
+- 15 dedicated read-only live checks pass (ledger/hash/mirrors, no default grants,
+  private helpers, restricted effective status and unchanged reported draft).
+- 423 cumulative live security checks pass. Four older unverified job-domain/assignment
+  decisions still remain; this revision does not change them.
+- TypeScript noEmit, scoped ESLint (zero errors/warnings), git diff --check pass.
+- Proof: DELEGATED_THAAN_DATABASE, PERMISSIONS_UI, INVENTORY_UI, LIVE, SECURITY,
+  ROLLOUT and BUILD_VERIFICATION.json files under docs. Historical proof files preserved.
+
+BUILD:
+- Isolated Vercel-preset build passes 2026-10-12T19:35:24.804Z
+  (13 October 2026, 01:05:24.804 IST). Existing installed isolated dependencies reused;
+  patched server-core 1.169.39 retained. No manual hosting deployment performed.
+
+BUSINESS RULES VERIFIED:
+- Actual measurements produce one first receipt; hidden existing CP remains preserved.
+  IDs/creator/barcode do not change. Corrections append history and use supplied values.
+- Owner grants individual actions; no accidental general-cost or administrative access.
+
+REMAINING:
+- Owner must enable desired new permissions for specific users. Existing grants were
+  intentionally preserved. Hosted deployment completion/live-device acceptance unverified.
+- Four legacy job-domain/assignment Owner decisions remain intentionally unchanged.
+
+NEXT PHASE:
+- None. Publish only the verified approved inventory/access revision to main.

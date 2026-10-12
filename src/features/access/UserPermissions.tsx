@@ -15,6 +15,14 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+type PermissionState = {
+  key: string;
+  role_default: boolean;
+  effective_allowed: boolean;
+  restriction: string | null;
+  active: boolean;
+};
+
 export function UserPermissions({ userId, onClose }: { userId: string; onClose: () => void }) {
   const staff = useStaff();
   const roles = useRoles();
@@ -29,6 +37,14 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
         .eq("user_id", userId);
       if (error) throw error;
       return data;
+    },
+  });
+  const accessState = useQuery({
+    queryKey: ["user-permission-state", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("owner_user_permission_state", { p_user: userId });
+      if (error) throw error;
+      return data as unknown as PermissionState[];
     },
   });
   const save = useMutation({
@@ -48,8 +64,9 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
   });
   const person = staff.data?.find((p) => p.id === userId);
   const isOwner = person?.roles.includes("owner");
-  const loadError = staff.error || roles.error || overrides.error;
-  const loading = staff.isPending || roles.isPending || overrides.isPending;
+  const loadError = staff.error || roles.error || overrides.error || accessState.error;
+  const loading =
+    staff.isPending || roles.isPending || overrides.isPending || accessState.isPending;
   const term = search.trim().toLowerCase();
   const permissions = (roles.data?.permissions ?? []).filter((p) =>
     `${p.label} ${p.key} ${p.domain}`.toLowerCase().includes(term),
@@ -131,6 +148,7 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                   void staff.refetch();
                   void roles.refetch();
                   void overrides.refetch();
+                  void accessState.refetch();
                 }}
               >
                 Retry loading permissions
@@ -157,11 +175,9 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                     .filter((p) => p.domain === domain)
                     .map((p) => {
                       const override = overrides.data?.find((o) => o.permission_key === p.key);
-                      const inherited =
-                        isOwner ||
-                        roles.data?.rolePermissions.some(
-                          (r) => person.roles.includes(r.role_key) && r.permission_key === p.key,
-                        );
+                      const state = accessState.data?.find((s) => s.key === p.key);
+                      const inherited = state?.role_default ?? false;
+                      const restricted = state?.restriction;
                       return (
                         <label
                           key={p.key}
@@ -177,12 +193,17 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                                   ? " · Personal exception"
                                   : ""}
                             </span>
+                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                              {restricted ??
+                                `Current access: ${state?.effective_allowed ? "Allowed" : "Denied"}${state?.active === false ? " · Account disabled" : ""}`}
+                              {restricted && override ? " · Saved exception has no effect" : ""}
+                            </span>
                           </span>
                           <select
                             aria-label={`${p.label} permission`}
                             className="w-full shrink-0 rounded-md border bg-background p-2 text-sm sm:w-56"
                             value={
-                              isOwner
+                              isOwner || restricted
                                 ? "inherit"
                                 : override
                                   ? override.granted
@@ -190,7 +211,7 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                                     : "deny"
                                   : "inherit"
                             }
-                            disabled={isOwner || save.isPending}
+                            disabled={isOwner || Boolean(restricted) || !state || save.isPending}
                             onChange={(e) =>
                               save.mutate({ permission: p.key, value: e.target.value })
                             }
