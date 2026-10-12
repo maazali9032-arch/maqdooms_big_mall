@@ -66,14 +66,14 @@ try {
     "Batch generation asks for no unknown lengths",
   );
   await page.getByRole("button", { name: "Enter optional Thaan details 1", exact: true }).click();
-  await page.getByLabel("Colour � fabric 1, Thaan 2", { exact: true }).fill("Blue");
-  await page.getByLabel("Length (metres) � fabric 1, Thaan 2", { exact: true }).fill("10");
-  await page.getByLabel("CP per metre (optional) � fabric 1, Thaan 2", { exact: true }).fill("450");
-  await page.getByLabel("Colour � fabric 1, Thaan 3", { exact: true }).fill("White");
+  await page.getByLabel("Colour - fabric 1, Thaan 2", { exact: true }).fill("Blue");
+  await page.getByLabel("Length (metres) - fabric 1, Thaan 2", { exact: true }).fill("10");
+  await page.getByLabel("CP per metre (optional) - fabric 1, Thaan 2", { exact: true }).fill("450");
+  await page.getByLabel("Colour - fabric 1, Thaan 3", { exact: true }).fill("White");
   await page.getByRole("button", { name: "Hide optional Thaan details 1", exact: true }).click();
   await page.getByRole("button", { name: "Enter optional Thaan details 1", exact: true }).click();
   check(
-    (await page.getByLabel("Colour � fabric 1, Thaan 2", { exact: true }).inputValue()) === "Blue",
+    (await page.getByLabel("Colour - fabric 1, Thaan 2", { exact: true }).inputValue()) === "Blue",
     "Collapsed details retained",
   );
   await page.getByLabel("Thaan count 1", { exact: true }).fill("2");
@@ -89,9 +89,9 @@ try {
   );
   await page.getByLabel("Thaan count 1", { exact: true }).fill("3");
   await page.getByRole("button", { name: "Enter optional Thaan details 2", exact: true }).click();
-  await page.getByLabel("CP per metre (optional) � fabric 2, Thaan 1", { exact: true }).fill("200");
+  await page.getByLabel("CP per metre (optional) - fabric 2, Thaan 1", { exact: true }).fill("200");
   check(
-    (await page.getByLabel("Colour � fabric 1, Thaan 1", { exact: true }).inputValue()) === "",
+    (await page.getByLabel("Colour - fabric 1, Thaan 1", { exact: true }).inputValue()) === "",
     "Unentered fields stay empty",
   );
   for (const width of [320, 390, 768, 1440]) {
@@ -100,6 +100,15 @@ try {
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
       `Batch builder fits ${width}px`,
     );
+    if (width === 1440 || width === 390)
+      await page
+        .getByRole("heading", { name: "Fabric Types & Quantities", exact: true })
+        .locator("xpath=ancestor::section[1]")
+        .screenshot({
+          path: `docs/STOCK_ENTRY_UI_${width === 1440 ? "DESKTOP" : "MOBILE"}.png`,
+          style:
+            "[data-workspace-header], [data-sonner-toaster] { visibility: hidden !important; }",
+        });
   }
   await page.getByRole("button", { name: "Generate All Barcodes", exact: true }).click();
   await page.getByRole("button", { name: "Retry same request", exact: true }).waitFor();
@@ -233,7 +242,7 @@ try {
   check(true, "Later additions continue suffix and print identity");
   check(errors.length === 0, "No browser errors");
   await fs.writeFile(
-    "docs/OPTIONAL_THAAN_DETAILS_UI_VERIFICATION.json",
+    "docs/STOCK_ENTRY_UI_POLISH_VERIFICATION.json",
     JSON.stringify(
       { verified_at: new Date().toISOString(), checks, passed: true, errors },
       null,

@@ -1,6 +1,16 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  ArrowRight,
+  Barcode,
+  ChevronDown,
+  FileText,
+  Info,
+  Layers,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuppliers } from "@/features/inventory";
@@ -529,11 +539,26 @@ export function StockRegistration() {
       )}
       {stage === "create" && (
         <>
-          <Panel title="Batch Information">
-            <fieldset disabled={frozen} className="grid gap-3 sm:grid-cols-2">
+          <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-medium">
+                Optional: enter actual details now or leave blank and complete by scanning.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Stock becomes available only when colour and length are recorded. CP can be added
+                later.
+              </p>
+            </div>
+          </div>
+          <Panel
+            title="Batch Information"
+            actions={<FileText className="size-5 text-primary" aria-hidden="true" />}
+          >
+            <fieldset disabled={frozen} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div>
                 <Label>Batch ID</Label>
-                <Input value="Auto-generated when labels are created" readOnly />
+                <Input className="h-11 bg-muted/30" value="Auto-generated on save" readOnly />
               </div>
               <div>
                 <Label htmlFor="arrival-date">Arrival date</Label>
@@ -565,46 +590,83 @@ export function StockRegistration() {
           </Panel>
           <Panel
             title="Fabric Types & Quantities"
-            description="Enter physical Thaan counts, not metres."
+            description="Choose your fabrics and the number of physical Thaans for each."
           >
             <fieldset disabled={frozen} className="space-y-3">
               {rows.map((r, i) => (
-                <div
+                <section
                   key={r.id}
-                  className="grid gap-2 rounded border p-3 sm:grid-cols-[1fr_120px_auto]"
+                  className="overflow-hidden rounded-xl border bg-card shadow-sm"
+                  aria-label={`Fabric group ${i + 1}`}
                 >
-                  <div>
-                    <Label htmlFor={`type-${r.id}`}>Fabric Type {i + 1}</Label>
-                    <PickOrTypeInput
-                      id={`type-${r.id}`}
-                      value={r.name}
-                      options={fabricNames}
-                      onChange={(name) =>
-                        setRows((old) =>
-                          old.map((row) => (row.id === r.id ? { ...row, name } : row)),
-                        )
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor={`count-${r.id}`}>Thaan count {i + 1}</Label>
-                    <Input
-                      id={`count-${r.id}`}
-                      inputMode="numeric"
-                      value={r.quantity}
-                      onChange={(e) =>
-                        setRows((old) =>
-                          old.map((row) =>
-                            row.id === r.id ? { ...row, quantity: e.target.value } : row,
-                          ),
-                        )
-                      }
-                    />
-                  </div>
-                  <div className="min-w-0 sm:col-span-full">
+                  <div className="flex items-center justify-between gap-3 border-b px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Layers className="size-5" aria-hidden="true" />
+                      </span>
+                      <h3 className="text-sm font-semibold">Fabric Type {i + 1}</h3>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
+                      className="h-8 gap-1.5 border-destructive/20 px-2.5 text-xs text-destructive hover:bg-destructive/5 hover:text-destructive"
+                      aria-label={`Remove Fabric Type ${i + 1}`}
+                      disabled={rows.length === 1}
+                      onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      Remove
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 items-start gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
+                    <div className="min-w-0">
+                      <Label
+                        htmlFor={`type-${r.id}`}
+                        className="mb-1.5 block text-xs text-muted-foreground"
+                      >
+                        Fabric Type {i + 1}
+                      </Label>
+                      <PickOrTypeInput
+                        id={`type-${r.id}`}
+                        value={r.name}
+                        options={fabricNames}
+                        placeholder="Choose a fabric or type a new name"
+                        onChange={(name) =>
+                          setRows((old) =>
+                            old.map((row) => (row.id === r.id ? { ...row, name } : row)),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <Label
+                        htmlFor={`count-${r.id}`}
+                        className="mb-1.5 block text-xs text-muted-foreground"
+                      >
+                        Thaan count {i + 1}
+                      </Label>
+                      <Input
+                        id={`count-${r.id}`}
+                        inputMode="numeric"
+                        className="h-11"
+                        placeholder="e.g. 10"
+                        value={r.quantity}
+                        onChange={(e) =>
+                          setRows((old) =>
+                            old.map((row) =>
+                              row.id === r.id ? { ...row, quantity: e.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/25 px-4 py-2.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-8 gap-2 px-2 text-xs"
+                      aria-label={`${r.expanded ? "Hide" : "Enter"} optional Thaan details ${i + 1}`}
                       aria-expanded={r.expanded}
                       aria-controls={`details-${r.id}`}
                       disabled={!/^[1-9]\d*$/.test(r.quantity) || Number(r.quantity) > 500}
@@ -616,22 +678,65 @@ export function StockRegistration() {
                         )
                       }
                     >
-                      {r.expanded ? "Hide" : "Enter"} optional Thaan details {i + 1}
+                      <ChevronDown
+                        className={`size-4 transition-transform ${r.expanded ? "rotate-180" : ""}`}
+                        aria-hidden="true"
+                      />
+                      {r.expanded ? "Hide details" : "Optional Thaan details"}
                     </Button>
-                    {r.expanded && (
-                      <div id={`details-${r.id}`} className="mt-3 space-y-3">
-                        <p>
-                          Optional: enter actual details now or leave blank and complete by
-                          scanning. Stock becomes available only when colour and length are
-                          recorded.
-                        </p>
+                    <span className="flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+                      <Barcode className="size-3.5" aria-hidden="true" />
+                      {/^[1-9]\d*$/.test(r.quantity)
+                        ? `${r.quantity} labels`
+                        : "Enter a Thaan count"}
+                    </span>
+                  </div>
+                  {r.expanded && (
+                    <div id={`details-${r.id}`} className="border-t p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">Individual Thaans</p>
+                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                          Optional
+                        </span>
+                      </div>
+                      <div
+                        className="max-h-[32rem] overflow-y-auto rounded-lg border"
+                        tabIndex={0}
+                        aria-label={`Thaan rows for fabric ${i + 1}`}
+                      >
+                        <div className="sticky top-0 z-10 hidden grid-cols-[2rem_minmax(10rem,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-3 border-b bg-muted/70 px-3 py-2.5 text-xs font-medium text-muted-foreground lg:grid">
+                          <span>#</span>
+                          <span>Barcode status</span>
+                          <span>Colour</span>
+                          <span>Length (m)</span>
+                          <span>CP per metre (optional)</span>
+                          <span className="sr-only">Actions</span>
+                        </div>
                         {Array.from(
                           { length: Math.min(500, Math.max(0, Number(r.quantity) || 0)) },
                           (_, n) => (
-                            <div key={n} className="grid gap-2 rounded border p-3 sm:grid-cols-3">
-                              <p className="font-semibold sm:col-span-full">
-                                Thaan {n + 1} � barcode generated on save
-                              </p>
+                            <div
+                              key={n}
+                              className="grid gap-3 border-b bg-card p-3 last:border-b-0 sm:grid-cols-3 lg:grid-cols-[2rem_minmax(10rem,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] lg:items-center"
+                            >
+                              <span className="text-xs font-semibold text-muted-foreground sm:col-span-3 lg:col-span-1">
+                                <span className="lg:hidden">Thaan </span>
+                                {String(n + 1).padStart(2, "0")}
+                              </span>
+                              <div className="flex min-w-0 items-center gap-2 sm:col-span-3 lg:col-span-1">
+                                <Barcode
+                                  className="size-7 shrink-0 text-muted-foreground"
+                                  aria-hidden="true"
+                                />
+                                <div className="min-w-0">
+                                  <span className="inline-block rounded bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
+                                    Barcode generated on save
+                                  </span>
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    Thaan {n + 1} (fabric {i + 1})
+                                  </p>
+                                </div>
+                              </div>
                               {(
                                 [
                                   ["colour", "Colour"],
@@ -639,14 +744,29 @@ export function StockRegistration() {
                                   ["cp", "CP per metre (optional)"],
                                 ] as const
                               ).map(([field, label]) => (
-                                <div key={field}>
-                                  <Label htmlFor={`${r.id}-${n}-${field}`}>
-                                    {label} � fabric {i + 1}, Thaan {n + 1}
+                                <div key={field} className="min-w-0">
+                                  <Label
+                                    htmlFor={`${r.id}-${n}-${field}`}
+                                    className="mb-1 block text-xs text-muted-foreground lg:sr-only"
+                                  >
+                                    {label}
+                                    <span className="sr-only">
+                                      {" "}
+                                      - fabric {i + 1}, Thaan {n + 1}
+                                    </span>
                                   </Label>
                                   <Input
                                     id={`${r.id}-${n}-${field}`}
+                                    className="h-10"
                                     value={r.details[n]?.[field] ?? ""}
                                     disabled={!can("stock.measure_thaan")}
+                                    placeholder={
+                                      field === "colour"
+                                        ? "e.g. Navy blue"
+                                        : field === "length"
+                                          ? "Metres"
+                                          : "Optional CP"
+                                    }
                                     inputMode={field === "colour" ? "text" : "decimal"}
                                     onChange={(e) =>
                                       setRows((old) =>
@@ -667,42 +787,78 @@ export function StockRegistration() {
                                   />
                                 </div>
                               ))}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="size-8 justify-self-end border-destructive/20 text-destructive hover:bg-destructive/5 sm:col-span-3 lg:col-span-1"
+                                aria-label={`Remove Thaan ${n + 1} from Fabric Type ${i + 1}`}
+                                disabled={Number(r.quantity) <= 1}
+                                onClick={() =>
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id !== r.id
+                                        ? row
+                                        : {
+                                            ...row,
+                                            quantity: String(Number(row.quantity) - 1),
+                                            details: Array.from(
+                                              {
+                                                length: Math.max(
+                                                  Number(row.quantity),
+                                                  row.details.length,
+                                                ),
+                                              },
+                                              (_, index) =>
+                                                row.details[index] ?? {
+                                                  colour: "",
+                                                  length: "",
+                                                  cp: "",
+                                                },
+                                            ).filter((_, index) => index !== n),
+                                          },
+                                    ),
+                                  )
+                                }
+                              >
+                                <Trash2 className="size-3.5" aria-hidden="true" />
+                              </Button>
                             </div>
                           ),
                         )}
                       </div>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={rows.length === 1}
-                    onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
-                  >
-                    Remove Fabric Type {i + 1}
-                  </Button>
-                </div>
+                    </div>
+                  )}
+                </section>
               ))}
               <Button
                 type="button"
                 variant="outline"
+                className="h-11 w-full justify-start gap-2 border-primary/10 bg-primary/5 text-primary hover:bg-primary/10"
                 disabled={rows.length >= 100}
                 onClick={() => setRows((old) => [...old, emptyRow()])}
               >
+                <Plus className="size-4" aria-hidden="true" />
                 Add Another Fabric Type
               </Button>
             </fieldset>
           </Panel>
-          <Panel title="Batch Summary">
-            <p>Total Thaans: {total}</p>
-            <p>Fabric Types: {rows.length}</p>
-            <p>Estimated Barcodes: {total}</p>
-            <p className="my-3">
-              Print one fabric type at a time, attach its labels, then scan each Thaan to record
-              actual details.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" disabled={frozen} onClick={() => setStage("home")}>
+          <Panel
+            bodyClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            className="border-primary/15"
+          >
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <p>Total Thaans: {total}</p>
+              <p>Fabric Types: {rows.length}</p>
+              <p>Estimated Barcodes: {total}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:shrink-0">
+              <Button
+                className="min-w-24"
+                variant="outline"
+                disabled={frozen}
+                onClick={() => setStage("home")}
+              >
                 Cancel
               </Button>
               <Button
@@ -761,7 +917,7 @@ export function StockRegistration() {
                   }
                 }}
               >
-                Generate All Barcodes
+                Generate All Barcodes <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
             </div>
           </Panel>

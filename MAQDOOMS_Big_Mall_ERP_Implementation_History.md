@@ -4848,3 +4848,128 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner instructions after this workflow extension.
+
+
+## 12 October 2026 — Stock Entry fabric/details UI polish
+
+PHASE:
+- Owner-requested UI enhancement of the Fabric Types & Quantities and optional
+  Thaan rows shown in the two screenshots; no additional business phase.
+
+STATUS:
+- Implemented and verified locally; frontend publication remains pending.
+
+IMPLEMENTED:
+- Compact numbered fabric headers with a fabric picker, count and small remove
+  icon; replaced the oversized full-width removal button. Label-count badges and
+  concise optional-details dropdown controls. Dashed Add Another Fabric Type action.
+- Desktop Thaan rows use aligned Colour / Length / CP columns with sticky headings;
+  large groups scroll within a bounded area. Mobile fields retain visible labels
+  and count/remove controls share a row. Clear placeholders and optional badges.
+- Removed corrupted separator characters and repeated barcode/field explanations;
+  full fabric/Thaan context retained in accessible field names. One concise barcode
+  and stock-availability note per group.
+
+MODIFIED:
+- src/features/inventory/StockRegistration.tsx and current browser-check labels/
+  screenshots in scripts/optional-thaan-details-ui-test.mjs. This history and the
+  optional-details guide. New STOCK_ENTRY_UI proof files and desktop/mobile PNGs.
+
+REUSED:
+- Existing batch/scanner RPCs, controlled row values, permissions, count protection,
+  frozen request retries, barcode generation and grouped printing.
+
+DATABASE CHANGES:
+- None. No new migration, schema, seed, configuration or live data change.
+  Previously applied migrations and existing business records left unchanged.
+
+SECURITY / PERMISSIONS:
+- No role/permission/RLS changes. Existing action gates retained; disabled fields
+  and last-fabric removal guard remain. Accessible names, expanded-state controls
+  and keyboard-operable buttons retained.
+
+TESTS:
+- 34 current actual-component browser checks pass, including optional value
+  retention, count-reduction protection, scanner completion, exact retries,
+  fabric-group printing and 320/390/768/1440 responsiveness. No browser errors.
+- Desktop/mobile render captures inspected. Proof in
+  docs/STOCK_ENTRY_UI_POLISH_VERIFICATION.json; screenshots
+  docs/STOCK_ENTRY_UI_DESKTOP.png and docs/STOCK_ENTRY_UI_MOBILE.png.
+- No database suite rerun for presentation-only changes.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Vercel-preset production
+  build passes; separate proof docs/STOCK_ENTRY_UI_POLISH_BUILD_VERIFICATION.json.
+
+BUSINESS RULES VERIFIED:
+- Optional values and permanently assigned barcode identities retain existing
+  behaviour. Presentation changes do not alter stock, CP, transfers or sale rules.
+
+REMAINING:
+- Frontend publication and physical staff acceptance. No push/deployment performed.
+
+NEXT PHASE:
+- None started. Await Owner instructions.
+
+
+## 12 October 2026 — Stock Entry latest reference layout
+
+PHASE:
+- Owner-approved UI refinement following the latest batch/table screenshot and
+  "go ahead and improve the ui". Objective: match its clearer card/table hierarchy.
+
+STATUS:
+- Implemented and verified locally. Frontend publication remains pending.
+
+IMPLEMENTED:
+- Wide-screen batch information row and one optional-entry notice. Separate white
+  fabric cards with heading/icon, compact Remove action, picker and Thaan count.
+- Expandable Thaan table with barcode-status badges, colour, actual length,
+  optional CP per metre and individual draft removal. Desktop aligned headings;
+  labelled stacked mobile fields. Large groups retain bounded scrolling.
+- Draft row removal updates the count and preserves other rows' entries, including
+  sparse values. Keep at least one row per fabric. No persisted identity is deleted.
+- Full-width Add Another Fabric Type action and compact summary/action footer
+  with Cancel and prominent Generate All Barcodes.
+
+MODIFIED:
+- src/features/inventory/StockRegistration.tsx. New
+  scripts/stock-entry-reference-ui-test.mjs and STOCK_ENTRY_REFERENCE proof/captures,
+  docs/STOCK_ENTRY_REFERENCE_UI.md and this chronological history entry.
+
+REUSED:
+- Existing supplier selection, batch IDs, optional entry data, permissions, scanner
+  APIs, ledger/cost rules, exact frozen retries and grouped barcode printing.
+
+DATABASE CHANGES:
+- None. No migration/schema/seed/configuration/live data changes. Historical and
+  generated records preserved; per-row removal applies to unsaved entry drafts only.
+
+SECURITY / PERMISSIONS:
+- No changes. Existing action gates and frozen fieldsets remain enforced; controls
+  have accessible names and expansion state. Other ERP navigation unchanged.
+
+TESTS:
+- 37 actual-component browser checks pass: draft row removal/count update, retained
+  remaining colour/CP, last-row guard, collapse retention, count protection, scanner
+  completion, grouped printing/reprinting, frozen retries and responsive widths
+  320/390/768/1440. No browser errors. Desktop/mobile captures visually inspected.
+- Proof docs/STOCK_ENTRY_REFERENCE_UI_VERIFICATION.json and reference desktop/mobile
+  PNGs. No database suite rerun for this presentation/draft interaction change.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint, whitespace checks and Vercel-preset production
+  build pass. Proof docs/STOCK_ENTRY_REFERENCE_BUILD_VERIFICATION.json; patched
+  TanStack dependency retained. No frontend deployment performed.
+
+BUSINESS RULES VERIFIED:
+- Removing an unsaved row does not remove a generated barcode or historical stock.
+  Optional values remain explicit; stock activation and CP restrictions unchanged.
+
+REMAINING:
+- Frontend publication and physical staff acceptance; no commit/push/deployment.
+- Reference's separate Bill/Invoice No. field not added in this UI-only refinement;
+  existing persisted batch fields retained. No unsaved invoice control introduced.
+
+NEXT PHASE:
+- None started. Await Owner instructions.

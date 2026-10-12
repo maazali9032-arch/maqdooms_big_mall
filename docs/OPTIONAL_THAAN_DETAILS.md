@@ -1,5 +1,10 @@
 # Optional details during batch creation — 12 October 2026
 
+The subsequent UI polish adds compact numbered fabric headers, remove icons,
+label-count badges and a dropdown for optional rows. Desktop rows use aligned
+columns with sticky headings; mobile rows retain visible field labels. Corrupted
+separator text is removed. Stock-entry behaviour and database rules remain unchanged.
+
 Extends the labels-first Stock Entry workflow to match panel 5 of the Owner's
 latest reference. Database migration is applied live; frontend publication remains.
 
