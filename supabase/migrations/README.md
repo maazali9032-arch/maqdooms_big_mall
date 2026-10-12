@@ -264,3 +264,14 @@ No default role grants, schema tables/columns/indexes/RLS changes, backfill or b
 record changes. See `docs/DELEGATED_THAAN_PERMISSIONS.md`, versioned verification files
 and Implementation History for exact objects, hash and actual live results. Never
 modify this applied migration; create a subsequent migration for further changes.
+
+## Module/action scope (13 October 2026)
+
+Applied and verified: `20261013000100_module_role_scope.sql`; identical Drizzle mirror
+`0038_module_role_scope.sql`, journal idx 38. Replaces creator restrictions with module
+permissions across stock receiving/CP/scanning/labels/history; stock CP SELECT policies,
+shared draft batch update policy, and E-commerce-only online-order policies. Replaces
+23 existing functions; no tables/columns/indexes/default grants or business backfill.
+Exact objects, SHA256 and verification are in the Implementation History and
+`docs/MODULE_ROLE_SCOPE.md` / MODULE_ROLE_SCOPE verification files. Previous migrations
+and data preserved; use a new migration for future changes.

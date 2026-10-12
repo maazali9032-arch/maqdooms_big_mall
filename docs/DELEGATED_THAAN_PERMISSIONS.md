@@ -23,3 +23,9 @@ results are in the Implementation History and DELEGATED_THAAN verification JSON 
 Verification includes 444 disposable DB checks, 24 permission UI checks, 19 inventory
 UI checks, 15 dedicated live checks, 423 live security checks and a production build.
 No production fixtures, measurements or staff grants were written during validation.
+
+## Current rule — 13 October 2026
+
+The creator-specific controls described above are superseded by module/action access.
+They are hidden; historical rows are retained. Stock staff use normal module permissions
+for Owner-/peer-created records. See MODULE_ROLE_SCOPE.md and Master Plan Section 44.

@@ -1658,3 +1658,29 @@ Approved 13 October 2026 from the Inventory screenshot:
 - Keep Incomplete only separate from the navigation. Legacy/internal and archived
   Thaan views retain their own search because they do not contain the Workshop scanner.
 - No changes to inventory data, permissions, barcode identity or database schema.
+
+# 44. OWNER-APPROVED MODULE ACCESS — CREATOR IS AUDIT METADATA
+
+Approved 13 October 2026. This supersedes the creator-based stock rules in Sections
+33, 38–40 and the additional cross-registrant controls in Section 42:
+
+- Work records belong to authorised modules/actions, not to their original creator.
+  Stock Entry users can view and work with stock registered by the Owner or other
+  stock employees. E-commerce users can view and update authorised Owner-created
+  listings/orders. Owner has all workflows and administration without extra roles.
+- Fabric CP visibility uses the stock fabric-CP permission across all registrants.
+  Missing CP entry, measurement, metadata editing, completed CP correction and Workshop
+  balance correction remain independently controlled actions. Existing explicit denies
+  still apply. POS/E-commerce/Tailor/Salesperson do not receive stock CP.
+- Retire the three creator-specific grant controls from the UI; preserve their metadata
+  and historical override rows. They no longer control stock visibility or editing.
+- Module eligibility applies to action grants. Stock/Counter users cannot gain listing
+  management without the E-commerce role. POS users cannot browse/manage E-commerce
+  online orders simply because they can sell at the counter. Multiple assigned roles
+  give the union of their authorised workflows.
+- Preserve creator IDs, request actor attribution, audit records and immutable history.
+  Actor-bound idempotency receipts remain bound to the original caller. Tailor job
+  assignments and Salesperson attribution remain because they define assigned work,
+  not record creation ownership. No global sharing of private administrative data.
+- POS and E-commerce retain stock-availability projections necessary for sales/listing
+  work; these do not grant stock editing or internal CP access.

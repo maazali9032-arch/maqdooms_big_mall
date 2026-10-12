@@ -63,7 +63,7 @@ function LegacyFabricStock({
   receiving?: boolean;
   scanOnly?: boolean;
 }) {
-  const { isOwner, roles, userId, can } = useSession();
+  const { isOwner, roles, can } = useSession();
   const mayReceive = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const qc = useQueryClient();
   const stock = useQuery({
@@ -82,14 +82,14 @@ function LegacyFabricStock({
   const ensureSupplier = useEnsureSupplier();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = (stock.data ?? []).find((s) => s.id === selectedId);
-  const ownOpen = Boolean(
+  const openEntry = Boolean(
     selected &&
-    (isOwner || (selected.created_by === userId && mayReceive)) &&
+    (isOwner || (mayReceive && can("inventory.edit_thaan"))) &&
     ["draft", "correcting"].includes(selected.entry_state),
   );
   const cp = useQuery({
     queryKey: ["fabric-entry-cp", selectedId, selected?.entry_state],
-    enabled: Boolean(selected && (isOwner || ownOpen)),
+    enabled: Boolean(selected && (isOwner || can("inventory.view_registered_cp"))),
     queryFn: async () => {
       const { data, error } = await supabase.rpc("domain_stock_entry_cp", {
         p_stock_id: selectedId!,
@@ -149,10 +149,8 @@ function LegacyFabricStock({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Operation failed"),
   });
   const run = (work: () => Promise<void>) => action.mutate(work);
-  const editable = selected?.entry_state === "draft" && ownOpen;
-  const draftBatches = (batches.data ?? []).filter(
-    (b) => b.status === "draft" && (isOwner || b.created_by === userId),
-  );
+  const editable = selected?.entry_state === "draft" && openEntry;
+  const draftBatches = (batches.data ?? []).filter((b) => b.status === "draft");
   async function check<T>(result: { data: T; error: { message: string } | null }): Promise<T> {
     if (result.error) throw new Error(result.error.message);
     return result.data;
@@ -483,7 +481,7 @@ function LegacyFabricStock({
                 </tbody>
               </table>
             </div>
-            {isOwner || ownOpen ? (
+            {isOwner || can("inventory.view_registered_cp") ? (
               <div className="space-y-2">
                 <Label htmlFor="stock-cp">CP / Lagat (₹ per metre)</Label>
                 {cp.error ? (
@@ -494,12 +492,12 @@ function LegacyFabricStock({
                     value={editCp}
                     onChange={(e) => setEditCp(e.target.value)}
                     inputMode="decimal"
-                    disabled={!ownOpen || disabled || cp.isPending}
+                    disabled={!openEntry || disabled || cp.isPending}
                   />
                 )}
               </div>
             ) : null}
-            {ownOpen ? (
+            {openEntry ? (
               <div className="flex flex-wrap gap-2">
                 <Button
                   disabled={disabled || cp.isPending || Boolean(cp.error)}
@@ -588,7 +586,7 @@ function LegacyFabricStock({
                 {selected.entry_state === "complete" ? (
                   <div>
                     <p>
-                      Open a scoped CP correction for this stock's original entry user. Quantity and
+                      Open a scoped CP correction for authorised stock-entry staff. Quantity and
                       barcode stay unchanged.
                     </p>
                     <Button

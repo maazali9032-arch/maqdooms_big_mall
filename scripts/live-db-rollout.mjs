@@ -149,7 +149,8 @@ const execute = async (file, expected) => {
     file.includes("_labels_first_stock_entry") ||
     file.includes("_optional_thaan_details") ||
     file.includes("_workshop_inventory_hierarchy") ||
-    file.includes("_delegated_thaan_permissions");
+    file.includes("_delegated_thaan_permissions") ||
+    file.includes("_module_role_scope");
   await sql.begin(async (tx) => {
     await tx.unsafe("set local lock_timeout='15s'");
     await tx.unsafe(
@@ -219,7 +220,8 @@ try {
       f.includes("_labels_first_stock_entry") ||
       f.includes("_optional_thaan_details") ||
       f.includes("_workshop_inventory_hierarchy") ||
-      f.includes("_delegated_thaan_permissions")
+      f.includes("_delegated_thaan_permissions") ||
+      f.includes("_module_role_scope")
     )
       continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
@@ -425,26 +427,41 @@ try {
         await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${delegatedFile}`
       )[0]?.n,
     );
+  const scopeFile = files.find((f) => f.includes("_module_role_scope"));
+  let scopeExpected;
+  if (scopeFile) {
+    await reference.exec(await fs.readFile(path.join("supabase/migrations", scopeFile), "utf8"));
+    scopeExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const scopeRecorded =
+    scopeFile &&
+    Number(
+      (
+        await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${scopeFile}`
+      )[0]?.n,
+    );
   compare(
-    delegatedRecorded
-      ? delegatedExpected
-      : hierarchyRecorded
-        ? hierarchyExpected
-        : optionalRecorded
-          ? optionalExpected
-          : labelsRecorded
-            ? labelsExpected
-            : productionRecorded
-              ? productionExpected
-              : salespersonRecorded
-                ? salespersonExpected
-                : pricingRecorded
-                  ? pricingExpected
-                  : registrationRecorded
-                    ? registrationExpected
-                    : currentPhase === 8 && !guardRecorded
-                      ? phase8Base
-                      : expected[currentPhase],
+    scopeRecorded
+      ? scopeExpected
+      : delegatedRecorded
+        ? delegatedExpected
+        : hierarchyRecorded
+          ? hierarchyExpected
+          : optionalRecorded
+            ? optionalExpected
+            : labelsRecorded
+              ? labelsExpected
+              : productionRecorded
+                ? productionExpected
+                : salespersonRecorded
+                  ? salespersonExpected
+                  : pricingRecorded
+                    ? pricingExpected
+                    : registrationRecorded
+                      ? registrationExpected
+                      : currentPhase === 8 && !guardRecorded
+                        ? phase8Base
+                        : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
@@ -457,6 +474,7 @@ try {
   report.optional_thaan_details_verified = Boolean(optionalRecorded);
   report.workshop_inventory_hierarchy_verified = Boolean(hierarchyRecorded);
   report.delegated_thaan_permissions_verified = Boolean(delegatedRecorded);
+  report.module_role_scope_verified = Boolean(scopeRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -484,6 +502,7 @@ try {
     if (optionalFile) await execute(optionalFile, optionalExpected);
     if (hierarchyFile) await execute(hierarchyFile, hierarchyExpected);
     if (delegatedFile) await execute(delegatedFile, delegatedExpected);
+    if (scopeFile) await execute(scopeFile, scopeExpected);
     if (report.applied.length) preserve(report.before, report.after, Boolean(pricingFile));
     else report.after = await fingerprint();
     console.log(

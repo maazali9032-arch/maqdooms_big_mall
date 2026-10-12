@@ -34,6 +34,9 @@ try {
   const baselineLegacyCosts = Number(
     (await sql`select count(*) as n from public.thaan_costs`)[0].n,
   );
+  const baselineTransferIds = (
+    await sql`select id from public.stock_transfers where status='posted' order by posted_at desc,id desc limit 50`
+  ).map((r) => r.id);
   const people =
     await sql`select p.id,array_agg(r.role_key order by r.role_key) as roles from public.profiles p join public.user_roles r on r.user_id=p.id where p.active group by p.id`;
   for (const role of ["owner", "counter", "tailor", "stock_entry"]) {
@@ -50,10 +53,15 @@ try {
       check((await tx`select public.has_role(auth.uid(),${role}) as ok`)[0].ok, role + " identity");
       const costs = Number((await tx`select count(*) as n from public.fabric_stock_costs`)[0].n);
       const legacyCosts = Number((await tx`select count(*) as n from public.thaan_costs`)[0].n);
-      if (role === "owner")
+      if (
+        role === "owner" ||
+        (role === "stock_entry" &&
+          (await tx`select public.has_perm(auth.uid(),'inventory.view_registered_cp') allowed`)[0]
+            .allowed)
+      )
         check(
           costs === baselineCosts && legacyCosts === baselineLegacyCosts,
-          "Owner sees all current CP rows",
+          role + " sees authorised fabric CP across record creators",
         );
       else check(costs === 0 && legacyCosts === 0, role + " cannot read CP rows");
       check(
@@ -100,12 +108,20 @@ try {
       }
       if (role === "stock_entry") {
         const target = (await tx`select id from public.thaans where status<>'draft' limit 1`)[0];
-        if (target)
-          await denied(
-            tx,
-            "select public.stock_entry_cp('" + target.id + "')",
-            "Stock Entry cannot access committed legacy CP",
-          );
+        if (target) {
+          if (
+            (await tx`select public.has_perm(auth.uid(),'inventory.view_registered_cp') allowed`)[0]
+              .allowed
+          ) {
+            await tx`select public.stock_entry_cp(${target.id}::uuid)`;
+            checks++;
+          } else
+            await denied(
+              tx,
+              "select public.stock_entry_cp('" + target.id + "')",
+              "Denied Stock CP permission blocks legacy CP API",
+            );
+        }
       }
       check(
         !(
@@ -541,8 +557,8 @@ try {
           const transfers = (await tx`select public.stock_transfer_history(null,50) data`)[0].data;
           check(
             Array.isArray(transfers) &&
-              (role === "owner" || transfers.every((t) => t.created_by === person.id)),
-            role + " transfer history scoped",
+              JSON.stringify(transfers.map((t) => t.id)) === JSON.stringify(baselineTransferIds),
+            role + " sees all authorised module transfer history across creators",
           );
         } else
           await denied(
@@ -555,11 +571,29 @@ try {
         if (role === "owner" || role === "stock_entry") {
           const entries = (await tx`select public.stock_registration_catalog() data`)[0].data;
           check(Array.isArray(entries), role + " Stock Registration catalog authorized");
-          if (role === "stock_entry")
-            check(
-              !JSON.stringify(entries).match(/\"cp_paise_per_m\":\s*(?!null)[0-9\"]/),
-              "Stock Entry no ongoing CP values",
+          if (role === "stock_entry") {
+            const visible = (
+              await tx`select public.has_perm(auth.uid(),'inventory.view_registered_cp') allowed`
+            )[0].allowed;
+            const costRows =
+              await tx`select distinct on(fabric_stock_id) fabric_stock_id,cp_paise_per_m from public.fabric_stock_costs order by fabric_stock_id,revision desc`;
+            const variants = entries.flatMap((batch) =>
+              batch.fabric_types.flatMap((group) => group.variants),
             );
+            check(
+              variants.every(
+                (v) =>
+                  v.cp_paise_per_m ===
+                  (visible
+                    ? String(
+                        costRows.find((c) => c.fabric_stock_id === v.stock_id)?.cp_paise_per_m ??
+                          "",
+                      ) || null
+                    : null),
+              ),
+              "Stock catalogue exposes exact authorised current fabric CP across creators",
+            );
+          }
         } else
           await denied(
             tx,

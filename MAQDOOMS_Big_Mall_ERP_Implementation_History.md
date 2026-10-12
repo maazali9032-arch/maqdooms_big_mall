@@ -5418,3 +5418,144 @@ REMAINING:
 
 NEXT PHASE:
 - None. Publish only this approved UI refinement to main.
+
+## 13 October 2026 — Module/action access replaces creator-owned records
+
+PHASE:
+- Owner-approved access-model correction; no additional numbered phase started.
+
+STATUS:
+- Implemented, tested and applied to the live database.
+
+OBJECTIVE / BUSINESS DECISION:
+- Creator attribution is audit metadata, not an access boundary for module records.
+  Stock work created/changed by Owner must be accessible to authorised Stock Entry
+  staff; E-commerce work must be accessible to E-commerce staff rather than POS/Stock.
+- Owner alone has every module/workflow without needing additional staff roles.
+- Existing per-action grants/denies, Tailor assignments, Salesperson attribution,
+  immutable stock/financial history and actor-bound request receipts remain enforced.
+
+BASELINE AUDIT:
+- Inspected current source and read-only live functions/policies before editing.
+- Creator restrictions found in registration/scanner/CP, batch extension, transfer
+  history and older receiving/quote handoff APIs. Creator checks in request retries
+  protect attribution/idempotency and were intentionally retained.
+- E-commerce listings/variants/links already use permission-based RLS; no creator
+  restriction. Older online_orders RLS also allowed POS, which required correction.
+- Existing Owner module union, operational POS history, assignment-based Tailor
+  APIs and Salesperson attribution were reused; no creation ownership filter there.
+
+IMPLEMENTED / MODIFIED:
+- New migration supabase/migrations/20261013000100_module_role_scope.sql; identical
+  drizzle/migrations/0038_module_role_scope.sql; append-only journal idx 38.
+- src/features/access/permissionLabels.ts: module CP wording and retired creator-key
+  list. UserPermissions.tsx/access.tsx hide retired controls and explain module access.
+- src/features/inventory/FabricStock.tsx: remove creator checks from available draft
+  batches and editing; show permitted CP across completed/other-creator records.
+- src/routes/_authenticated/inventory.index.tsx: fabric CP permission controls stock
+  CP display, consistent with the revised RLS.
+- scripts/live-db-rollout.mjs adds exact cumulative scope reference and preservation
+  checks. live-db-verify.mjs verifies permitted Stock CP and exact full module histories.
+- scripts/workshop-inventory-test.mjs verifies historical contracts before applying
+  this revision, then module-role-scope-cases.mjs validates the current contract.
+- New module-role-scope-live-test.mjs; permission browser fixture/tests extended for
+  module CP wording and retired controls. Guides, Master Plan Section 44, migration
+  README, proof files/current permissions screenshots and this history updated.
+
+REUSED:
+- Existing role/action permission engine, Owner union, registration/cost/ledger APIs,
+  audit triggers, request receipts, private helper signatures and database identities.
+
+DATABASE CHANGES / MIGRATION RECORD:
+- Migration: 20261013000100_module_role_scope.sql; mirror 0038 above.
+- Purpose: module-based stock work/CP access and explicit E-commerce order boundary.
+- SHA256: 5fcd4ab38d21bbe1634835690472031c5e0395243c76dc19e0d0adc260bbeb47.
+- Replaced 23 existing function definitions, without adding new functions:
+  permission_role_restriction; can_edit_thaan_registration; can_view_thaan_cp;
+  can_change_others_thaan_cp; workshop_fabric_inventory; complete_barcode_thaan;
+  save_registered_thaan_details; registered_thaan_details; fill_registered_thaan_cp;
+  stock_registration_catalog; registration_insert_thans; register_fabric_type;
+  stock_transfer_history; can_enter_legacy_cp; guard_receiving_authorization;
+  guard_phase4_fabric_identity; domain_stock_entry_cp; create_fabric_entry;
+  update_fabric_entry; complete_fabric_entry; create_customer_tailoring;
+  stock_entry_cp; guard_legacy_cost_write.
+- Helpers retain compatibility signatures but ignore creator for module eligibility.
+  Existing stock action permissions decide visibility/edit/CP work. General financial
+  and administration restrictions remain Owner-only. Domain eligibility prevents grants
+  bypassing required roles. Creator-specific keys are superseded, not deleted.
+- Added SELECT policies module_stock_legacy_cp_read on thaan_costs and
+  module_stock_fabric_cp_read on fabric_stock_costs, gated by stock fabric-CP permission.
+- Altered phase2_entry_batch_update on receiving_batches: authorised draft workflow,
+  creator-independent; existing trigger preserves creator during staff updates.
+- Altered manage orders/read online_orders policies: E-commerce permissions and Owner
+  reports, no implicit POS access. Existing listing policies reused unchanged.
+- Existing trigger bindings, RPC ACLs and private-helper restrictions preserved.
+- No tables/columns/relationships/constraints/indexes, permission defaults, user grants
+  or metadata rows added/removed/rewritten. No backfill, seed edits, manual database
+  changes, generated measurements/prices or production business-data mutations.
+- Connected and matched pre-rollout cumulative schema; applied only this new migration
+  with ledger/hash and exact schema/RLS/ACL verification in one atomic runner transaction.
+  All earlier migration files skipped. Original-column fingerprints and existing
+  metadata row sets preserved. Post-rollout canonical-schema comparison also passes.
+- Live apply finished 2026-10-12T20:53:13.217Z (13 October 2026, 02:23:13.217 IST).
+
+SECURITY / PERMISSIONS:
+- Existing Stock Entry role and normal action permissions suffice for authorised
+  Owner-/peer-created records. No new creator-specific permission toggle required.
+- Fabric CP visible to authorised Stock staff; POS/E-commerce/Tailor/Salesperson have
+  no CP grant from this revision. Production costing, margins, protected financial
+  snapshots, access management and audit/report administration remain protected.
+- Existing denies still block the relevant action across every creator. Completed CP
+  corrections require the normal CP-correction action; quantities require their
+  normal correction action. No author reassignment or historical transaction rewrite.
+- Obsolete creator-specific metadata/override rows retained, hidden in Owner UI and
+  nonfunctional for staff. No silent role assignment or override changes.
+- Tailor assignments, Salesperson attribution and request actor isolation intentionally
+  preserved; stock availability projections retained for legitimate POS/E-commerce work.
+
+TESTS / VERIFICATION:
+- 567 cumulative disposable PostgreSQL checks pass across Supabase populated, identical
+  Drizzle populated and clean chains: historical 444 checks then 123 current-revision
+  checks. Tests cover Owner/peer stock visibility, scanner completion, CP visibility,
+  independent deny/correction actions, shared batch extension/transfer history,
+  E-commerce Owner-record updates, cross-role RLS denial, preserved creators, original
+  length, CP versions and one receipt. No live fixtures were used.
+- 26 actual permission-popup browser checks pass, including module CP label and removal
+  of obsolete creator controls. 36 inventory browser and 42 sidebar/navigation checks
+  pass. No browser runtime errors; current permission screenshot layouts inspected.
+- 27 dedicated live read-only checks pass: ledger/hash/mirrors/ACLs, affected Owner-created
+  draft now editable/completable by stock_ent without creator grant, and E-commerce/
+  Counter/Tailor CP/listing/order separation. No measurements entered by verification.
+- 424 cumulative live security checks pass. Stock account sees authorised 13 fabric
+  cost rows and 16 legacy cost rows; Counter/Tailor see zero. General Owner cost APIs
+  remain denied to staff. Four existing job-domain/assignment decisions remain unchanged.
+- TypeScript noEmit, scoped ESLint (zero errors/warnings), git diff --check pass.
+- Evidence: docs/MODULE_ROLE_SCOPE_DATABASE, PERMISSIONS_UI, INVENTORY_UI, SIDEBAR,
+  LIVE, SECURITY, ROLLOUT and BUILD_VERIFICATION.json. Prior proof files preserved.
+
+BUILD:
+- Isolated Vercel-preset build passed 2026-10-12T20:53:06.840Z
+  (13 October 2026, 02:23:06.840 IST), using the installed isolated dependencies.
+  Patched server-core 1.169.39 retained. No manual hosting deployment run.
+
+BUSINESS RULES VERIFIED:
+- Module/action access replaces creator ownership; Owner has the union automatically.
+  Staff receive authorised business updates across creators, with protected CP/financial
+  boundaries and existing assignment/attribution rules preserved.
+
+REMAINING:
+- Hosted deployment completion and live-device acceptance unverified locally. Refresh
+  access/stock data after the new frontend is deployed. No special creator grants needed.
+- Four legacy job-domain/assignment Owner decisions remain intentionally unchanged.
+
+NEXT PHASE:
+- None. Publish only this approved access correction to main.
+
+Final wording/build verification follow-up (13 October 2026):
+- Labelled the legacy general-cost permission Owner-only cost access to distinguish
+  it from the authorised stock action View fabric CP. No permission keys or data changed.
+- Final permission browser checks remain 26 passing; TypeScript/scoped lint pass.
+- Final isolated Vercel-preset build passes 2026-10-12T21:00:24.530Z
+  (13 October 2026, 02:30:24.530 IST). Current MODULE_ROLE_SCOPE_BUILD_VERIFICATION
+  records this final build; the earlier successful build remains recorded above.
+- Applied migration bytes/objects were not changed by this wording clarification.

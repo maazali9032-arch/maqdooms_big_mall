@@ -23,3 +23,7 @@ The popup now displays database-enforced defaults and Current access, with expli
 Owner-only/role restrictions. Stored role defaults are a catalogue; they do not bypass
 these checks. See DELEGATED_THAAN_PERMISSIONS.md for separate Owner grants allowing
 Stock Entry users to edit, view CP or change CP on another registrant's Workshop stock.
+
+Staff permissions now apply to all authorised records in their module regardless of
+creator. The old cross-registrant exception controls are retired. View fabric CP and
+Fill missing fabric CP use module wording; see MODULE_ROLE_SCOPE.md for the current rule.

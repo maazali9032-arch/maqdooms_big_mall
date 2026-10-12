@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { permissionLabel, RETIRED_CREATOR_PERMISSIONS } from "./permissionLabels";
 
 type PermissionState = {
   key: string;
@@ -68,8 +69,12 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
   const loading =
     staff.isPending || roles.isPending || overrides.isPending || accessState.isPending;
   const term = search.trim().toLowerCase();
-  const permissions = (roles.data?.permissions ?? []).filter((p) =>
-    `${p.label} ${p.key} ${p.domain}`.toLowerCase().includes(term),
+  const permissions = (roles.data?.permissions ?? []).filter(
+    (p) =>
+      !RETIRED_CREATOR_PERMISSIONS.has(p.key) &&
+      `${permissionLabel(p.key, p.label)} ${p.label} ${p.key} ${p.domain}`
+        .toLowerCase()
+        .includes(term),
   );
   const domains = [...new Set(permissions.map((p) => p.domain))];
 
@@ -121,6 +126,10 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
             <p className="mt-2 text-muted-foreground">
               Changes save immediately. Role eligibility and protected-data restrictions still
               apply. Staff should refresh access after a change.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              Access follows the person’s modules and actions, regardless of who created a record.
+              Creator names remain in the audit history.
             </p>
           </div>
           {isOwner && (
@@ -184,7 +193,7 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                           className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                         >
                           <span className="min-w-0 text-sm font-medium">
-                            {p.label}
+                            {permissionLabel(p.key, p.label)}
                             <span className="mt-1 block text-xs font-normal text-muted-foreground">
                               Role default: {inherited ? "Allowed" : "Denied"}
                               {isOwner
@@ -200,7 +209,7 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
                             </span>
                           </span>
                           <select
-                            aria-label={`${p.label} permission`}
+                            aria-label={`${permissionLabel(p.key, p.label)} permission`}
                             className="w-full shrink-0 rounded-md border bg-background p-2 text-sm sm:w-56"
                             value={
                               isOwner || restricted

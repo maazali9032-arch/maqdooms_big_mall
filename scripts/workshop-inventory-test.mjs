@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { verifyDelegation } from "./delegated-thaan-cases.mjs";
+import { verifyModuleScope } from "./module-role-scope-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 let checks = 0;
 const check = (value, label) => {
@@ -56,6 +57,7 @@ for (const [directory, demo] of [
       .filter((file) => file.endsWith(".sql") && !file.includes("_live_"))
       .sort()) {
       if (!demo && file.includes("demo_seed")) continue;
+      if (file.includes("_module_role_scope")) continue; // Verify prior approved contract before the new revision.
       if (file.includes("_labels_first_stock_entry")) {
         oldTables = await q(
           "select tablename name from pg_tables where schemaname='public' and tablename not in ('roles','permissions','role_permissions','erp_audit_records') order by tablename",
@@ -723,6 +725,11 @@ for (const [directory, demo] of [
       "No raw variant writes",
     );
     await verifyDelegation({ q, one, denied, login, users, check });
+    const scopeFile = (await fs.readdir(directory)).find((f) =>
+      f.endsWith("_module_role_scope.sql"),
+    );
+    await db.exec(await fs.readFile(resolve(directory, scopeFile), "utf8"));
+    await verifyModuleScope({ db, q, one, denied, login, users, check });
     console.log(
       directory + " " + (demo ? "demo" : "clean") + ": Labels-first Stock Entry verified",
     );
@@ -731,7 +738,7 @@ for (const [directory, demo] of [
   }
 }
 await fs.writeFile(
-  "docs/DELEGATED_THAAN_DATABASE_VERIFICATION.json",
+  "docs/MODULE_ROLE_SCOPE_DATABASE_VERIFICATION.json",
   JSON.stringify({ verified_at: new Date().toISOString(), checks, passed: true }, null, 2),
 );
 console.log(`PASS: ${checks} cumulative optional-detail Stock Entry checks`);

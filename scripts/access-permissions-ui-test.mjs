@@ -57,9 +57,21 @@ try {
   await open("Stock Example");
   const dialog = page.getByRole("dialog");
   check(
-    (await page.getByLabel("View laagat / cost permission").isDisabled()) &&
+    await page.getByLabel("View fabric CP permission").isVisible(),
+    "Fabric CP action uses module wording, not creator ownership",
+  );
+  check(
+    (await dialog.getByText("Edit Thaans registered by other staff", { exact: true }).count()) ===
+      0 &&
+      (await dialog
+        .getByText("View CP on Thaans registered by other staff", { exact: true })
+        .count()) === 0,
+    "Obsolete creator-specific controls removed from popup",
+  );
+  check(
+    (await page.getByLabel("Owner-only cost access permission").isDisabled()) &&
       (await page
-        .getByLabel("View laagat / cost permission")
+        .getByLabel("Owner-only cost access permission")
         .getByRole("option", { selected: true })
         .textContent()) === "Use role default (Denied)",
     "Database-restricted CP default shows Denied despite stale stored role grant",
@@ -224,7 +236,7 @@ try {
   );
   check(errors.length === 0, "No browser runtime errors");
   await fs.writeFile(
-    "docs/DELEGATED_THAAN_PERMISSIONS_UI_VERIFICATION.json",
+    "docs/MODULE_ROLE_SCOPE_PERMISSIONS_UI_VERIFICATION.json",
     JSON.stringify(
       {
         checkedAt: new Date().toISOString(),

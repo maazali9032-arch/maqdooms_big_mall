@@ -204,7 +204,7 @@ function ThaanTable({
 function InventoryPage() {
   const navigation = useWorkflowRoute();
   const { can, isOwner } = useSession();
-  const showCost = can("inventory.view_cost");
+  const showCost = isOwner || can("inventory.view_registered_cp");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
   const showOperationalHistory = can("inventory.receive") || can("reports.view");
   const activeTab = [
@@ -361,8 +361,8 @@ function InventoryPage() {
           {!showCost ? (
             <DemoNotice>
               Laagat (cost) is stored in a permission-gated table — your account is not granted
-              <span className="numeric"> inventory.view_cost</span>, so the database returns no cost
-              rows at all.
+              <span className="numeric"> inventory.view_registered_cp</span>, so the database
+              returns no cost rows at all.
             </DemoNotice>
           ) : null}
         </TabsContent>

@@ -267,6 +267,13 @@
       "when": 1791849600000,
       "tag": "0037_delegated_thaan_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791849660000,
+      "tag": "0038_module_role_scope",
+      "breakpoints": true
     }
   ]
 }

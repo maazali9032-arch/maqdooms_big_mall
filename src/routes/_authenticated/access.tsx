@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
+import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -59,7 +60,9 @@ function AccessPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
 
   const roleList = roles.data?.roles ?? [];
-  const permissions = roles.data?.permissions ?? [];
+  const permissions = (roles.data?.permissions ?? []).filter(
+    (p) => !RETIRED_CREATOR_PERMISSIONS.has(p.key),
+  );
   const rolePermissions = roles.data?.rolePermissions ?? [];
   const staffList = staff.data ?? [];
   const activeOwnerCount = staffList.filter(

@@ -32,6 +32,26 @@ const userRoles = [
   { user_id: "counter", role_key: "counter" },
 ];
 const permissions = [
+  {
+    key: "inventory.view_registered_cp",
+    label: "View CP on own registered Thaans",
+    domain: "inventory",
+  },
+  {
+    key: "inventory.edit_others_thaans",
+    label: "Edit Thaans registered by other staff",
+    domain: "inventory",
+  },
+  {
+    key: "inventory.view_others_cp",
+    label: "View CP on Thaans registered by other staff",
+    domain: "inventory",
+  },
+  {
+    key: "inventory.correct_others_cp",
+    label: "Change CP on Thaans registered by other staff",
+    domain: "inventory",
+  },
   { key: "inventory.view_cost", label: "View laagat / cost", domain: "inventory" },
   { key: "stock.adjust", label: "Adjust stock", domain: "stock" },
   { key: "stock.transfer", label: "Transfer stock", domain: "stock" },
@@ -39,6 +59,7 @@ const permissions = [
   { key: "audit.view", label: "View audit trail", domain: "audit" },
 ];
 const rolePermissions = [
+  { role_key: "stock_entry", permission_key: "inventory.view_registered_cp" },
   { role_key: "stock_entry", permission_key: "stock.transfer" },
   { role_key: "stock_entry", permission_key: "inventory.view_cost" },
 ];
