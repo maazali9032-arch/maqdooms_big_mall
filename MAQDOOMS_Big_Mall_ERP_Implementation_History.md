@@ -5079,3 +5079,11 @@ REMAINING:
 
 NEXT PHASE:
 - None started; complete authorized publication to main, then stop.
+
+Git publication result (12 October 2026):
+- Implementation commit 31b252e, "Add Workshop inventory hierarchy and audited Thaan
+  editing", successfully pushed with git push -u origin main. Remote advanced from
+  47ad5b3 to 31b252e; main now tracks origin/main. No force push, rebase, amendment
+  or published-history rewrite. This follow-up records the completed push.
+- Implementation, verified migration and proof files are published on main. The
+  automatic hosting deployment outcome remains unverified; no manual deploy run.
