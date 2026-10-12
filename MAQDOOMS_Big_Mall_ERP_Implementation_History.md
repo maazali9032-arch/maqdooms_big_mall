@@ -4973,3 +4973,109 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner instructions.
+
+
+## 12 October 2026 — Always-open Workshop inventory and audited editing
+
+PHASE:
+- Owner-approved Inventory → Fabric Stock revision, Master Plan Section 40. Objective:
+  newest batch → fabric type → individual Thaan hierarchy, shared filtering, CP-only
+  inventory, missing/zero-CP incompleteness, exact-label printing and edit popup.
+  Owner explicitly confirmed push to main, correcting the initial mail spelling.
+
+STATUS:
+- Implemented, validated and migrated live. Authorized main push prepared; actual
+  Git publication result will be recorded after completion.
+
+IMPLEMENTED:
+- Always-open batch/type headings, separate physical Thaan rows and rightmost Barcode
+  popup/print action. Newest-created batches first; searches retain contextual headings.
+- Upper search/scanner and Incomplete only now filter the same hierarchy. Removed
+  lower duplicate search/heading. CP replaces SP in this Workshop view. Missing names,
+  type, colour, actual length or CP, including zero CP, mark rows incomplete. Optional
+  remarks/design/rack do not. Row name opens permitted edits; CP remains restricted.
+- Workshop summaries use the current hierarchy's balances/incomplete flags; unlocated
+  legacy stock explicitly remains unresolved rather than assigned guessed quantities.
+- Measured-stock quantity edits append Workshop ADJUSTMENTs; received length remains
+  immutable. CP changes append cost revisions. Names/colour/group display names are
+  audited; barcode IDs, batch/group membership and historical transactions preserved.
+- Require correction reason/current version. Reject stale edits. Freeze uncertain
+  saves and retry exact requests without duplicating movements/costs. Pending stock
+  completes through the existing first receipt only when actual colour/length exist.
+
+MODIFIED:
+- New src/features/inventory/WorkshopFabricStock.tsx: hierarchy/query/filter/editor/
+  label popup. FabricStock.tsx routes the main inventory view to it, retaining existing
+  legacy receiving and scan-only callers. inventory.index.tsx connects shared filters
+  and Workshop metrics; types.ts includes new APIs. Other workflows unchanged.
+- New migration/mirror and journal entry36; live-db-rollout.mjs verifies cumulative
+  hierarchy schema. Historical test loaders retain their earlier migration boundaries.
+- New scripts/workshop-inventory-{test,ui-test,live-test,api-test}.mjs and fixture;
+  WORKSHOP_INVENTORY evidence/captures/guide, README, Master Plan and this history.
+
+REUSED:
+- Existing registration identities, inventory ledger, cost versions, immutable request
+  receipts, label generation/printing, Owner grants, audit and legacy reconciliation.
+
+DATABASE CHANGES:
+- New supabase/migrations/20261012000200_workshop_inventory_hierarchy.sql, identical
+  drizzle/migrations/0036_workshop_inventory_hierarchy.sql; journal entry36.
+- SHA256 5ebfce41046f1cc907dfb83861c697bdb01ce730e8d61158d11d0c5ab93760ce.
+  Live ledger verification timestamp 2026-10-12T14:19:15.265Z (19:49:15.265 IST).
+- New workshop_fabric_inventory and edit_workshop_thaan APIs. Replaces definitions of
+  registration_group_guard, guard_label_variant_history and
+  registration_operational_identity_guard through the new migration only. Existing
+  trigger bindings and RLS retained; request markers authorize explicit corrections.
+- Adds two permission metadata rows. No new tables, columns, constraints, indexes,
+  relationships, seed changes or historical business backfill. Existing applied SQL
+  unchanged, not reapplied/renamed/squashed. No undocumented manual database change.
+- Transactional rollout preserved original-column fingerprints for 81 public tables /
+  1,026 baseline rows. No fixture stock/CP/transfer/sale or permission override executed
+  live. Still 81 tables, now 37 migration versions. Independent cumulative schema,
+  grants/RLS and recorded hash match. Initial transient DNS failure resolved on retry.
+
+SECURITY / PERMISSIONS:
+- New inventory.correct_cp and inventory.correct_workshop actions: Owner-managed,
+  no staff defaults. Existing receive/edit_thaan and original registrant/Owner checks
+  apply. Own missing/zero CP can use existing fill_missing_cp action; positive CP and
+  measured quantity corrections require the respective new granted action.
+- CP visibility remains Owner/all-cost or own-registration permission only. Foreign
+  staff cannot edit/read CP; Counter/Tailor cannot use Workshop API. Anonymous API
+  access denied, fixed search paths, direct protected table writes still denied.
+- Type-name changes affect the registered group's display name, never identity or
+  membership. Legacy group reassignment disabled; existing shared labels preserved.
+
+TESTS:
+- 360 cumulative disposable database checks pass across demo Supabase, demo Drizzle
+  and clean full replay: data preservation, zero/missing CP, permissions, unchanged
+  barcode IDs, metadata corrections, stale edits, cost revision history, Workshop
+  adjustments and exact retry idempotency, plus prior stock-entry behavior.
+- 19 current actual-component browser checks pass: hierarchy/order, CP/no SP, removed
+  duplicate search, shared filter/scanner and headings, exact label print, editable
+  popup, frozen/exact retry, corrected CP leaving incomplete view, responsive widths
+  320/390/768/1440. No browser errors; desktop/mobile captures inspected.
+- 18 dedicated live checks, 422 cumulative security checks and 4 anonymous PostgREST
+  discovery/denial checks pass; independent read-only schema reference check passes.
+- Evidence docs/WORKSHOP_INVENTORY_{DATABASE,UI,BUILD,APPLICATION,SCHEMA,LIVE,SECURITY,
+  API}_VERIFICATION.json and desktop/mobile PNGs. Older historical proofs retained.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint (zero errors; one Fast Refresh export-layout
+  warning), whitespace checks and isolated Vercel-preset build pass at
+  2026-10-12T14:19:34.703Z. Patched TanStack server-core 1.169.39 retained.
+
+BUSINESS RULES VERIFIED:
+- Fabric SP remains Counter-entered at billing, absent from the new Workshop response.
+  Missing/zero CP is incomplete. No stock/location guesses, barcode regeneration,
+  historical received-length/transaction overwrites or legacy identity replacement.
+
+REMAINING:
+- Owner must grant new correction actions to staff who should correct positive CP
+  or measured Workshop balances. Own metadata/missing or zero CP use existing actions.
+- Unlocated/shared legacy records and four prior job decisions remain; no Showroom
+  redesign, general legacy reconciliation or Dashboard/Reports/Audit changes.
+- Physical staff/hardware acceptance and live concurrency/load tests not performed;
+  automatic deployment outcome not yet verified. Git push outcome follows separately.
+
+NEXT PHASE:
+- None started; complete authorized publication to main, then stop.

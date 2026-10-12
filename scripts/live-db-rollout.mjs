@@ -147,7 +147,8 @@ const execute = async (file, expected) => {
     file.includes("_salesperson_tailoring_pricing") ||
     file.includes("_owner_production_workflow") ||
     file.includes("_labels_first_stock_entry") ||
-    file.includes("_optional_thaan_details");
+    file.includes("_optional_thaan_details") ||
+    file.includes("_workshop_inventory_hierarchy");
   await sql.begin(async (tx) => {
     await tx.unsafe("set local lock_timeout='15s'");
     await tx.unsafe(
@@ -215,7 +216,8 @@ try {
       f.includes("_salesperson_tailoring_pricing") ||
       f.includes("_owner_production_workflow") ||
       f.includes("_labels_first_stock_entry") ||
-      f.includes("_optional_thaan_details")
+      f.includes("_optional_thaan_details") ||
+      f.includes("_workshop_inventory_hierarchy")
     )
       continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
@@ -391,22 +393,39 @@ try {
         await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${optionalFile}`
       )[0]?.n,
     );
+  const hierarchyFile = files.find((f) => f.includes("_workshop_inventory_hierarchy"));
+  let hierarchyExpected;
+  if (hierarchyFile) {
+    await reference.exec(
+      await fs.readFile(path.join("supabase/migrations", hierarchyFile), "utf8"),
+    );
+    hierarchyExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const hierarchyRecorded =
+    hierarchyFile &&
+    Number(
+      (
+        await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${hierarchyFile}`
+      )[0]?.n,
+    );
   compare(
-    optionalRecorded
-      ? optionalExpected
-      : labelsRecorded
-        ? labelsExpected
-        : productionRecorded
-          ? productionExpected
-          : salespersonRecorded
-            ? salespersonExpected
-            : pricingRecorded
-              ? pricingExpected
-              : registrationRecorded
-                ? registrationExpected
-                : currentPhase === 8 && !guardRecorded
-                  ? phase8Base
-                  : expected[currentPhase],
+    hierarchyRecorded
+      ? hierarchyExpected
+      : optionalRecorded
+        ? optionalExpected
+        : labelsRecorded
+          ? labelsExpected
+          : productionRecorded
+            ? productionExpected
+            : salespersonRecorded
+              ? salespersonExpected
+              : pricingRecorded
+                ? pricingExpected
+                : registrationRecorded
+                  ? registrationExpected
+                  : currentPhase === 8 && !guardRecorded
+                    ? phase8Base
+                    : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
@@ -417,6 +436,7 @@ try {
   report.owner_production_workflow_verified = Boolean(productionRecorded);
   report.labels_first_stock_entry_verified = Boolean(labelsRecorded);
   report.optional_thaan_details_verified = Boolean(optionalRecorded);
+  report.workshop_inventory_hierarchy_verified = Boolean(hierarchyRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -442,6 +462,7 @@ try {
     if (productionFile) await execute(productionFile, productionExpected);
     if (labelsFile) await execute(labelsFile, labelsExpected);
     if (optionalFile) await execute(optionalFile, optionalExpected);
+    if (hierarchyFile) await execute(hierarchyFile, hierarchyExpected);
     if (report.applied.length) preserve(report.before, report.after, Boolean(pricingFile));
     else report.after = await fingerprint();
     console.log(

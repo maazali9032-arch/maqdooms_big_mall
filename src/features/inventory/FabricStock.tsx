@@ -1,3 +1,4 @@
+import { WorkshopFabricStock } from "./WorkshopFabricStock";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -55,7 +56,7 @@ function metres(mm: number | null) {
   return mm === null ? "—" : `${mm / 1000} m`;
 }
 
-export function FabricStock({
+function LegacyFabricStock({
   receiving = false,
   scanOnly = false,
 }: {
@@ -640,5 +641,29 @@ export function FabricStock({
         </Panel>
       ) : null}
     </div>
+  );
+}
+
+export function FabricStock({
+  receiving = false,
+  scanOnly = false,
+  search = "",
+  incompleteOnly = false,
+  onSearchChange,
+}: {
+  receiving?: boolean;
+  scanOnly?: boolean;
+  search?: string;
+  incompleteOnly?: boolean;
+  onSearchChange?: (value: string) => void;
+}) {
+  return receiving || scanOnly ? (
+    <LegacyFabricStock receiving={receiving} scanOnly={scanOnly} />
+  ) : (
+    <WorkshopFabricStock
+      search={search}
+      incompleteOnly={incompleteOnly}
+      onSearchChange={onSearchChange}
+    />
   );
 }

@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-12T14:20:09.370Z",
+  "checks": 4,
+  "results": [
+    {
+      "rpc": "workshop_fabric_inventory",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "edit_workshop_thaan",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "mode": "anonymous invalid-input discovery/denial; no live transaction fixtures"
+}

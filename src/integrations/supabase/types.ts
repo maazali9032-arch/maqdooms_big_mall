@@ -1138,6 +1138,17 @@ export type Database = {
       };
     };
     Functions: {
+      workshop_fabric_inventory: { Args: Record<string, never>; Returns: Json };
+      edit_workshop_thaan: {
+        Args: {
+          p_request: string;
+          p_thaan: string;
+          p_version: string;
+          p_changes: Json;
+          p_reason: string;
+        };
+        Returns: string;
+      };
       create_barcode_batch_with_details: {
         Args: {
           p_request: string;

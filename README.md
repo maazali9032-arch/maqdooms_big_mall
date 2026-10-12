@@ -1812,6 +1812,10 @@ The [optional Thaan details extension](docs/OPTIONAL_THAAN_DETAILS.md) adds expa
 rows during creation: enter colour, length and CP now, or save missing fields later
 by scanning. Its additional migration is also applied and verified live.
 
+The [Workshop inventory hierarchy](docs/WORKSHOP_INVENTORY.md) groups batches, fabric
+types and individual Thaans in an always-open view, with shared search/scanner filters,
+permission-controlled CP, missing/zero-CP filtering and audited edit/barcode popups.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

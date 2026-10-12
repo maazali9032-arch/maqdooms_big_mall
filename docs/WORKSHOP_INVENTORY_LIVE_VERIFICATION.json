@@ -1,0 +1,49 @@
+{
+  "verified_at": "2026-10-12T14:20:08.024Z",
+  "checks": 18,
+  "passed": true,
+  "ledger": {
+    "version": "20261012000200",
+    "filename": "20261012000200_workshop_inventory_hierarchy.sql",
+    "sha256": "5ebfce41046f1cc907dfb83861c697bdb01ce730e8d61158d11d0c5ab93760ce",
+    "mode": "applied",
+    "verification": {
+      "schema": "matches canonical reference including RLS/grants",
+      "verified_at": "2026-10-12T14:19:15.265Z"
+    }
+  },
+  "public_tables": 81,
+  "versions": 37,
+  "roles_verified": [
+    {
+      "role": "owner",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "stock_entry",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "counter",
+      "verified": true
+    },
+    {
+      "role": "tailor",
+      "verified": true
+    }
+  ],
+  "limitations": [
+    "No live barcode batch, measurement, CP or stock transaction created",
+    "Populated behavior tested in disposable PostgreSQL; no live concurrency/hardware test"
+  ]
+}

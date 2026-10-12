@@ -1584,3 +1584,27 @@ before barcode generation, without making them mandatory for identity creation.
   A partial length alone creates no inventory item or movement.
 - Existing Owner-managed action permissions, ownership and restricted CP visibility
   apply equally to pre-generation details and subsequent scanner completion.
+
+
+# 40. OWNER-APPROVED WORKSHOP INVENTORY HIERARCHY
+
+Approved 12 October 2026 through the Inventory/Fabric Stock screenshots and explicit
+implementation request. Owner subsequently confirmed pushing to main rather than mail.
+
+- Inventory Fabric Stock lists Workshop stock as Batch → Fabric Type → individual
+  Thaan rows, newest-created batch first. Hierarchy remains expanded at all times.
+- Upper stock search and barcode scanner filter the same rows while retaining their
+  matching batch/type context. Remove the duplicate lower search and section heading.
+- Show permitted CP per metre, not fabric SP. Counter sets fabric SP while billing.
+  Incomplete only includes missing required names/type/colour/length and missing or
+  zero CP. Optional remarks and explicitly available zero balance are not missing fields.
+- Rightmost Barcode opens the existing exact label and permits printing that label
+  only. No CP on labels; preserve historical shared labels without guessing new IDs.
+- Row name opens a permission-controlled edit popup. Require reason/current version;
+  preserve barcode IDs, group membership and all past transactions. Group-name edits
+  affect its display name across the group. Original received length stays permanent;
+  measured-stock quantity edits append Workshop adjustments, CP edits append versions.
+- Owner manages separate CP and Workshop-balance correction actions. Staff retain
+  own-registration restrictions and existing edit/receive/CP view/fill rules.
+- Pending labels remain unavailable until actual colour/length are recorded. Unlocated
+  legacy stock is explicitly unresolved; never invent its Workshop location or opening.

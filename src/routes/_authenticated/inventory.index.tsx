@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import {
   incompleteReasons,
   useAdjustThaan,
-  useDashboardMetrics,
   useFabrics,
   useMovements,
   useThaanCosts,
@@ -16,6 +15,7 @@ import {
 } from "@/features/inventory";
 import { ThaanEditor } from "@/features/inventory/ThaanEditor";
 import { LocationLedger } from "@/features/inventory/LocationLedger";
+import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
 import { FabricStock } from "@/features/inventory/FabricStock";
 import { Consumables } from "@/features/inventory/Consumables";
 import { useSession } from "@/app/providers/session";
@@ -212,7 +212,7 @@ function InventoryPage() {
   const costs = useThaanCosts(showCost);
   const movements = useMovements(150, showOperationalHistory);
   const batches = useBatches(can("inventory.receive"));
-  const metrics = useDashboardMetrics();
+  const workshop = useWorkshopInventory();
   const adjust = useAdjustThaan();
 
   const [search, setSearch] = useState("");
@@ -238,10 +238,13 @@ function InventoryPage() {
             .filter(Boolean)
             .some((v) => String(v).toLowerCase().includes(q)),
         );
-    return incompleteOnly ? searched.filter((thaan) => thaan.is_incomplete) : searched;
-  }, [thaans.data, search, incompleteOnly]);
-
-  const m = metrics.data ?? {};
+    return incompleteOnly
+      ? searched.filter(
+          (thaan) =>
+            workshop.data?.find((r) => r.thaan_id === thaan.id)?.incomplete ?? thaan.is_incomplete,
+        )
+      : searched;
+  }, [thaans.data, search, incompleteOnly, workshop.data]);
 
   async function submitAdjust() {
     if (!adjustTarget) return;
@@ -271,7 +274,7 @@ function InventoryPage() {
     <>
       <PageHeader
         title="Inventory"
-        description="One Fabric Barcode identifies a Fabric + Batch. Individual Thans and historical labels remain traceable."
+        description="Workshop stock grouped by batch, fabric type and individual Thaan. Existing barcodes and movement history stay traceable."
         actions={
           can("inventory.receive") ? (
             <Button asChild size="sm">
@@ -282,10 +285,25 @@ function InventoryPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="Active thaans" value={m["active_thaans"] ?? "—"} />
-        <StatCard label="Total available" value={formatMetres(m["available_mm"] ?? 0)} />
-        <StatCard label="Incomplete" value={m["incomplete_thaans"] ?? 0} tone="warning" />
-        <StatCard label="Depleted" value={m["depleted_thaans"] ?? 0} />
+        <StatCard
+          label="Active thaans"
+          value={workshop.data ? workshop.data.filter((r) => r.status === "active").length : "—"}
+        />
+        <StatCard
+          label="Total available"
+          value={formatMetres(
+            workshop.data ? workshop.data.reduce((sum, r) => sum + (r.workshop_mm ?? 0), 0) : 0,
+          )}
+        />
+        <StatCard
+          label="Incomplete"
+          value={workshop.data ? workshop.data.filter((r) => r.incomplete).length : "—"}
+          tone="warning"
+        />
+        <StatCard
+          label="Unlocated legacy"
+          value={workshop.data ? workshop.data.filter((r) => r.unlocated).length : "—"}
+        />
       </div>
 
       <Tabs
@@ -321,7 +339,9 @@ function InventoryPage() {
             <TabsTrigger value="archived">Depleted / archived</TabsTrigger>
           </TabsList>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {canCorrectIncomplete ? (
+            {canCorrectIncomplete ||
+            navigation.activeId === "fabric-stock" ||
+            !navigation.activeId ? (
               <label className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-input bg-card px-3 text-sm shadow-sm shadow-black/[0.02]">
                 <Checkbox
                   checked={incompleteOnly}
@@ -340,7 +360,7 @@ function InventoryPage() {
         </div>
 
         <TabsContent value="fabric-stock" className="mt-4">
-          <FabricStock />
+          <FabricStock search={search} incompleteOnly={incompleteOnly} onSearchChange={setSearch} />
         </TabsContent>
         {isOwner ? (
           <TabsContent value="finished-products" className="mt-4">

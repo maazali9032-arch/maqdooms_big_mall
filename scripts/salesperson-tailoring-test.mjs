@@ -52,7 +52,7 @@ for (const [directory, demo] of [
       return JSON.stringify(result);
     };
     for (const file of (await fs.readdir(directory))
-      .filter((file) => file.endsWith(".sql") && !file.includes("_labels_first_stock_entry") && !file.includes("_optional_thaan_details") && !file.includes("_live_"))
+      .filter((file) => file.endsWith(".sql") && !file.includes("_labels_first_stock_entry") && !file.includes("_optional_thaan_details") && !file.includes("_workshop_inventory_hierarchy") && !file.includes("_live_"))
       .sort()) {
       if (!demo && file.includes("demo_seed")) continue;
       if (file.includes("_salesperson_tailoring_pricing")) {
