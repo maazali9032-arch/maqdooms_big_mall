@@ -1,0 +1,49 @@
+{
+  "verified_at": "2026-10-12T08:58:28.648Z",
+  "checks": 14,
+  "passed": true,
+  "ledger": {
+    "version": "20261012000000",
+    "filename": "20261012000000_labels_first_stock_entry.sql",
+    "sha256": "c5a9e0c8ff36cbe6ae40cd196a784b1086c239f94fceb1a7f3e3fd367cc0e682",
+    "mode": "applied",
+    "verification": {
+      "schema": "matches canonical reference including RLS/grants",
+      "verified_at": "2026-10-12T08:56:56.048Z"
+    }
+  },
+  "public_tables": 81,
+  "versions": 35,
+  "roles_verified": [
+    {
+      "role": "owner",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "stock_entry",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "counter",
+      "verified": true
+    },
+    {
+      "role": "tailor",
+      "verified": true
+    }
+  ],
+  "limitations": [
+    "No live barcode batch, measurement, CP or stock transaction created",
+    "Populated behavior tested in disposable PostgreSQL; no live concurrency/hardware test"
+  ]
+}

@@ -1138,6 +1138,48 @@ export type Database = {
       };
     };
     Functions: {
+      create_barcode_batch_with_details: {
+        Args: {
+          p_request: string;
+          p_provider: string;
+          p_arrival_date: string;
+          p_remarks: string | null;
+          p_fabrics: Json;
+        };
+        Returns: string;
+      };
+      save_registered_thaan_details: {
+        Args: {
+          p_request: string;
+          p_barcode: string;
+          p_colour?: string | null;
+          p_length_mm?: number | null;
+          p_cp?: number | null;
+        };
+        Returns: string;
+      };
+
+      create_barcode_batch: {
+        Args: {
+          p_request: string;
+          p_provider: string;
+          p_arrival_date: string;
+          p_remarks: string | null;
+          p_fabrics: Json;
+        };
+        Returns: string;
+      };
+      complete_barcode_thaan: {
+        Args: {
+          p_request: string;
+          p_barcode: string;
+          p_colour: string;
+          p_length_mm: number;
+          p_cp?: number | null;
+        };
+        Returns: string;
+      };
+      registered_thaan_details: { Args: { p_barcode: string }; Returns: Json };
       register_delivery_batch: { Args: { p_request: string; p_provider: string }; Returns: string };
       salesperson_options: { Args: Record<PropertyKey, never>; Returns: Json };
       salesperson_work: {

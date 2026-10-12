@@ -1531,3 +1531,56 @@ Show only existing role/permission-authorized options and hide empty groups.
 Each child option opens its corresponding existing workflow/tab directly. Keep
 same-page drafts and uncertain transaction retry payloads across tab navigation.
 This navigation revision does not change database permissions or business rules.
+
+
+# 38. OWNER-APPROVED LABELS-FIRST STOCK ENTRY
+
+Approved 12 October 2026 through the batch-count/printing images, two-card Stock
+Entry description and explicit implementation request. This supersedes entering
+measurements before generating registered physical Thaan labels. Earlier approved
+revisions remain applicable elsewhere.
+
+- Stock Entry opens Scan Existing Barcode and Create Batch cards. Scanning shows
+  details below, with authorized completion of missing data.
+- Create Batch captures a unique delivery, supplier/provider selected from history
+  or typed, arrival date, remarks, and fabric types with physical Thaan counts.
+  Repeated supplier names do not reuse batch IDs.
+- Generate one permanent unique barcode per physical Thaan before measurements.
+  Retain provider prefix/random fabric number/sequential suffix rules, including
+  first `a` and continuation after `z` to `aa`, `ab`.
+- Print one fabric type's labels together, then navigate to the next. Print Again
+  and reopening batches reuse codes. Appending Thaans continues the group's suffix;
+  new fabric groups get new codes.
+- Attach labels, then scan to enter actual colour, positive length and optional CP.
+  Unknown measurements are NULL, never invented stock. Draft labels have no inventory
+  item or movement until measured, then one atomic Workshop inward receipt.
+- CP can be entered at measurement or filled later with appropriate permission.
+  Owner separately controls label generation, measurement and staff own-registration
+  CP viewing. Labels contain no CP. Existing Counter pricing remains.
+- Initial generation is bounded to 100 types / 500 Thaans per type / 5,000 total;
+  subsequent append operations support more labels. Combine duplicate fabric names
+  in initial submission. Exact frozen retries must not duplicate stock.
+- Legacy barcode scanning uses the existing safe catalogue. Do not reissue historical
+  labels, change historical identities or guess missing opening quantities.
+
+
+# 39. OWNER-APPROVED OPTIONAL DETAILS BEFORE PRINTING
+
+Approved 12 October 2026 following the finalised workflow/reference comparison and
+"do it then" authorization. Extends Section 38: measurements may also be entered
+before barcode generation, without making them mandatory for identity creation.
+
+- Clicking a fabric type expands its individual physical Thaan rows. Colour,
+  positive actual length and optional CP per metre can be entered independently.
+  Unopened/incomplete rows retain blank fields, not invented measurements or costs.
+- Generate permanent identities and any entered details atomically. Retain saved
+  values when collapsing groups; never silently discard entered rows when reducing
+  counts. Preserve all approved barcode formats and fabric-by-fabric printing.
+- Scanning retrieves the same exact Thaan with saved values and editable missing
+  fields. Independently saving partial colour/length/CP is supported. Existing
+  saved values are protected; existing Owner corrections remain separate.
+- A pending Thaan becomes available only when both actual colour and positive length
+  exist, with one atomic Workshop inward. CP is optional and may remain missing.
+  A partial length alone creates no inventory item or movement.
+- Existing Owner-managed action permissions, ownership and restricted CP visibility
+  apply equally to pre-generation details and subsequent scanner completion.

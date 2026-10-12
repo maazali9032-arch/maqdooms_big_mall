@@ -20,7 +20,7 @@ function ReceivingPage() {
     <>
       <PageHeader
         title="Fabric Stock Entry"
-        description="Provider / delivery batch → Fabric Type → individually coded Thans. Enter CP now or fill missing CP later by scanning."
+        description="Scan existing fabric labels or create a batch, print labels by fabric type, then measure each Thaan."
       />
       <StockRegistration />
     </>

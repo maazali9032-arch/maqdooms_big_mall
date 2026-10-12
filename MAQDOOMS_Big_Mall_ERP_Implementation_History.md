@@ -4617,3 +4617,234 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Await Owner's next instructions.
+
+
+## 12 October 2026 — Owner-approved labels-first Stock Entry
+
+PHASE:
+- Post-Phase-16 Stock Entry revision, Master Plan Section 38. Objective: two entry
+  cards, batch creation by fabric/physical Thaan counts, grouped printing, then
+  barcode-scanned actual colour/length/optional CP. Explicit Owner authorization.
+
+STATUS:
+- Implemented; migration applied and independently verified live. Frontend awaits
+  publication. No later phase or unrelated workflow started.
+
+IMPLEMENTED:
+- Scanner and Create Batch cards; safe scanned details below scanner. Batch captures
+  supplier history/new name, arrival date, remarks, fabric types and physical counts.
+- Atomic generation of permanent unique physical Thaan codes before measurements.
+  One fabric group's labels per printing stage, Previous/Next, Print Again, reopen
+  existing batch, append more Thaans and add another fabric type. No CP printed.
+- Actual colour, positive length and optional CP completed by scanning. Unmeasured
+  labels have NULL original/availability and no inventory authority or movement.
+  First measurement creates exactly one Workshop inward; missing CP can be filled
+  later. Frozen requests prevent duplicate identities and receipts on retry.
+- Preserved provider prefix/random fabric digits/a…z/aa… suffixes and existing B0001
+  batch format; same supplier creates different delivery IDs. Actual quantities are
+  entered, never derived from illustrative screenshots.
+
+MODIFIED:
+- src/features/inventory/StockRegistration.tsx, inventory.receiving.tsx route and
+  src/integrations/supabase/types.ts: workflow, RPC contracts and safe scanner fallback.
+- New canonical/mirror SQL and drizzle/migrations/meta/_journal.json entry 34.
+- scripts/live-db-rollout.mjs: cumulative migration verification and metadata-safe
+  baseline preservation. Phase 1–15, stock-registration, transfer/pricing, Salesperson
+  and Owner Production historical test loaders retain their original migration
+  boundaries by excluding this later revision; old applied migration files unchanged.
+- New scripts/labels-first-stock-entry-{test,ui-test,live-test,api-test}.mjs and
+  scripts/fixtures/labels-first-stock-entry files. New LABELS_FIRST_STOCK_ENTRY proof
+  files and guide under docs; README, Master Plan Section 38 and this history.
+
+REUSED:
+- Existing registrations, suppliers/batches/fabric groups/Thaans, fabrics.colour,
+  barcode printing, request receipts, inventory ledger, cost versions, audit triggers,
+  role overrides and catalogue APIs. Legacy nonregistered scans are read-only.
+
+DATABASE CHANGES:
+- One logical migration, canonical
+  supabase/migrations/20261012000000_labels_first_stock_entry.sql, identical mirror
+  drizzle/migrations/0034_labels_first_stock_entry.sql; journal entry 34.
+- SHA256 c5a9e0c8ff36cbe6ae40cd196a784b1086c239f94fceb1a7f3e3fd367cc0e682.
+  Live ledger verification timestamp 2026-10-12T08:56:56.048Z (14:26:56.048 IST).
+- Adds nullable label_position to stock_registration_fabric_types with positive
+  value CHECK; details_recorded_at to stock_registration_variants. Existing rows
+  retain NULL. Colour uses existing fabrics.colour; no duplicate column.
+- New create_barcode_batch, complete_barcode_thaan and registered_thaan_details APIs,
+  private guard_label_variant_history trigger function. Replaces definitions of
+  registration_operational_identity_guard, registration_insert_thans,
+  register_fabric_type, stock_registration_catalog and fabric_stock_catalog.
+- Replaces existing registration_variants_immutable trigger definition to permit
+  first measured timestamp only. Identity guards require authenticated matching
+  receipt markers for first length/colour writes; later overwrites/deletes denied.
+- No new tables, indexes or relationships; existing unique barcode and relationship
+  indexes reused. No historical backfill, barcode reassignment or stock/price changes.
+- Applied transactionally against Session Pooler, preserving original-column
+  fingerprints for baseline 81 public tables / 470 rows. Added permission/audit/
+  migration metadata only. No live fixture batches, measurements, CP, sales or
+  transfers created. Table count remains 81; live migration ledger has 35 versions.
+- Independent schema comparison matches canonical reference including RLS/grants.
+  No reset/delete/manual undocumented data operation; prior migration hashes retained.
+
+SECURITY / PERMISSIONS:
+- New independently Owner-managed actions stock.generate_labels, stock.measure_thaan
+  and inventory.view_registered_cp with Stock Entry defaults; existing receive,
+  print and missing-CP permissions still apply. Individual overrides enforced.
+- Owner or original registering staff can complete with permission. Other authorized
+  stock staff see safe identity/location data but cannot complete or see another
+  staff member's CP. Own CP requires its new view permission; Owner retains full view.
+- New APIs authenticated only, anonymous/PUBLIC EXECUTE revoked, fixed search paths;
+  private trigger inaccessible and raw variant writes denied. Existing RLS retained.
+- Exact actor-bound retries reuse results; changed payloads rejected. Matching fresh
+  measurement requests cannot duplicate inward stock. Pending labels cannot be sold,
+  transferred or activated through raw writes.
+
+TESTS:
+- 201 database checks pass across demo Supabase, demo Drizzle and clean full replay:
+  data preservation, code/count/order, pending stock exclusion, immutable measurement,
+  retry idempotency, delayed CP, split transfers/same barcode, append z→aa→ab,
+  role/individual action denials and invalid input guards.
+- 27 actual-component browser checks pass: two cards, count summary, frozen batch/
+  measurement retries, grouped iframe print content, same-code Print Again, group
+  navigation, actual mm/paise payloads, measurement receipt display, append and
+  responsive widths 320/390/768/1440; no browser errors.
+- Historical 18-suite database regression: 5,493 checks pass. Old historical proof
+  files restored unchanged; new regression evidence saved separately.
+- Live 14 dedicated checks, 420 cumulative security checks and 6 anonymous PostgREST
+  discovery/denial checks pass. Read-only live recheck confirms schema and hash.
+- Evidence: docs/LABELS_FIRST_STOCK_ENTRY_{DATABASE,UI,BUILD,APPLICATION,SCHEMA,LIVE,
+  SECURITY,API}_VERIFICATION.json and LABELS_FIRST_STOCK_ENTRY_REGRESSION_DATABASE.json.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Isolated Vercel-preset
+  production build passes at 2026-10-12T08:56:02.035Z, with patched TanStack server-core
+  1.169.39. No package/configuration or deployment change.
+
+BUSINESS RULES VERIFIED:
+- Counts create labels, actual measured metres create stock. No guessed original
+  lengths/opening balance. One immutable identity and one inward per measured Thaan.
+- CP optional/delayed and restricted; no stock-entry SP. Partial transfer keeps the
+  same barcode with location balances. Production/Counter pricing rules unchanged.
+
+REMAINING:
+- Publish compatible frontend and perform physical printer/scanner acceptance;
+  live concurrency/load behavior not tested. Print Again tracks an attempt only.
+- Initial batch caps: 100 fabric types, 500 Thaans/type, 5,000 total; append supports
+  further labels up to 500/call. Initial duplicate trimmed/case-insensitive names
+  must be combined. Recorded original colour/length immutable in this workflow;
+  no new colour correction UI. Existing stock/cost corrections remain.
+- Four prior legacy job decisions and Dashboard/Reports/Audit requests unchanged.
+- No commit, push or frontend deployment performed.
+
+NEXT PHASE:
+- None started. Await Owner instructions after this Stock Entry revision.
+
+
+## 12 October 2026 — Optional per-Thaan details before printing
+
+PHASE:
+- Owner-approved post-Phase-16 extension, Master Plan Section 39. Objective: match
+  optional expandable fabric/Thaan rows in panel 5, and independently complete
+  missing colour/length/CP through the scanner. Authorized by "do it then".
+
+STATUS:
+- Implemented and verified; additional migration applied live. Frontend publication
+  remains. Previous chronological entries describe their original implementation.
+
+IMPLEMENTED:
+- Expand each fabric type to its physical Thaan rows during creation. Enter actual
+  colour, length and/or CP per metre independently, or leave any/all blank. Collapsing
+  retains entries. Count reductions that would discard filled rows are blocked.
+- Generate permanent barcodes and entered details atomically. No temporary/reserved
+  barcode is issued before generation. Grouped print/reprint remains unchanged.
+- Scanner shows saved partial values and inputs only for missing values. Partial
+  fields can be saved independently. Actual positive length plus colour creates one
+  Workshop inward; a partial length alone remains unavailable. CP optional/delayed.
+- Existing values remain protected. Exact retries retain all optional values;
+  changed requests fail, matching fresh completions never duplicate stock.
+
+MODIFIED:
+- src/features/inventory/StockRegistration.tsx: expandable rows, draft retention,
+  payload conversion/validation, new APIs and missing-only scanner completion.
+- src/integrations/supabase/types.ts: two new typed RPC contracts.
+- drizzle/migrations/meta/_journal.json entry 35; scripts/live-db-rollout.mjs adds
+  cumulative optional-detail reference verification and rollout.
+- New scripts/optional-thaan-details-{test,ui-test,live-test,api-test}.mjs; current
+  labels-first browser fixtures model partial state and include the app's Toaster.
+- Historical database loaders exclude this later revision to retain original phase
+  boundaries. Original labels-first database suite retains its migration boundary;
+  browser suite uses current API names/display. Historical proof files unchanged.
+- New OPTIONAL_THAAN_DETAILS evidence/guide, README, Master Plan Section 39 and history.
+
+REUSED:
+- Supplier/batch/fabric/Thaan identities, unique barcodes/suffixes, printing, receiving,
+  cost versions, stock ledger, audit triggers, request receipts, ownership and all
+  existing action permissions. Sidebar, legacy catalogue and other workflows retained.
+
+DATABASE CHANGES:
+- New canonical supabase/migrations/20261012000100_optional_thaan_details.sql;
+  identical mirror drizzle/migrations/0035_optional_thaan_details.sql, journal entry35.
+- SHA256 f19cbc59b968e74a481b124ab97b3c767793336823c2226d6faed6500c01d683.
+  Live ledger verification time 2026-10-12T09:35:42.398Z (15:05:42.398 IST).
+- Adds stock_registration_variants.draft_details JSONB, NOT NULL default {}, with
+  object/allowed-key CHECK (colour, length_mm, cp). Historical rows receive empty
+  metadata; no actual value/quantity/cost/identity backfill. Original measurement
+  remains separate in thaans.original_mm. No new tables, indexes or relationships.
+- New create_barcode_batch_with_details and save_registered_thaan_details APIs.
+  Replaces guard_label_variant_history, complete_barcode_thaan, fill_registered_thaan_cp,
+  registered_thaan_details and stock_registration_catalog definitions via this new
+  migration only. Existing trigger bindings/audit triggers remain. No earlier applied
+  migration edited, removed, renamed or reapplied.
+- Guard permits authenticated append-only partial completion with immutable request
+  markers; original identity links remain permanent. Older completion/CP-fill APIs
+  cannot contradict stored partial values. Partial cost is private draft metadata;
+  actual completed cost/measurement uses existing operational tables/functions.
+- Applied transactionally after checking current live schema. Original-column
+  fingerprints preserved for 81 tables / 1,013 existing rows at this rollout baseline.
+  All old IDs/business records preserved; no live fixture transactions or overrides.
+- Independent read-only cumulative schema/RLS/grants comparison passed; ledger now
+  36 versions, still 81 public tables. No manual undocumented database changes.
+
+SECURITY / PERMISSIONS:
+- Reuses generate_labels, measure_thaan, receive, fill_missing_cp, own-registration
+  CP-view and print actions; no new permissions or expanded roles. Optional input
+  disabled without measurement permission; blank count-only generation still allowed.
+- New APIs authenticated-only, anonymous/PUBLIC denied, fixed public search paths,
+  original registering user/Owner checks. Raw variant reads remain Owner-only under
+  existing RLS, including draft CP. Staff cannot directly mutate partial metadata.
+- CP scanner visibility remains restricted even before measurement. No CP labels.
+
+TESTS:
+- 297 cumulative disposable database checks pass across Supabase demo, Drizzle demo
+  and clean full Supabase replay. Includes complete/partial/blank creation, independent
+  scanner fields, exact/new retries, immutable values, old-API bypass denials,
+  rollback of invalid later rows, foreign draft CP isolation, permissions and earlier
+  stock workflows. 34 current actual-component browser checks pass, no browser errors.
+- Browser verification covers expansion/collapse retention, missing-only scanner,
+  optional units/paise, count-reduction protection, frozen retries, grouped print/
+  same-code reprint and widths 320/390/768/1440.
+- Live 18 dedicated checks, 421 cumulative security checks and 4 anonymous PostgREST
+  discovery/denial checks pass. Independent cumulative schema/reference check passes.
+- Proof: docs/OPTIONAL_THAAN_DETAILS_{DATABASE,UI,BUILD,APPLICATION,SCHEMA,LIVE,SECURITY,
+  API}_VERIFICATION.json. Historical 5,493-check evidence from the preceding revision
+  remains; that entire historical suite was not rerun for this extension.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint and git diff --check pass. Isolated Vercel-preset
+  build passes 2026-10-12T09:33:05.347Z; patched server-core stays 1.169.39. No package,
+  environment configuration or frontend deployment changes.
+
+BUSINESS RULES VERIFIED:
+- Barcode creates permanent identity, not guessed measurements/costs. Saved partial
+  fields survive printing/scanning. Only actual colour+length activates exact stock;
+  CP optional. One inward receipt, unchanged barcode identity and restricted CP.
+
+REMAINING:
+- Publish frontend; real physical scanner/printer acceptance and live concurrency/
+  load tests. Existing 100 types / 500 Thaans/type / 5,000 initial labels caps retained.
+- No new general colour/length correction UI; existing Owner corrections remain.
+- Four legacy job decisions, Dashboard/Reports/Audit requests and sidebar unchanged.
+- No commit, push or frontend deployment performed.
+
+NEXT PHASE:
+- None started. Await Owner instructions after this workflow extension.

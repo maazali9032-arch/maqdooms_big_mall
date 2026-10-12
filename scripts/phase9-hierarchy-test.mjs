@@ -92,7 +92,7 @@ for (const [directory, demo] of [
       .filter(
         (f) =>
           (process.argv.includes("--include-phase10") || !f.includes("phase10_")) &&
-          f.endsWith(".sql") && !f.includes("_owner_production_workflow") && !f.includes("_salesperson_tailoring_pricing") && !f.includes("_stock_transfer_counter_pricing") &&
+          f.endsWith(".sql") && !f.includes("_labels_first_stock_entry") && !f.includes("_optional_thaan_details") && !f.includes("_owner_production_workflow") && !f.includes("_salesperson_tailoring_pricing") && !f.includes("_stock_transfer_counter_pricing") &&
           !f.includes("_stock_registration") &&
           (process.argv.includes("--include-phase15") || !f.includes("phase15_")) &&
           (process.argv.includes("--include-phase14") || !f.includes("phase14_")) &&

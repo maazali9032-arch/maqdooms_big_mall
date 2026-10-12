@@ -1804,6 +1804,14 @@ Overview stays open; opening another group closes the previous one. Workflow lin
 open their corresponding tabs directly on desktop and mobile. Frontend publication
 is still required.
 
+The [labels-first Stock Entry revision](docs/LABELS_FIRST_STOCK_ENTRY.md) now opens
+Scanner and Create Batch cards, generates unique labels from fabric Thaan counts,
+prints by fabric type, then captures actual colour/length/optional CP by scanning.
+Its migration is applied and verified live. Publish the frontend to use this flow.
+The [optional Thaan details extension](docs/OPTIONAL_THAAN_DETAILS.md) adds expandable
+rows during creation: enter colour, length and CP now, or save missing fields later
+by scanning. Its additional migration is also applied and verified live.
+
 Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh

@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-12T09:36:22.110Z",
+  "checks": 4,
+  "results": [
+    {
+      "rpc": "create_barcode_batch_with_details",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "rpc": "save_registered_thaan_details",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "mode": "anonymous invalid-input discovery/denial; no live transaction fixtures"
+}

@@ -1,0 +1,49 @@
+{
+  "verified_at": "2026-10-12T09:36:19.509Z",
+  "checks": 18,
+  "passed": true,
+  "ledger": {
+    "version": "20261012000100",
+    "filename": "20261012000100_optional_thaan_details.sql",
+    "sha256": "f19cbc59b968e74a481b124ab97b3c767793336823c2226d6faed6500c01d683",
+    "mode": "applied",
+    "verification": {
+      "schema": "matches canonical reference including RLS/grants",
+      "verified_at": "2026-10-12T09:35:42.398Z"
+    }
+  },
+  "public_tables": 81,
+  "versions": 36,
+  "roles_verified": [
+    {
+      "role": "owner",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "stock_entry",
+      "permissions": {
+        "generate": true,
+        "measure": true,
+        "own_cp": true
+      },
+      "verified": true
+    },
+    {
+      "role": "counter",
+      "verified": true
+    },
+    {
+      "role": "tailor",
+      "verified": true
+    }
+  ],
+  "limitations": [
+    "No live barcode batch, measurement, CP or stock transaction created",
+    "Populated behavior tested in disposable PostgreSQL; no live concurrency/hardware test"
+  ]
+}

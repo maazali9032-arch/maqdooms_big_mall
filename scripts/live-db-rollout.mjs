@@ -145,7 +145,9 @@ const execute = async (file, expected) => {
   const pricing =
     file.includes("_stock_transfer_counter_pricing") ||
     file.includes("_salesperson_tailoring_pricing") ||
-    file.includes("_owner_production_workflow");
+    file.includes("_owner_production_workflow") ||
+    file.includes("_labels_first_stock_entry") ||
+    file.includes("_optional_thaan_details");
   await sql.begin(async (tx) => {
     await tx.unsafe("set local lock_timeout='15s'");
     await tx.unsafe(
@@ -211,7 +213,9 @@ try {
       f.includes("_stock_registration") ||
       f.includes("_stock_transfer_counter_pricing") ||
       f.includes("_salesperson_tailoring_pricing") ||
-      f.includes("_owner_production_workflow")
+      f.includes("_owner_production_workflow") ||
+      f.includes("_labels_first_stock_entry") ||
+      f.includes("_optional_thaan_details")
     )
       continue;
     if (/phase(?:8|9|10|11|12|13|14|15)_/.test(f)) continue; // Apply after the already-approved provenance overlay.
@@ -361,18 +365,48 @@ try {
         await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${productionFile}`
       )[0]?.n,
     );
+  const labelsFile = files.find((f) => f.includes("_labels_first_stock_entry"));
+  let labelsExpected;
+  if (labelsFile) {
+    await reference.exec(await fs.readFile(path.join("supabase/migrations", labelsFile), "utf8"));
+    labelsExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const labelsRecorded =
+    labelsFile &&
+    Number(
+      (
+        await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${labelsFile}`
+      )[0]?.n,
+    );
+  const optionalFile = files.find((f) => f.includes("_optional_thaan_details"));
+  let optionalExpected;
+  if (optionalFile) {
+    await reference.exec(await fs.readFile(path.join("supabase/migrations", optionalFile), "utf8"));
+    optionalExpected = await catalog(async (q) => (await reference.query(q)).rows);
+  }
+  const optionalRecorded =
+    optionalFile &&
+    Number(
+      (
+        await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${optionalFile}`
+      )[0]?.n,
+    );
   compare(
-    productionRecorded
-      ? productionExpected
-      : salespersonRecorded
-        ? salespersonExpected
-        : pricingRecorded
-          ? pricingExpected
-          : registrationRecorded
-            ? registrationExpected
-            : currentPhase === 8 && !guardRecorded
-              ? phase8Base
-              : expected[currentPhase],
+    optionalRecorded
+      ? optionalExpected
+      : labelsRecorded
+        ? labelsExpected
+        : productionRecorded
+          ? productionExpected
+          : salespersonRecorded
+            ? salespersonExpected
+            : pricingRecorded
+              ? pricingExpected
+              : registrationRecorded
+                ? registrationExpected
+                : currentPhase === 8 && !guardRecorded
+                  ? phase8Base
+                  : expected[currentPhase],
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
@@ -381,6 +415,8 @@ try {
   report.stock_transfer_counter_pricing_verified = Boolean(pricingRecorded);
   report.salesperson_tailoring_verified = Boolean(salespersonRecorded);
   report.owner_production_workflow_verified = Boolean(productionRecorded);
+  report.labels_first_stock_entry_verified = Boolean(labelsRecorded);
+  report.optional_thaan_details_verified = Boolean(optionalRecorded);
   console.log("Verified current cumulative live schema:", "Phase " + currentPhase);
   await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
   if (apply) {
@@ -404,6 +440,8 @@ try {
     if (pricingFile) await execute(pricingFile, pricingExpected);
     if (salespersonFile) await execute(salespersonFile, salespersonExpected);
     if (productionFile) await execute(productionFile, productionExpected);
+    if (labelsFile) await execute(labelsFile, labelsExpected);
+    if (optionalFile) await execute(optionalFile, optionalExpected);
     if (report.applied.length) preserve(report.before, report.after, Boolean(pricingFile));
     else report.after = await fingerprint();
     console.log(
