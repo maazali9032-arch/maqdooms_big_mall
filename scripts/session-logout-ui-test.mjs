@@ -106,6 +106,12 @@ try {
       !(await page.getByRole("link", { name: "Stock Entry", exact: true }).count()),
     "New role gets its own sidebar without reload",
   );
+  await page.evaluate(() => window.logoutControls.foreignEvent());
+  await page.getByRole("heading", { name: "Counter workspace fixture", exact: true }).waitFor();
+  check(
+    JSON.parse(await page.getByTestId("session-state").innerText()).userId === "counter",
+    "Delayed foreign event reads canonical session rather than replacing current identity",
+  );
   await page.evaluate(() => window.logoutControls.staleSignIn());
   await page.getByRole("heading", { name: "Counter workspace fixture", exact: true }).waitFor();
   check(

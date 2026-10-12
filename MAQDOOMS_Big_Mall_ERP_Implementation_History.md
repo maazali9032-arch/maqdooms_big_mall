@@ -5157,3 +5157,16 @@ REMAINING:
 
 NEXT PHASE:
 - None started. Publish the verified fix to the previously authorized main branch.
+
+Publication and final verification follow-up (12 October 2026):
+- Implementation commit 6216e30, "Fix logout redirects and stale account state",
+  successfully pushed normally to origin/main with upstream tracking. No force push
+  or published-history rewrite. Public GitHub status/check-run APIs provided no
+  hosting results, so automatic deployment completion is not claimed.
+- Added canonical SDK-session reads outside auth callbacks, preventing a delayed
+  foreign cross-tab event from substituting the displayed identity. Token refresh is
+  tracked in the logout barrier. Final browser evidence now records 24 passing checks;
+  the earlier 23-check/build evidence remains in commit 6216e30's versioned history.
+- Final isolated Vercel-preset build passes 2026-10-12T17:56:14.234Z
+  (23:26:14.234 IST). TypeScript passes. Final evidence replaces current SESSION_LOGOUT
+  proof versions; prior security/sidebar proofs remain unchanged. No database changes.

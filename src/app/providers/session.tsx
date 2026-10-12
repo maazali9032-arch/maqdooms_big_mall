@@ -211,7 +211,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
         const timer = window.setTimeout(() => {
           deferred.delete(timer);
-          void load(session);
+          // A delayed cross-tab event may carry an older session. Read the
+          // canonical SDK session outside the callback before verifying access.
+          void load();
         }, 0);
         deferred.add(timer);
       }

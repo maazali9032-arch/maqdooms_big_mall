@@ -28,6 +28,7 @@ export const controls = {
   },
   releaseBootstrap: () => bootstrapRelease?.(),
   staleSignIn: () => emit("SIGNED_IN", oldSession),
+  foreignEvent: () => emit("SIGNED_IN", sessionFor("owner", 123)),
   externalSignOut: () => {
     oldSession = session;
     session = null;

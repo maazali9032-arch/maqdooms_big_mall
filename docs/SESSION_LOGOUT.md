@@ -30,10 +30,10 @@ configuration, seed, business transactions or production sessions were modified/
 
 ## Verification
 
-23 actual-component browser checks use the real SessionProvider, AppShell, AuthPage
+24 actual-component browser checks use the real SessionProvider, AppShell, AuthPage
 and route guards with a synthetic auth transport. Covers slow and failed logout,
 local verification/retry, cache clearing/late replies, external sign-out, old-token
-replay, Stock Entry → Counter → Owner switching without reload, slow profile responses,
+replay, canonical SDK-session reads for delayed foreign events, Stock Entry → Counter → Owner switching without reload, slow profile responses,
 and logout-only timeout/body/cancellation behavior. No browser errors.
 
 42 existing sidebar/navigation checks pass. TypeScript, scoped ESLint (zero errors,
