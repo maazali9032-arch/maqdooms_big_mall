@@ -1608,3 +1608,17 @@ implementation request. Owner subsequently confirmed pushing to main rather than
   own-registration restrictions and existing edit/receive/CP view/fill rules.
 - Pending labels remain unavailable until actual colour/length are recorded. Unlocated
   legacy stock is explicitly unresolved; never invent its Workshop location or opening.
+
+# 41. OWNER-APPROVED STAFF PERMISSIONS POPUP
+
+Approved 13 October 2026 after the Owner reviewed the role-checkbox table and
+separate individual-permissions panel.
+
+- Keep staff role assignments in the Staff table, labelled Assigned roles.
+- Open personal action overrides from that staff row's Actions → Manage permissions.
+- Remove the separate lower permissions panel and second staff-selection dropdown.
+- Show the selected name, email and assigned roles; group actions by module and
+  provide search. Explain Use role default, Allow and Deny in plain language.
+- Changes save immediately using the existing Owner permission API. Preserve role
+  eligibility, protected-data restrictions, Owner control and last-Owner safeguards.
+- No changes to database permissions, RLS, schema, or existing role defaults.

@@ -1,19 +1,32 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles, useStaff } from "@/features/access";
-import { Panel } from "@/shared/components/page";
+import { ROLE_LABELS } from "@/app/providers/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-export function UserPermissions() {
+export function UserPermissions({ userId, onClose }: { userId: string; onClose: () => void }) {
   const staff = useStaff();
   const roles = useRoles();
   const qc = useQueryClient();
-  const [user, setUser] = useState("");
+  const [search, setSearch] = useState("");
   const overrides = useQuery({
-    queryKey: ["user-permission-overrides"],
+    queryKey: ["user-permission-overrides", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.from("user_permission_overrides").select("*");
+      const { data, error } = await supabase
+        .from("user_permission_overrides")
+        .select("*")
+        .eq("user_id", userId);
       if (error) throw error;
       return data;
     },
@@ -21,82 +34,190 @@ export function UserPermissions() {
   const save = useMutation({
     mutationFn: async ({ permission, value }: { permission: string; value: string }) => {
       const { error } = await supabase.rpc("owner_set_user_permission", {
-        p_user: user,
+        p_user: userId,
         p_permission: permission,
         p_granted: value === "inherit" ? null : value === "allow",
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      void qc.invalidateQueries();
-      toast.success("User permission saved");
+    onSuccess: async () => {
+      await qc.invalidateQueries();
+      toast.success("Permission saved");
     },
     onError: (error) => toast.error(error.message),
   });
-  const person = staff.data?.find((p) => p.id === user);
+  const person = staff.data?.find((p) => p.id === userId);
+  const isOwner = person?.roles.includes("owner");
+  const loadError = staff.error || roles.error || overrides.error;
+  const loading = staff.isPending || roles.isPending || overrides.isPending;
+  const term = search.trim().toLowerCase();
+  const permissions = (roles.data?.permissions ?? []).filter((p) =>
+    `${p.label} ${p.key} ${p.domain}`.toLowerCase().includes(term),
+  );
+  const domains = [...new Set(permissions.map((p) => p.domain))];
+
   return (
-    <Panel
-      title="Individual user permissions"
-      description="Choose a user and allow, deny or inherit each action. Roles determine eligible workflows; internal costs and administration remain Owner-only. Owner accounts retain full control. Staff should refresh access after a change."
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !save.isPending) onClose();
+      }}
     >
-      {(staff.error || roles.error || overrides.error) && (
-        <p role="alert">Permissions could not load. Refresh before changing access.</p>
-      )}
-      <select
-        aria-label="Permission user"
-        className="w-full rounded border bg-background p-2"
-        value={user}
-        disabled={save.isPending}
-        onChange={(e) => setUser(e.target.value)}
+      <DialogContent
+        className="flex max-h-[90dvh] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:p-0"
+        onEscapeKeyDown={(event) => {
+          if (save.isPending) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (save.isPending) event.preventDefault();
+        }}
       >
-        <option value="">Select staff member</option>
-        {staff.data?.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.full_name} · {p.email}
-          </option>
-        ))}
-      </select>
-      {person && (
-        <div className="mt-3 space-y-2">
-          {roles.data?.permissions.map((p) => {
-            const override = overrides.data?.find(
-              (o) => o.user_id === user && o.permission_key === p.key,
-            );
-            const inherited = roles.data?.rolePermissions.some(
-              (r) => person.roles.includes(r.role_key) && r.permission_key === p.key,
-            );
-            return (
-              <label
-                key={p.key}
-                className="flex flex-wrap items-center justify-between gap-2 border-b py-2 text-sm"
+        <DialogHeader className="shrink-0 border-b p-5 pr-12 text-left">
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="size-5 text-primary" />
+            Manage permissions
+          </DialogTitle>
+          <DialogDescription>
+            Personal access settings for{" "}
+            <strong className="text-foreground">{person?.full_name ?? "this staff member"}</strong>.
+          </DialogDescription>
+          <p className="break-all text-xs text-muted-foreground">{person?.email}</p>
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            {person?.roles.map((role) => (
+              <span
+                key={role}
+                className="rounded-md bg-accent px-2 py-1 text-xs text-accent-foreground"
               >
-                <span>
-                  {p.label}
-                  <span className="block text-xs text-muted-foreground">
-                    {p.key} · Role default: {inherited ? "allowed" : "denied"}
-                  </span>
-                </span>
-                <select
-                  aria-label={`${p.label} permission`}
-                  className="rounded border bg-background p-2"
-                  value={override ? (override.granted ? "allow" : "deny") : "inherit"}
-                  disabled={
-                    person.roles.includes("owner") ||
-                    save.isPending ||
-                    overrides.isPending ||
-                    Boolean(overrides.error)
-                  }
-                  onChange={(e) => save.mutate({ permission: p.key, value: e.target.value })}
-                >
-                  <option value="inherit">Inherit role default</option>
-                  <option value="allow">Allow</option>
-                  <option value="deny">Deny</option>
-                </select>
-              </label>
-            );
-          })}
+                {ROLE_LABELS[role] ?? role}
+              </span>
+            ))}
+          </div>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <div className="rounded-lg border bg-surface p-3 text-xs leading-relaxed">
+            <p>
+              <strong>Use role default:</strong> follow this person’s assigned roles.
+            </p>
+            <p>
+              <strong>Allow / Deny:</strong> create an exception for this person only.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              Changes save immediately. Role eligibility and protected-data restrictions still
+              apply. Staff should refresh access after a change.
+            </p>
+          </div>
+          {isOwner && (
+            <p className="rounded-lg border border-primary/20 bg-accent p-3 text-sm">
+              Owner accounts always retain full control. Personal overrides cannot restrict an
+              Owner.
+            </p>
+          )}
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search permissions"
+              placeholder="Search actions or modules…"
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          {loadError ? (
+            <div role="alert" className="space-y-2 text-sm text-destructive">
+              <p>Permissions could not load. Retry before changing access.</p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void staff.refetch();
+                  void roles.refetch();
+                  void overrides.refetch();
+                }}
+              >
+                Retry loading permissions
+              </Button>
+            </div>
+          ) : loading ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              Loading permissions…
+            </p>
+          ) : !person ? (
+            <p role="alert">
+              This staff account is no longer available. Close this window and refresh staff.
+            </p>
+          ) : domains.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No actions match your search.</p>
+          ) : (
+            domains.map((domain) => (
+              <section key={domain} className="overflow-hidden rounded-lg border">
+                <h3 className="border-b bg-surface px-3 py-2 text-sm font-semibold capitalize">
+                  {domain.replaceAll("_", " ")}
+                </h3>
+                <div className="divide-y">
+                  {permissions
+                    .filter((p) => p.domain === domain)
+                    .map((p) => {
+                      const override = overrides.data?.find((o) => o.permission_key === p.key);
+                      const inherited =
+                        isOwner ||
+                        roles.data?.rolePermissions.some(
+                          (r) => person.roles.includes(r.role_key) && r.permission_key === p.key,
+                        );
+                      return (
+                        <label
+                          key={p.key}
+                          className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                        >
+                          <span className="min-w-0 text-sm font-medium">
+                            {p.label}
+                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                              Role default: {inherited ? "Allowed" : "Denied"}
+                              {isOwner
+                                ? " · Owner access protected"
+                                : override
+                                  ? " · Personal exception"
+                                  : ""}
+                            </span>
+                          </span>
+                          <select
+                            aria-label={`${p.label} permission`}
+                            className="w-full shrink-0 rounded-md border bg-background p-2 text-sm sm:w-56"
+                            value={
+                              isOwner
+                                ? "inherit"
+                                : override
+                                  ? override.granted
+                                    ? "allow"
+                                    : "deny"
+                                  : "inherit"
+                            }
+                            disabled={isOwner || save.isPending}
+                            onChange={(e) =>
+                              save.mutate({ permission: p.key, value: e.target.value })
+                            }
+                          >
+                            <option value="inherit">
+                              Use role default ({inherited ? "Allowed" : "Denied"})
+                            </option>
+                            <option value="allow">Allow for this person</option>
+                            <option value="deny">Deny for this person</option>
+                          </select>
+                        </label>
+                      );
+                    })}
+                </div>
+              </section>
+            ))
+          )}
         </div>
-      )}
-    </Panel>
+        <footer className="flex shrink-0 items-center justify-between gap-3 border-t px-5 py-3">
+          <p role="status" className="text-xs text-muted-foreground">
+            {save.isPending ? "Saving permission…" : "Each change saves automatically."}
+          </p>
+          <Button variant="outline" disabled={save.isPending} onClick={onClose}>
+            Done
+          </Button>
+        </footer>
+      </DialogContent>
+    </Dialog>
   );
 }

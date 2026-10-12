@@ -5170,3 +5170,72 @@ Publication and final verification follow-up (12 October 2026):
 - Final isolated Vercel-preset build passes 2026-10-12T17:56:14.234Z
   (23:26:14.234 IST). TypeScript passes. Final evidence replaces current SESSION_LOGOUT
   proof versions; prior security/sidebar proofs remain unchanged. No database changes.
+
+## 13 October 2026 — Staff permissions popup and clearer access controls
+
+PHASE:
+- Owner-approved UI refinement; no new implementation phase started.
+
+STATUS:
+- Implemented and locally verified.
+
+IMPLEMENTED:
+- Staff Actions → Manage permissions opens a contextual popup for that exact account.
+- Selected name/email/roles, searchable module groups, plain-language role defaults
+  and individual Allow/Deny exceptions. Existing overrides load on opening.
+- Removed the lower Individual user permissions panel and redundant staff dropdown.
+- Saving feedback; controls and closing blocked while saving/refetching; failed saves
+  retain persisted values. Failed loads show retry instead of writable defaults.
+- Owner accounts retain full control; per-action controls are read-only for Owners.
+
+MODIFIED:
+- src/routes/_authenticated/access.tsx: staff action menu, selected-user dialog,
+  Assigned roles heading and explanatory copy; existing account actions preserved.
+- src/features/access/UserPermissions.tsx: contextual responsive dialog, user-scoped
+  overrides query, search/groups, loading/errors/retry and existing mutation wiring.
+- src/features/access/index.ts: surface user_roles/roles/permissions/role_permissions
+  query errors rather than silently treating failed reads as empty defaults.
+- scripts/access-permissions-ui-test.mjs; scripts/fixtures/access-permissions/
+  client.ts, main.tsx and index.html; docs/ACCESS_PERMISSIONS.md, desktop/mobile
+  screenshots, UI/build verification JSON; Master Plan Section 41 and this history.
+
+REUSED:
+- Existing Staff/role queries, owner_set_user_permission RPC, user_permission_overrides,
+  QueryClient invalidation, role labels, Radix Dialog and staff Actions menu.
+
+DATABASE CHANGES:
+- None. No migrations, tables, columns, relationships, indexes, constraints, triggers,
+  functions, RLS, permission metadata, backfills or live data changed.
+
+SECURITY / PERMISSIONS:
+- Existing backend authorization/role eligibility remains unchanged. Per-user query
+  and mutation target is fixed by the selected row; no second user selector.
+- Existing last-active-Owner role/deactivation protections and active status retained.
+- Full-control Owner explanation does not claim staff overrides grant roles or bypass
+  protected-data restrictions. No real staff access changes made during testing.
+
+TESTS:
+- 22 actual-component browser checks pass with synthetic backend transport and no
+  browser runtime errors. Covers existing overrides/defaults, selected-account RPC
+  targets for Allow/Deny/Inherit, reset between users, search, grouped actions,
+  save-in-progress close blocking, failed-save recovery, load retry, Owner protection
+  and 390px/1440px popup layout. Screenshots visually inspected.
+- TypeScript noEmit, scoped ESLint (zero errors/warnings) and git diff --check pass.
+- Evidence: docs/ACCESS_PERMISSIONS_UI_VERIFICATION.json. No live DB tests or writes.
+
+BUILD:
+- Isolated Vercel-preset production build passed 2026-10-12T18:58:20.611Z
+  (13 October 2026, 00:28:20.611 IST), reusing the previously installed isolated
+  dependencies. Patched TanStack server-core 1.169.39 retained. No deployment run.
+- Evidence: docs/ACCESS_PERMISSIONS_BUILD_VERIFICATION.json. Historical
+  TANSTACK_START_SECURITY_BUILD proof restored unchanged.
+
+BUSINESS RULES VERIFIED:
+- Staff roles and personal action exceptions remain separate controls. Existing
+  grant/revoke semantics, Owner control, role defaults and business data unchanged.
+
+REMAINING:
+- Hosted deployment and live-device acceptance are not verified by these local tests.
+
+NEXT PHASE:
+- None. Only the approved permissions presentation refinement was implemented.

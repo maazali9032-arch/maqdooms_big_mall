@@ -55,6 +55,7 @@ function AccessPage() {
   const setRole = useSetUserRole();
   const setActive = useSetActive();
   const [search, setSearch] = useState("");
+  const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
 
   const roleList = roles.data?.roles ?? [];
@@ -148,8 +149,8 @@ function AccessPage() {
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Staff</h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Manage user roles and account status. Access is enforced in the database, not only
-              hidden in the interface.
+              Assign roles below. For personal access exceptions, open a staff member’s Actions menu
+              and choose Manage permissions.
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto">
@@ -205,7 +206,7 @@ function AccessPage() {
                 <tr className="label-eyebrow">
                   <th className="px-5 py-3 font-semibold">User</th>
                   <th className="px-4 py-3 font-semibold">Last login</th>
-                  <th className="px-4 py-3 font-semibold">Roles &amp; permissions</th>
+                  <th className="px-4 py-3 font-semibold">Assigned roles</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
@@ -322,6 +323,10 @@ function AccessPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>{user.full_name}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => setPermissionUserId(user.id)}>
+                              <ShieldCheck className="mr-2 size-4" />
+                              Manage permissions
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               disabled={protectsLastOwner}
                               onSelect={() => void updateActive(user)}
@@ -348,7 +353,13 @@ function AccessPage() {
         )}
       </section>
 
-      <UserPermissions />
+      {permissionUserId && (
+        <UserPermissions
+          key={permissionUserId}
+          userId={permissionUserId}
+          onClose={() => setPermissionUserId(null)}
+        />
+      )}
       <details className="panel group overflow-hidden">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">

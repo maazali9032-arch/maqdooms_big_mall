@@ -5,11 +5,12 @@ export function useStaff() {
   return useQuery({
     queryKey: ["staff"],
     queryFn: async () => {
-      const [{ data: profiles, error }, { data: userRoles }] = await Promise.all([
+      const [{ data: profiles, error }, { data: userRoles, error: roleError }] = await Promise.all([
         supabase.from("profiles").select("*").order("full_name"),
         supabase.from("user_roles").select("user_id, role_key"),
       ]);
       if (error) throw error;
+      if (roleError) throw roleError;
       return (profiles ?? []).map((p) => ({
         ...p,
         roles: (userRoles ?? []).filter((r) => r.user_id === p.id).map((r) => r.role_key),
@@ -22,11 +23,13 @@ export function useRoles() {
   return useQuery({
     queryKey: ["roles"],
     queryFn: async () => {
-      const [{ data: roles }, { data: permissions }, { data: rolePerms }] = await Promise.all([
+      const results = await Promise.all([
         supabase.from("roles").select("*"),
         supabase.from("permissions").select("*").order("domain"),
         supabase.from("role_permissions").select("*"),
       ]);
+      for (const result of results) if (result.error) throw result.error;
+      const [{ data: roles }, { data: permissions }, { data: rolePerms }] = results;
       return {
         roles: roles ?? [],
         permissions: permissions ?? [],
