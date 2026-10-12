@@ -5087,3 +5087,73 @@ Git publication result (12 October 2026):
   or published-history rewrite. This follow-up records the completed push.
 - Implementation, verified migration and proof files are published on main. The
   automatic hosting deployment outcome remains unverified; no manual deploy run.
+
+
+## 12 October 2026 — Logout transition and stale-role fix
+
+PHASE:
+- Owner-requested authentication bug fix. Objective: logout and switch staff accounts
+  without stale role interfaces or reloading Chrome. No new business phase.
+
+STATUS:
+- Implemented and verified locally; production build ready for main publication.
+
+IMPLEMENTED:
+- Logout immediately clears identity/roles/permissions, cancels and clears caches,
+  invalidates pending access requests and deferred auth loads, and hides the shell.
+- Role guard now issues one redirect per destination instead of repeated Navigate
+  renders. Browser reproduction exposed the old infinite update/navigation loop.
+- SIGNED_OUT clears access synchronously. Auth API/RPC work occurs outside callbacks.
+  Previously logged-out token barriers prevent stale events/requests restoring roles.
+- Login waits for verified local session removal; failed verification offers Retry
+  sign-out. Remote-revoke failure with cleared local session is reported distinctly.
+- Five-second remote logout fetch deadline covers headers/body and honors upstream
+  cancellation. Other auth/ERP requests unchanged. No hard browser reload used.
+- Verified roles render without waiting for optional profile name; late profile
+  responses cannot replace the next user's identity. Role-aware home routing retained.
+
+MODIFIED:
+- src/app/providers/session.tsx, src/app/layouts/AppShell.tsx, src/routes/auth.tsx,
+  src/integrations/supabase/client.ts; new authLogoutFetch.ts helper. New
+  scripts/session-logout-ui-test.mjs and scripts/fixtures/session-logout files.
+- SESSION_LOGOUT guide, proof files and this permanent history. Prior build/sidebar
+  proof files restored unchanged; new evidence saved under SESSION_LOGOUT names.
+
+REUSED:
+- Supabase public auth APIs/storage, existing bootstrap, role/module home resolver,
+  QueryClient, router and access checks. Existing logout scope retained.
+
+DATABASE CHANGES:
+- None. No migrations, schema, RLS, seed, permissions, configuration, business data
+  or production auth sessions changed. No manual database operations.
+
+SECURITY / PERMISSIONS:
+- Existing server-side roles/RLS unchanged. Cleared credentials/roles do not leak into
+  the next user's interface/cache. Inputs disabled until local removal is verified;
+  failure cannot silently reopen the old workspace. No new credential persistence.
+
+TESTS:
+- 23 actual-component browser checks pass: immediate shell/role/cache removal during
+  slow logout, local verification/login gating, late bootstrap/query responses,
+  old-token events, failed-local retry, handled remote error, Stock Entry → Counter →
+  Owner switching without reload, external sign-out, delayed profile lookup and
+  logout-only timeout including body/caller cancellation. No browser errors.
+- 42 existing sidebar/navigation browser checks pass. Proof in
+  docs/SESSION_LOGOUT_UI_VERIFICATION.json and SESSION_LOGOUT_SIDEBAR_VERIFICATION.json.
+- No database tests or real production account logout performed for this frontend fix.
+
+BUILD:
+- TypeScript noEmit, scoped ESLint (zero errors, three warnings), git diff --check and
+  isolated Vercel-preset build pass at 2026-10-12T17:40:54.353Z (23:10:54.353 IST).
+  Patched server-core 1.169.39 preserved. Proof SESSION_LOGOUT_BUILD_VERIFICATION.json.
+
+BUSINESS RULES VERIFIED:
+- Existing role access and home routing retained; no change to ERP quantities,
+  costing, barcodes, staff permissions or billing. Account transitions clear old data.
+
+REMAINING:
+- Automatic deployment confirmation and live-device acceptance after publication.
+  Other-device revocation cannot be claimed if the remote logout request fails.
+
+NEXT PHASE:
+- None started. Publish the verified fix to the previously authorized main branch.

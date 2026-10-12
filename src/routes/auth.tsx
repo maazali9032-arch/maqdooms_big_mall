@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useSession } from "@/app/providers/session";
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,8 +27,9 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function AuthPage() {
+export function AuthPage() {
   const navigate = useNavigate();
+  const { signingOut, logoutError, signOut } = useSession();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +38,7 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (signingOut || logoutError) return;
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -53,7 +56,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      await navigate({ to: "/dashboard" });
+      await navigate({ to: "/" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
@@ -62,6 +65,7 @@ function AuthPage() {
   }
 
   async function google() {
+    if (signingOut || logoutError || busy) return;
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -70,7 +74,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    await navigate({ to: "/dashboard" });
+    await navigate({ to: "/" });
   }
 
   return (
@@ -127,64 +131,82 @@ function AuthPage() {
             the owner assigns roles.
           </p>
 
-          <form onSubmit={submit} className="mt-7 space-y-4">
-            {mode === "signup" ? (
+          {signingOut && (
+            <p role="status" className="mt-4 text-sm text-muted-foreground">
+              Finishing sign-out...
+            </p>
+          )}
+          {logoutError && (
+            <div role="alert" className="mt-4 space-y-2 text-sm text-destructive">
+              <p>{logoutError}</p>
+              <Button variant="outline" onClick={() => void signOut()}>
+                Retry sign-out
+              </Button>
+            </div>
+          )}
+          <fieldset disabled={busy || signingOut || !!logoutError}>
+            <form onSubmit={submit} className="mt-7 space-y-4">
+              {mode === "signup" ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Full name</Label>
+                  <Input
+                    id="name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Mohammed Maqdoom"
+                    className="h-11"
+                  />
+                </div>
+              ) : null}
               <div className="space-y-1.5">
-                <Label htmlFor="name">Full name</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Mohammed Maqdoom"
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   className="h-11"
                 />
               </div>
-            ) : null}
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className="h-11"
-              />
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  className="h-11"
+                />
+              </div>
+              <Button type="submit" disabled={busy} className="h-11 w-full">
+                {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+              </Button>
+            </form>
+
+            <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+              <span className="h-px flex-1 bg-border" /> or{" "}
+              <span className="h-px flex-1 bg-border" />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                className="h-11"
-              />
-            </div>
-            <Button type="submit" disabled={busy} className="h-11 w-full">
-              {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+
+            <Button variant="outline" className="h-11 w-full" onClick={google}>
+              Continue with Google
             </Button>
-          </form>
 
-          <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button variant="outline" className="h-11 w-full" onClick={google}>
-            Continue with Google
-          </Button>
-
-          <button
-            type="button"
-            className="mt-6 w-full text-center text-sm text-primary underline-offset-4 hover:underline"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "No account yet? Create one" : "Already have an account? Sign in"}
-          </button>
+            <button
+              type="button"
+              className="mt-6 w-full text-center text-sm text-primary underline-offset-4 hover:underline"
+              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+            >
+              {mode === "signin"
+                ? "No account yet? Create one"
+                : "Already have an account? Sign in"}
+            </button>
+          </fieldset>
         </div>
       </div>
     </div>

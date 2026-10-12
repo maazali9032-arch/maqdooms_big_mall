@@ -1,9 +1,8 @@
-import { Link, Navigate, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { canAccessPath, homePath } from "@/app/access/modules";
 import { ChevronDown, RefreshCw, LogOut, Menu, Search, UserRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_LABELS, useSession } from "@/app/providers/session";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,20 @@ function RouteGuard({ children }: { children: ReactNode }) {
   const { loading, roles, permissions, userId } = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const denied = !loading && !!userId && !canAccessPath(roles, permissions, pathname);
+  const navigate = useNavigate();
+  const requestedRedirect = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    const destination = !userId ? "/auth" : denied ? homePath(roles, permissions) : null;
+    if (!destination) {
+      requestedRedirect.current = null;
+      return;
+    }
+    if (requestedRedirect.current !== destination) {
+      requestedRedirect.current = destination;
+      void navigate({ to: destination, replace: true });
+    }
+  }, [loading, userId, denied, roles, permissions, navigate]);
 
   useEffect(() => {
     if (denied) toast.error("You do not have access to that page");
@@ -38,8 +51,7 @@ function RouteGuard({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  if (!userId) return <Navigate to="/auth" replace />;
-  if (denied) return <Navigate to={homePath(roles, permissions)} replace />;
+  if (!userId || denied) return null;
   return <>{children}</>;
 }
 
@@ -158,7 +170,15 @@ function SidebarFooter() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { fullName, roles, email, permissions } = useSession();
+  const {
+    fullName,
+    roles,
+    email,
+    permissions,
+    userId,
+    signingOut,
+    signOut: clearSession,
+  } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -190,10 +210,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [sections, search]);
 
   async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    void navigate({ to: "/auth", replace: true });
+    await clearSession();
   }
 
   function submitSearch(event: FormEvent) {
@@ -207,6 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }
 
+  if (!userId || signingOut) return <RouteGuard>{children}</RouteGuard>;
   return (
     <div className="flex min-h-screen bg-background">
       <a
@@ -318,7 +336,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-md p-1 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/30 sm:gap-3">
+                <button
+                  aria-label="Account menu"
+                  className="flex items-center gap-2 rounded-md p-1 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/30 sm:gap-3"
+                >
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#342718] text-xs font-semibold text-[#f6ead6] shadow-sm">
                     {initials(fullName)}
                   </span>
