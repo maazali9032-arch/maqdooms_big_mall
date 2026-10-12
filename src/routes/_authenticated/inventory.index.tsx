@@ -17,6 +17,7 @@ import { ThaanEditor } from "@/features/inventory/ThaanEditor";
 import { LocationLedger } from "@/features/inventory/LocationLedger";
 import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
 import { FabricStock } from "@/features/inventory/FabricStock";
+import { InventoryToolbar } from "@/features/inventory/InventoryToolbar";
 import { Consumables } from "@/features/inventory/Consumables";
 import { useSession } from "@/app/providers/session";
 import {
@@ -30,10 +31,9 @@ import {
 import { formatMetres, formatMoney, parseMetreInput } from "@/shared/utils/units";
 import { formatDate, formatDateTime } from "@/shared/utils/format";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -207,6 +207,18 @@ function InventoryPage() {
   const showCost = can("inventory.view_cost");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
   const showOperationalHistory = can("inventory.receive") || can("reports.view");
+  const activeTab = [
+    "fabric-stock",
+    "thaans",
+    "locations",
+    "consumables",
+    "archived",
+    ...(showOperationalHistory ? ["movements"] : []),
+    ...(can("inventory.receive") ? ["batches"] : []),
+    ...(isOwner ? ["finished-products"] : []),
+  ].includes(navigation.activeId)
+    ? navigation.activeId
+    : "fabric-stock";
   const thaans = useThaans();
   const fabrics = useFabrics();
   const costs = useThaanCosts(showCost);
@@ -306,58 +318,18 @@ function InventoryPage() {
         />
       </div>
 
-      <Tabs
-        value={
-          [
-            "fabric-stock",
-            "thaans",
-            "locations",
-            "consumables",
-            "archived",
-            ...(showOperationalHistory ? ["movements"] : []),
-            ...(can("inventory.receive") ? ["batches"] : []),
-            ...(isOwner ? ["finished-products"] : []),
-          ].includes(navigation.activeId)
-            ? navigation.activeId
-            : "fabric-stock"
-        }
-        onValueChange={navigation.onChange}
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList className="w-full overflow-x-auto sm:w-auto">
-            <TabsTrigger value="fabric-stock">Fabric Stock &amp; scan</TabsTrigger>
-            <TabsTrigger value="thaans">Legacy / internal Thans</TabsTrigger>
-            <TabsTrigger value="locations">Locations &amp; transfers</TabsTrigger>
-            {showOperationalHistory ? (
-              <TabsTrigger value="movements">Stock movements</TabsTrigger>
-            ) : null}
-            {can("inventory.receive") ? <TabsTrigger value="batches">Receiving</TabsTrigger> : null}
-            {isOwner ? (
-              <TabsTrigger value="finished-products">Finished Products</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="consumables">Consumables</TabsTrigger>
-            <TabsTrigger value="archived">Depleted / archived</TabsTrigger>
-          </TabsList>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {canCorrectIncomplete ||
-            navigation.activeId === "fabric-stock" ||
-            !navigation.activeId ? (
-              <label className="flex h-10 items-center gap-2 whitespace-nowrap rounded-md border border-input bg-card px-3 text-sm shadow-sm shadow-black/[0.02]">
-                <Checkbox
-                  checked={incompleteOnly}
-                  onCheckedChange={(checked) => setIncompleteOnly(Boolean(checked))}
-                />
-                Incomplete only
-              </label>
-            ) : null}
-            <Input
-              placeholder="Search barcode, fabric, rack…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 sm:w-72"
-            />
-          </div>
-        </div>
+      <Tabs value={activeTab} onValueChange={navigation.onChange}>
+        <InventoryToolbar
+          activeId={activeTab}
+          showOperationalHistory={showOperationalHistory}
+          canReceive={can("inventory.receive")}
+          isOwner={isOwner}
+          showIncomplete={canCorrectIncomplete || activeTab === "fabric-stock"}
+          incompleteOnly={incompleteOnly}
+          onIncompleteChange={setIncompleteOnly}
+          search={search}
+          onSearchChange={setSearch}
+        />
 
         <TabsContent value="fabric-stock" className="mt-4">
           <FabricStock search={search} incompleteOnly={incompleteOnly} onSearchChange={setSearch} />

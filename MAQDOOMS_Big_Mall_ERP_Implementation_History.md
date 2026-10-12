@@ -5352,3 +5352,69 @@ REMAINING:
 
 NEXT PHASE:
 - None. Publish only the verified approved inventory/access revision to main.
+
+## 13 October 2026 — Inventory search deduplication and responsive tabs
+
+PHASE:
+- Owner-approved UI refinement; no numbered phase started.
+
+STATUS:
+- Implemented and locally verified.
+
+IMPLEMENTED:
+- Removed the redundant search beside Incomplete only in Fabric Stock. The lower
+  Workshop search/scanner remains the sole input and filters the same hierarchy.
+- Section labels no longer sit in an overflowing centre-aligned strip. Navigation
+  wraps into readable desktop rows and a two-column mobile grid; 44px minimum touch
+  targets, visible selected state and existing keyboard tab navigation retained.
+- Incomplete only sits in its own filter row. Legacy/internal and archived views
+  retain their own search; other tabs do not show a nonfunctional search input.
+- Corrected label spelling to Legacy / internal Thaans; consistent section casing.
+- Effective-tab fallback is shared by content and toolbar for unknown/denied hashes.
+
+MODIFIED:
+- src/features/inventory/InventoryToolbar.tsx (new reusable actual toolbar).
+- src/routes/_authenticated/inventory.index.tsx: integrate toolbar, preserve tab/role
+  routing and remove duplicated field. No shared Tabs component styling changed.
+- scripts/fixtures/workshop-inventory/main.tsx and scripts/workshop-inventory-ui-test.mjs:
+  actual toolbar and Workshop component fixture plus responsive/navigation checks.
+- Master Plan Section 43, this Implementation History and INVENTORY_TOOLBAR desktop/
+  mobile screenshots, UI verification JSON and production build proof.
+
+REUSED:
+- Existing Radix Tabs, Checkbox, shared Input, role visibility checks, route hashes,
+  Workshop hierarchy/scanner, incomplete/search state and stock-edit/barcode workflows.
+
+DATABASE CHANGES:
+- None. No migrations, schema, indexes, functions/triggers, RLS, seed, configuration,
+  production data or actual staff grants changed.
+
+SECURITY / PERMISSIONS:
+- Existing role visibility and guarded workflows retained. Receiving, movement and
+  finished-product sections remain conditional on their existing permissions/roles.
+
+TESTS:
+- 36 actual-component browser checks pass with synthetic transport and no runtime
+  errors. Covers single Fabric Stock search, legacy search retention, full labels and
+  touch targets at 320/390/768/1024/1440px, all eight tab selections, keyboard Home/End,
+  plus existing search/incomplete/edit/barcode/print/hierarchy cases.
+- Desktop/mobile screenshots visually inspected. TypeScript noEmit, scoped ESLint
+  (zero errors/warnings), git diff --check pass. No real business mutations performed.
+- Evidence: docs/INVENTORY_TOOLBAR_UI_VERIFICATION.json and screenshot files. Older
+  Workshop verification proofs remain unchanged.
+
+BUILD:
+- Isolated Vercel-preset production build passed 2026-10-12T20:32:54.172Z
+  (13 October 2026, 02:02:54.172 IST), reusing installed isolated dependencies.
+  Patched TanStack server-core 1.169.39 retained. Historical build evidence preserved.
+- Proof: docs/INVENTORY_TOOLBAR_BUILD_VERIFICATION.json. No manual deployment run.
+
+BUSINESS RULES VERIFIED:
+- Same stock filters, IDs, barcode/edit operations and role-specific tab visibility;
+  only presentation/search placement changed.
+
+REMAINING:
+- Hosted deployment completion/live-device acceptance not verified locally.
+
+NEXT PHASE:
+- None. Publish only this approved UI refinement to main.

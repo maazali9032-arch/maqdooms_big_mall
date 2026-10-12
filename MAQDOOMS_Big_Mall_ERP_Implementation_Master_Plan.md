@@ -1646,3 +1646,15 @@ explicit role restrictions. Owner-only actions cannot offer an ineffective Allow
 selection. Keep existing ineffective overrides as history rather than silently
 rewriting them. The expandable role table is labelled Stored role defaults because
 raw catalogue grants alone do not represent effective database access.
+
+# 43. OWNER-APPROVED RESPONSIVE INVENTORY NAVIGATION
+
+Approved 13 October 2026 from the Inventory screenshot:
+- Fabric Stock uses its existing lower Workshop search/scanner only. Remove the
+  duplicate input beside Incomplete only.
+- Inventory sections retain their existing IDs, routing and role visibility. Show
+  complete, spaced labels; wrap into desktop rows and a two-column mobile layout.
+  Avoid clipped tab labels and horizontal/vertical scrollbars in the section selector.
+- Keep Incomplete only separate from the navigation. Legacy/internal and archived
+  Thaan views retain their own search because they do not contain the Workshop scanner.
+- No changes to inventory data, permissions, barcode identity or database schema.

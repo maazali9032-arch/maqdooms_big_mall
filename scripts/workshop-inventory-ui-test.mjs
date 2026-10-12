@@ -40,6 +40,69 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("http://127.0.0.1:5195");
   await page.getByRole("heading", { name: "B0002 - Raymonds", exact: true }).waitFor();
+  check(
+    (await page.getByRole("textbox").count()) === 1,
+    "Fabric Stock has one search/scanner input",
+  );
+  check(
+    (await page.getByLabel("Search legacy Thaans").count()) === 0,
+    "No duplicate search beside Incomplete only on Fabric Stock",
+  );
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 1100 });
+    check(
+      await page.getByRole("tablist", { name: "Inventory sections" }).evaluate((list) => {
+        const r = list.getBoundingClientRect();
+        return (
+          list.scrollWidth <= list.clientWidth + 1 &&
+          list.scrollHeight <= list.clientHeight + 1 &&
+          [...list.querySelectorAll('[role="tab"]')].every((tab) => {
+            const t = tab.getBoundingClientRect();
+            return (
+              t.left >= r.left &&
+              t.right <= r.right + 1 &&
+              t.height >= 44 &&
+              tab.scrollWidth <= tab.clientWidth + 1
+            );
+          })
+        );
+      }),
+      `All inventory tabs fit and retain touch targets at ${width}px`,
+    );
+  }
+  for (const name of [
+    "Legacy / internal Thaans",
+    "Locations & transfers",
+    "Stock movements",
+    "Receiving",
+    "Finished products",
+    "Consumables",
+    "Depleted / archived",
+    "Fabric stock & scan",
+  ]) {
+    await page.getByRole("tab", { name, exact: true }).click();
+    check(
+      (await page.getByRole("tab", { name, exact: true }).getAttribute("aria-selected")) === "true",
+      `Inventory tab remains selectable: ${name}`,
+    );
+  }
+  await page.getByRole("tab", { name: "Legacy / internal Thaans", exact: true }).click();
+  check(await page.getByLabel("Search legacy Thaans").isVisible(), "Legacy-only search retained");
+  await page.getByRole("tab", { name: "Fabric stock & scan", exact: true }).click();
+  await page.keyboard.press("End");
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[role="tab"][aria-selected="true"]')?.textContent ===
+      "Depleted / archived",
+  );
+  check(
+    (await page
+      .getByRole("tab", { name: "Depleted / archived", exact: true })
+      .getAttribute("aria-selected")) === "true",
+    "Keyboard tab navigation reaches last section",
+  );
+  await page.keyboard.press("Home");
+  await page.getByRole("heading", { name: "B0002 - Raymonds", exact: true }).waitFor();
   check((await page.locator("tbody tr").count()) === 3, "Every Thaan is an individual row");
   const headings = await page.locator("h2").allTextContents();
   check(
@@ -60,7 +123,7 @@ try {
   );
   await page.getByLabel("Incomplete only", { exact: true }).check();
   check((await page.locator("tbody tr").count()) === 2, "Zero and missing CP included");
-  await page.getByLabel("Upper inventory search").fill("Raymonds");
+  await page.getByLabel("Search or scan Workshop stock").fill("Raymonds");
   check(
     (await page.locator("tbody tr").count()) === 1,
     "Upper search combines with incomplete filter",
@@ -139,12 +202,13 @@ try {
     );
     if (width === 390 || width === 1440)
       await page.locator("main").screenshot({
-        path: `docs/WORKSHOP_INVENTORY_${width === 1440 ? "DESKTOP" : "MOBILE"}.png`,
+        path: `docs/INVENTORY_TOOLBAR_${width === 1440 ? "DESKTOP" : "MOBILE"}.png`,
+        style: "[data-sonner-toaster] { visibility: hidden !important; }",
       });
   }
   check(errors.length === 0, "No browser errors");
   await fs.writeFile(
-    "docs/WORKSHOP_INVENTORY_UI_VERIFICATION.json",
+    "docs/INVENTORY_TOOLBAR_UI_VERIFICATION.json",
     JSON.stringify(
       { verified_at: new Date().toISOString(), checks, passed: true, errors },
       null,

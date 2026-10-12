@@ -3,6 +3,8 @@ import { useState } from "react";
 import { Toaster } from "sonner";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { WorkshopFabricStock } from "@/features/inventory/WorkshopFabricStock";
+import { InventoryToolbar } from "@/features/inventory/InventoryToolbar";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SessionContext } from "./session";
 import { calls } from "./client";
 import "@/styles.css";
@@ -10,6 +12,7 @@ const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 export function App() {
   const [search, setSearch] = useState("");
   const [incomplete, setIncomplete] = useState(false);
+  const [active, setActive] = useState("fabric-stock");
   return (
     <SessionContext.Provider
       value={{
@@ -25,26 +28,39 @@ export function App() {
     >
       <main className="mx-auto max-w-6xl space-y-4 p-4">
         <h1>Inventory</h1>
-        <div className="flex flex-wrap gap-3">
-          <label>
-            <input
-              type="checkbox"
-              checked={incomplete}
-              onChange={(e) => setIncomplete(e.target.checked)}
-            />
-            Incomplete only
-          </label>
-          <input
-            aria-label="Upper inventory search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+        <Tabs value={active} onValueChange={setActive}>
+          <InventoryToolbar
+            activeId={active}
+            showOperationalHistory
+            canReceive
+            isOwner
+            showIncomplete
+            incompleteOnly={incomplete}
+            onIncompleteChange={setIncomplete}
+            search={search}
+            onSearchChange={setSearch}
           />
-        </div>
-        <WorkshopFabricStock
-          search={search}
-          incompleteOnly={incomplete}
-          onSearchChange={setSearch}
-        />
+          <TabsContent value="fabric-stock">
+            <WorkshopFabricStock
+              search={search}
+              incompleteOnly={incomplete}
+              onSearchChange={setSearch}
+            />
+          </TabsContent>
+          {[
+            "thaans",
+            "locations",
+            "movements",
+            "batches",
+            "finished-products",
+            "consumables",
+            "archived",
+          ].map((id) => (
+            <TabsContent key={id} value={id}>
+              {id} panel fixture
+            </TabsContent>
+          ))}
+        </Tabs>
       </main>
       <Toaster />
     </SessionContext.Provider>
