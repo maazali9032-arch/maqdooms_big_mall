@@ -1,0 +1,25 @@
+{
+  "verified_at": "2026-10-13T07:05:09.305Z",
+  "checks": 17,
+  "results": [
+    "Repeated scans accumulate distinct rows without duplicates",
+    "Unknown measurements and CP remain blank",
+    "Ambiguous save freezes remaining values",
+    "Each row retains its actual values and uncertain retry reuses request",
+    "Bulk edits preserve separate colours",
+    "Stock editing fits 390px",
+    "Stock editing fits 1440px",
+    "Actual Stock Transfer route removes duplicate finished-products tab",
+    "Transfer scans accumulate distinct rows",
+    "Selected label printing retains exact identities and excludes unselected row",
+    "Over-transfer rejected before posting",
+    "Uncertain transfer preserves quantities and destinations",
+    "Different floors get separate exact documents and retry does not deduct twice",
+    "Partial/multiple transfer results marked per row",
+    "Transfer rows fit 390px",
+    "Transfer rows fit 1440px",
+    "No browser runtime errors"
+  ],
+  "errors": [],
+  "transport": "Synthetic; no live business changes"
+}

@@ -44,6 +44,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
           label: "Stock Transfer",
           icon: Boxes,
           module: "stock_transfer",
+          permission: "stock.transfer",
         },
         {
           to: "/inventory",
@@ -69,11 +70,11 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
               ownerOnly: true,
             }
           : {
-              to: "/inventory/transfers",
-              hash: "products",
+              to: "/inventory",
+              hash: "finished-products",
               label: "Finished Product Stock",
               icon: Boxes,
-              module: "stock_transfer",
+              module: "inventory",
               permission: "stock.transfer_finished",
             },
       ],

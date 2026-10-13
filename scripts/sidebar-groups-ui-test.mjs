@@ -163,9 +163,9 @@ try {
   await page.getByRole("button", { name: "Use stock_entry", exact: true }).click();
   await openGroup("Stock & Inventory");
   check(
-    (await link("Stock Transfer").isVisible()) &&
+    (await link("Stock Transfer").count()) === 0 &&
       (await link("Finished Product Stock").isVisible()),
-    "Finished-only permission exposes correct stock actions",
+    "Finished-only permission shows dedicated product stock without fabric transfer link",
   );
   check((await link("Stock Entry").count()) === 0, "Receive action remains permission-restricted");
   check((await group("Production").count()) === 0, "Stock staff cannot open Production");

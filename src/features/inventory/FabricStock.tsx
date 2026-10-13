@@ -648,12 +648,14 @@ export function FabricStock({
   search = "",
   incompleteOnly = false,
   onSearchChange,
+  onIncompleteChange,
 }: {
   receiving?: boolean;
   scanOnly?: boolean;
   search?: string;
   incompleteOnly?: boolean;
   onSearchChange?: (value: string) => void;
+  onIncompleteChange?: (value: boolean) => void;
 }) {
   return receiving || scanOnly ? (
     <LegacyFabricStock receiving={receiving} scanOnly={scanOnly} />
@@ -662,6 +664,7 @@ export function FabricStock({
       search={search}
       incompleteOnly={incompleteOnly}
       onSearchChange={onSearchChange}
+      onIncompleteChange={onIncompleteChange}
     />
   );
 }

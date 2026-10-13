@@ -8,6 +8,7 @@ import { Panel, EmptyState } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -67,10 +68,12 @@ export function WorkshopFabricStock({
   search = "",
   incompleteOnly = false,
   onSearchChange,
+  onIncompleteChange,
 }: {
   search?: string;
   incompleteOnly?: boolean;
   onSearchChange?: (value: string) => void;
+  onIncompleteChange?: (value: boolean) => void;
 }) {
   const catalog = useWorkshopInventory();
   const { can, isOwner } = useSession();
@@ -78,6 +81,15 @@ export function WorkshopFabricStock({
   const [localSearch, setLocalSearch] = useState("");
   const text = onSearchChange ? search : localSearch;
   const setSearch = onSearchChange ?? setLocalSearch;
+  const incompleteFilter = onIncompleteChange ? (
+    <label className="ml-auto flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
+      <Checkbox
+        checked={incompleteOnly}
+        onCheckedChange={(value) => onIncompleteChange(Boolean(value))}
+      />
+      Incomplete only
+    </label>
+  ) : null;
   const [editing, setEditing] = useState<WorkshopRow | null>(null);
   const [label, setLabel] = useState<WorkshopRow | null>(null);
   const [fields, setFields] = useState({
@@ -225,15 +237,18 @@ export function WorkshopFabricStock({
       ) : catalog.error ? (
         <p role="alert">{catalog.error.message}</p>
       ) : !visible.length ? (
-        <EmptyState
-          title="No matching Workshop Thaans"
-          description="Clear the search or incomplete filter to see other rows."
-        />
+        <div>
+          {incompleteFilter}
+          <EmptyState
+            title="No matching Workshop Thaans"
+            description="Clear the search or incomplete filter to see other rows."
+          />
+        </div>
       ) : (
         <div className="space-y-5" aria-label="Workshop inventory hierarchy">
           {[...batches.values()].map(({ row, groups }) => (
             <section key={row.batch_id} className="overflow-hidden rounded-xl border bg-card">
-              <header className="flex items-center gap-3 border-b bg-primary/5 p-4">
+              <header className="flex flex-wrap items-center gap-3 border-b bg-primary/5 p-4">
                 <FolderOpen className="size-5 text-primary" />
                 <div>
                   <h2 className="font-semibold">
@@ -245,6 +260,7 @@ export function WorkshopFabricStock({
                     Thaans
                   </p>
                 </div>
+                {row.batch_id === visible[0]?.batch_id ? incompleteFilter : null}
               </header>
               <div className="space-y-4 p-3 sm:p-4">
                 {[...groups.entries()].map(([id, rows]) => (

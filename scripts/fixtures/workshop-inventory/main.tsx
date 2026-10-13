@@ -34,7 +34,7 @@ export function App() {
             showOperationalHistory
             canReceive
             isOwner
-            showIncomplete
+            showIncomplete={active !== "fabric-stock"}
             incompleteOnly={incomplete}
             onIncompleteChange={setIncomplete}
             search={search}
@@ -45,6 +45,7 @@ export function App() {
               search={search}
               incompleteOnly={incomplete}
               onSearchChange={setSearch}
+              onIncompleteChange={setIncomplete}
             />
           </TabsContent>
           {[

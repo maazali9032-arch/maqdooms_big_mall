@@ -207,6 +207,7 @@ function InventoryPage() {
   const showCost = isOwner || can("inventory.view_registered_cp");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
   const showOperationalHistory = can("inventory.receive") || can("reports.view");
+  const showFinishedProducts = isOwner || can("stock.transfer_finished");
   const activeTab = [
     "fabric-stock",
     "thaans",
@@ -215,7 +216,7 @@ function InventoryPage() {
     "archived",
     ...(showOperationalHistory ? ["movements"] : []),
     ...(can("inventory.receive") ? ["batches"] : []),
-    ...(isOwner ? ["finished-products"] : []),
+    ...(showFinishedProducts ? ["finished-products"] : []),
   ].includes(navigation.activeId)
     ? navigation.activeId
     : "fabric-stock";
@@ -324,7 +325,8 @@ function InventoryPage() {
           showOperationalHistory={showOperationalHistory}
           canReceive={can("inventory.receive")}
           isOwner={isOwner}
-          showIncomplete={canCorrectIncomplete || activeTab === "fabric-stock"}
+          showFinishedProducts={showFinishedProducts}
+          showIncomplete={canCorrectIncomplete && activeTab !== "fabric-stock"}
           incompleteOnly={incompleteOnly}
           onIncompleteChange={setIncompleteOnly}
           search={search}
@@ -332,9 +334,14 @@ function InventoryPage() {
         />
 
         <TabsContent value="fabric-stock" className="mt-4">
-          <FabricStock search={search} incompleteOnly={incompleteOnly} onSearchChange={setSearch} />
+          <FabricStock
+            search={search}
+            incompleteOnly={incompleteOnly}
+            onSearchChange={setSearch}
+            onIncompleteChange={setIncompleteOnly}
+          />
         </TabsContent>
-        {isOwner ? (
+        {showFinishedProducts ? (
           <TabsContent value="finished-products" className="mt-4">
             <FinishedProductInventory />
           </TabsContent>

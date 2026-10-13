@@ -7,6 +7,7 @@ type Props = {
   showOperationalHistory: boolean;
   canReceive: boolean;
   isOwner: boolean;
+  showFinishedProducts?: boolean;
   showIncomplete: boolean;
   incompleteOnly: boolean;
   onIncompleteChange: (value: boolean) => void;
@@ -21,7 +22,9 @@ export function InventoryToolbar(props: Props) {
     { id: "locations", label: "Locations & transfers" },
     ...(props.showOperationalHistory ? [{ id: "movements", label: "Stock movements" }] : []),
     ...(props.canReceive ? [{ id: "batches", label: "Receiving" }] : []),
-    ...(props.isOwner ? [{ id: "finished-products", label: "Finished products" }] : []),
+    ...((props.showFinishedProducts ?? props.isOwner)
+      ? [{ id: "finished-products", label: "Finished products" }]
+      : []),
     { id: "consumables", label: "Consumables" },
     { id: "archived", label: "Depleted / archived" },
   ];

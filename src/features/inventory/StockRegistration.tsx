@@ -1,3 +1,4 @@
+import { ScannedThaanRows } from "./ScannedThaanRows";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { quantityInput } from "./ledger-quantity";
-import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { reportQuantity } from "@/features/reports/report-value";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 type Variant = {
@@ -40,32 +41,6 @@ type Batch = {
   arrival_date: string;
   remarks: string | null;
   fabric_types: FabricType[];
-};
-type Details = {
-  code: string;
-  batch_code: string;
-  supplier: string;
-  fabric_type: string;
-  original_mm: number | null;
-  saved_length_mm: number | null;
-  colour: string | null;
-  measured: boolean;
-  can_complete: boolean;
-  cp_visible: boolean;
-  can_set_cp?: boolean;
-  cp_missing: boolean;
-  cp_paise_per_m: number | null;
-  available_mm: number | null;
-  status: string;
-  locations: { id: string; name: string; quantity_mm: number }[];
-};
-type Legacy = {
-  barcode: string;
-  fabric_name: string;
-  batch_code: string;
-  available_mm: number;
-  thans: { id: string; original_mm: number | null; status: string }[];
-  locations: { id: string; name: string; quantity_mm: number }[];
 };
 type Work =
   | { kind: "append"; group: string; quantity: number }
@@ -165,11 +140,6 @@ export function StockRegistration() {
   const [extraName, setExtraName] = useState("");
   const [printed, setPrinted] = useState<string[]>([]);
   const labels = useRef<HTMLDivElement>(null);
-  const [barcode, setBarcode] = useState("");
-  const [scanned, setScanned] = useState("");
-  const [colour, setColour] = useState("");
-  const [length, setLength] = useState("");
-  const [cp, setCp] = useState("");
   const [pending, setPending] = useState<Pending | null>(null);
   const catalog = useQuery({
     queryKey: ["stock-registration", userId],
@@ -180,22 +150,6 @@ export function StockRegistration() {
       return data as unknown as Batch[];
     },
   });
-  const lookup = useQuery({
-    queryKey: ["stock-registration-scan", userId, scanned],
-    enabled: allowed && !!scanned,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("registered_thaan_details", {
-        p_barcode: scanned,
-      });
-      if (error) throw error;
-      if (data) return { registered: data as unknown as Details, legacy: null };
-      const fallback = await supabase.rpc("fabric_stock_catalog", { p_barcode: scanned });
-      if (fallback.error) throw fallback.error;
-      return { registered: null, legacy: (fallback.data as unknown as Legacy[])[0] ?? null };
-    },
-  });
-  const details = lookup.data?.registered;
-  const legacy = lookup.data?.legacy;
   const names = [
     ...new Set([
       ...(suppliers.data ?? []).map((s) => s.name),
@@ -281,10 +235,6 @@ export function StockRegistration() {
         setExtraCount("");
         setExtraName("");
         if (args.work.kind === "append") setPrinted([]);
-      } else {
-        setColour("");
-        setLength("");
-        setCp("");
       }
       await qc.invalidateQueries();
       toast.success(
@@ -313,183 +263,8 @@ export function StockRegistration() {
       )}
       {stage === "home" && (
         <>
-          <div className="grid items-start gap-4 lg:grid-cols-2">
-            <Panel
-              title="Scan Existing Barcode"
-              description="Scan a fabric Thaan to view its details and complete missing information."
-            >
-              <form
-                className="flex flex-wrap gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!frozen && barcode.trim()) {
-                    setScanned(barcode.trim());
-                    setColour("");
-                    setLength("");
-                    setCp("");
-                    void qc.invalidateQueries({
-                      queryKey: ["stock-registration-scan", userId, barcode.trim()],
-                    });
-                  }
-                }}
-              >
-                <Input
-                  aria-label="Thaan barcode"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder="Scan barcode and press Enter"
-                  disabled={frozen}
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <Button disabled={frozen || !barcode.trim()}>Scan Thaan</Button>
-              </form>
-              {!!scanned && (
-                <QueryState
-                  loading={lookup.isPending}
-                  error={lookup.error}
-                  retry={() => void lookup.refetch()}
-                />
-              )}
-              {details && !lookup.error && (
-                <div className="mt-4 space-y-3 rounded border p-3">
-                  <p className="break-all font-semibold">{details.code}</p>
-                  <p>
-                    {details.batch_code} / {details.supplier} / {details.fabric_type}
-                  </p>
-                  <p>Colour: {details.colour || "Not recorded"}</p>
-                  <p>Saved length: {metres(details.saved_length_mm)}</p>
-                  <p>Available stock: {metres(details.available_mm)}</p>
-                  <p>
-                    CP / metre:{" "}
-                    {details.cp_visible
-                      ? details.cp_paise_per_m === null
-                        ? "Not recorded"
-                        : reportMoney(String(details.cp_paise_per_m))
-                      : "Restricted"}
-                  </p>
-                  <p>
-                    Status:{" "}
-                    {details.measured
-                      ? details.status
-                      : "Awaiting actual measurement - unavailable for transfer or sale"}
-                  </p>
-                  {details.locations.map((l) => (
-                    <p key={l.id}>
-                      {l.name}: {metres(Number(l.quantity_mm))}
-                    </p>
-                  ))}
-                  {details.can_complete && (!details.measured || !details.colour) && (
-                    <fieldset disabled={frozen} className="space-y-2">
-                      {!details.colour && (
-                        <>
-                          <Label htmlFor="measured-colour">Actual colour</Label>
-                          <Input
-                            id="measured-colour"
-                            value={colour}
-                            onChange={(e) => setColour(e.target.value)}
-                          />
-                        </>
-                      )}
-                      {details.saved_length_mm === null && (
-                        <>
-                          <Label htmlFor="measured-length">Actual length (metres)</Label>
-                          <Input
-                            id="measured-length"
-                            inputMode="decimal"
-                            value={length}
-                            onChange={(e) => setLength(e.target.value)}
-                          />
-                        </>
-                      )}
-                      {details.cp_missing &&
-                        details.can_set_cp !== false &&
-                        (!details.measured || can("inventory.fill_missing_cp")) && (
-                          <>
-                            <Label htmlFor="measured-cp">CP per metre (optional)</Label>
-                            <Input
-                              id="measured-cp"
-                              inputMode="decimal"
-                              value={cp}
-                              onChange={(e) => setCp(e.target.value)}
-                            />
-                          </>
-                        )}
-                      <Button
-                        type="button"
-                        disabled={!colour.trim() && !length.trim() && !cp.trim()}
-                        onClick={() => {
-                          try {
-                            run({
-                              kind: "details",
-                              barcode: details.code,
-                              colour: colour.trim() || null,
-                              length: length.trim() ? quantityInput(length, "mm") : null,
-                              cp: cp.trim() ? fabricMoneyInput(cp) : null,
-                            });
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Invalid details");
-                          }
-                        }}
-                      >
-                        Save actual Thaan details
-                      </Button>
-                    </fieldset>
-                  )}
-                  {details.can_complete &&
-                    details.measured &&
-                    details.colour &&
-                    details.cp_missing &&
-                    details.can_set_cp !== false &&
-                    can("inventory.fill_missing_cp") && (
-                      <fieldset disabled={frozen} className="space-y-2">
-                        <Label htmlFor="delayed-cp">Missing CP per metre</Label>
-                        <Input
-                          id="delayed-cp"
-                          value={cp}
-                          onChange={(e) => setCp(e.target.value)}
-                          inputMode="decimal"
-                        />
-                        <Button
-                          type="button"
-                          disabled={!cp.trim()}
-                          onClick={() => {
-                            try {
-                              run({ kind: "cp", barcode: details.code, cp: fabricMoneyInput(cp) });
-                            } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Invalid CP");
-                            }
-                          }}
-                        >
-                          Save missing CP
-                        </Button>
-                      </fieldset>
-                    )}
-                </div>
-              )}
-              {legacy && !lookup.error && (
-                <div className="mt-4 rounded border p-3">
-                  <p>
-                    {legacy.barcode} / {legacy.fabric_name} / {legacy.batch_code}
-                  </p>
-                  <p>Available: {metres(Number(legacy.available_mm))}</p>
-                  {legacy.thans.map((t) => (
-                    <p key={t.id}>
-                      Thaan {t.id.slice(0, 8)} / {metres(t.original_mm)} / {t.status}
-                    </p>
-                  ))}
-                  {legacy.locations.map((l) => (
-                    <p key={l.id}>
-                      {l.name}: {metres(Number(l.quantity_mm))}
-                    </p>
-                  ))}
-                  <p>Existing stock record; corrections use the established inventory workflow.</p>
-                </div>
-              )}
-              {scanned && !lookup.isPending && !lookup.error && !details && !legacy && (
-                <p>No fabric barcode found.</p>
-              )}
-            </Panel>
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <ScannedThaanRows />
             <Panel
               title="Create Batch"
               description="Register arrival details and Thaan counts, then print labels by fabric type."
@@ -984,8 +759,6 @@ export function StockRegistration() {
                     disabled={frozen}
                     onClick={() => {
                       setStage("home");
-                      setScanned("");
-                      setBarcode("");
                     }}
                   >
                     Finish - Scan Thaans

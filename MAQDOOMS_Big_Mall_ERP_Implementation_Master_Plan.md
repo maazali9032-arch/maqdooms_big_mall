@@ -1684,3 +1684,22 @@ Approved 13 October 2026. This supersedes the creator-based stock rules in Secti
   not record creation ownership. No global sharing of private administrative data.
 - POS and E-commerce retain stock-availability projections necessary for sales/listing
   work; these do not grant stock editing or internal CP access.
+
+# 45. OWNER-APPROVED MULTIPLE-THAAN SCANNING AND TRANSFER UI
+
+Approved 13 October 2026 from the four Stock Entry/Inventory/Transfer screenshots:
+- Place the global Incomplete only filter on the right of the newest visible batch
+  header. Keep it accessible when no rows match. Zero/missing CP remains incomplete.
+- Stock Entry scans accumulate distinct physical Thaan rows. Select one, some or all
+  rows and enter individual colour, measurement and authorised CP details. Unknown
+  values remain blank; duplicate scans must not replace drafts or duplicate identities.
+- Stock Transfer scans accumulate compact rows showing the existing barcode, source
+  availability, metres to send and destination. Reprint selected existing barcode
+  identities; split pieces keep the same original barcode.
+- Post transfers immediately using existing stock authority. Each destination is a
+  separate atomic document; each edited Thaan is a separate audited save. Show completed
+  results and retain exact request IDs/payloads for uncertain-response retries.
+- Remove the duplicate Finished Product Transfers selector from the fabric transfer
+  page. Finished Product Stock remains reachable through its permitted sidebar link.
+- Preserve module/action permissions, original quantities and historical movements.
+  No receipt approval, invented measurements/prices, database schema changes or new roles.

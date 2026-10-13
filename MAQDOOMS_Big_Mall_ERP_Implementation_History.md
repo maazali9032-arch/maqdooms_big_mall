@@ -5559,3 +5559,99 @@ Final wording/build verification follow-up (13 October 2026):
   (13 October 2026, 02:30:24.530 IST). Current MODULE_ROLE_SCOPE_BUILD_VERIFICATION
   records this final build; the earlier successful build remains recorded above.
 - Applied migration bytes/objects were not changed by this wording clarification.
+
+
+PHASE:
+- Owner-approved multiple-Thaan Stock Entry and Stock Transfer UI refinement.
+- Date: 13 October 2026. Scope: four screenshot requests; no later phase started.
+STATUS:
+- Implemented and locally verified. Hosted deployment acceptance remains unverified.
+
+IMPLEMENTED:
+- Incomplete only moved into the newest visible batch header; responsive placement
+  and empty-results escape retained. Global filtering still includes missing/zero CP.
+- Stock Entry accumulates distinct physical scanned Thaan rows. Select one/some/all;
+  edit individual colour, length and permitted CP values. Duplicate scans preserve
+  draft values. Missing measurements/prices remain blank.
+- Stock Transfer accumulates scanned rows with original barcode symbols/codes,
+  source availability, metres to send and per-row destination. Selected labels can
+  be reprinted without CP; no new barcode identity generated.
+- Successful saves/transfers are marked per row. Unknown responses retain exact
+  request IDs/payloads and freeze edits for safe retry. Over-transfer fails before
+  posting; database authority still validates real available stock.
+- Removed duplicate finished-product transfer tab. Corrected Stock staff Finished
+  Product Stock sidebar target to /inventory#finished-products, preserving access.
+- Tables scroll within their containers on small screens; page and navigation fit.
+
+MODIFIED:
+- src/features/inventory/ScannedThaanRows.tsx (new).
+- src/features/inventory/StockRegistration.tsx, FabricTransfer.tsx,
+  WorkshopFabricStock.tsx, FabricStock.tsx, InventoryToolbar.tsx.
+- src/routes/_authenticated/inventory.index.tsx and inventory.transfers.tsx.
+- src/app/access/sidebar.ts.
+- scripts/fixtures/multi-thaan/{index.html,main.tsx,inventory.ts,client.ts} (new);
+  scripts/fixtures/workshop-inventory/main.tsx; scripts/sidebar-groups-ui-test.mjs.
+- New scripts/multi-thaan-ui-test.mjs, multi-thaan-batch-ui-test.mjs and
+  multi-thaan-inventory-ui-test.mjs; docs/MULTI_THAAN_* proof/screenshots.
+- Master Plan Section 45 and this permanent history.
+
+REUSED:
+- Existing Workshop inventory/edit RPCs, fabric catalog, inventory authority,
+  locations/balances, audited transfer posting/history and Code128 printing helper.
+- Existing batch creation, optional details, per-fabric printing and resume flow.
+
+DATABASE CHANGES:
+- None. No migration created/applied, live business data written, seed edited,
+  manual database change, ID replacement or historical transaction rewrite.
+
+SECURITY / PERMISSIONS:
+- Existing module/action rules retained. Field editing uses per-record effective
+  metadata/measurement/CP/correction flags; protected CP remains restricted.
+- Fabric transfer and label printing require their existing action permissions.
+- Finished-product inventory remains visible to eligible Stock staff through the
+  dedicated sidebar link; fabric sidebar entry requires fabric transfer permission.
+- No role defaults, individual grants, RLS or function ACL changes.
+
+TESTS:
+- 17 multi-scan browser checks pass: accumulation/deduplication, blank unknown fields,
+  independent row edits, selected identity printing, quantity validation, destination
+  grouping, successful-row results and exact retry after a lost committed response.
+- 28 batch browser checks pass: optional details, uncertain generation retry,
+  per-fabric printing, reprint/resume and later batch extension.
+- 38 Workshop inventory browser checks pass: batch-header filter location,
+  empty-results availability, zero/missing CP filtering, scanner context and
+  responsive inventory navigation/hierarchy.
+- 42 sidebar/navigation browser checks pass, including finished-only permission.
+- No browser runtime errors. Desktop/mobile screenshots visually inspected.
+- TypeScript noEmit passes. Scoped ESLint passes with zero errors; existing
+  Fast Refresh hook/component export warning and fixture-only warning remain.
+- Synthetic test transports only; no live test business records were created.
+- Evidence: docs/MULTI_THAAN_UI_VERIFICATION.json,
+  MULTI_THAAN_BATCH_POLISH_VERIFICATION.json,
+  MULTI_THAAN_INVENTORY_UI_VERIFICATION.json,
+  MULTI_THAAN_SIDEBAR_VERIFICATION.json and accompanying PNGs.
+  Earlier historical verification artifacts restored unchanged.
+
+BUILD:
+- Isolated Vercel-preset production build passed 2026-10-13T07:10:32.665Z
+  (12:40:32.665 IST); patched TanStack server-core 1.169.39 retained.
+- docs/MULTI_THAAN_BUILD_VERIFICATION.json records the result.
+- No manual hosting deployment performed.
+
+BUSINESS RULES VERIFIED:
+- Same physical Thaan identity throughout scanning, editing, split transfer/printing.
+- Real quantities and permission checks retained; no CP/SP inference or fixed fabric SP.
+- Each Thaan save and each destination transfer is independently atomic and audited.
+
+REMAINING:
+- Cross-destination transfers and multiple edits are not one global transaction;
+  completed groups/rows remain committed if a later one fails.
+- Scanner editing covers Workshop records; absent/depleted/outside-Workshop records
+  require inspection in their existing inventory/location views.
+- Legacy shared barcodes may resolve to several internal physical rows; those
+  historical identities are preserved rather than silently replaced.
+- Live hosted/device acceptance and physical-printer output are unverified locally.
+- Previous four legacy job-domain/assignment Owner decisions remain unchanged.
+
+NEXT PHASE:
+- None. Publish only this approved UI refinement to main.
