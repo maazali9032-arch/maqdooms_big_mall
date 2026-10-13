@@ -30,7 +30,7 @@ export function Bars({
         values.map((r) => (
           <div key={r.name}>
             <div className="mb-1 flex justify-between gap-3 text-sm">
-              <span className="break-words">{r.name}</span>
+              <span className="break-words">{r.name.replaceAll("_", " ")}</span>
               <strong>{money ? reportMoney(r.value.toString()) : r.value.toString()}</strong>
             </div>
             <div className="h-2 overflow-hidden rounded bg-muted" aria-hidden="true">

@@ -165,8 +165,16 @@ const rpc = (name: string, args: Record<string, unknown> = {}) => {
         data: {
           paid_sales: matches
             ? [
-                { kind: "direct_fabric_sale", orders: "1", total_paise: "10000" },
-                { kind: "finished_product_sale", orders: "1", total_paise: "20000" },
+                {
+                  kind: "direct_fabric_sale",
+                  orders: "1",
+                  total_paise: window.ownerZero ? "0" : "10000",
+                },
+                {
+                  kind: "finished_product_sale",
+                  orders: "1",
+                  total_paise: window.ownerZero ? "0" : "20000",
+                },
               ]
             : [],
           customer_tailoring_bookings: {
@@ -178,12 +186,18 @@ const rpc = (name: string, args: Record<string, unknown> = {}) => {
         error: null,
       };
     }
-    const source = (datasets[String(args["p_dataset"])] ?? []).filter(
-      (r) =>
-        !r.event_at ||
-        ((!args["p_from"] || Date.parse(r.event_at) >= Date.parse(String(args["p_from"]))) &&
-          (!args["p_to"] || Date.parse(r.event_at) < Date.parse(String(args["p_to"])))),
-    );
+    const source = (datasets[String(args["p_dataset"])] ?? [])
+      .map((r) =>
+        window.ownerZero && args["p_dataset"] === "orders"
+          ? { ...r, data: { ...r.data, final_customer_price_paise: "0" } }
+          : r,
+      )
+      .filter(
+        (r) =>
+          !r.event_at ||
+          ((!args["p_from"] || Date.parse(r.event_at) >= Date.parse(String(args["p_from"]))) &&
+            (!args["p_to"] || Date.parse(r.event_at) < Date.parse(String(args["p_to"])))),
+      );
 
     // Simulate multiple cursor pages even for small data, to verify complete aggregation.
     const offset = args["p_after"] ? Number(args["p_after"]) : 0,
@@ -207,5 +221,6 @@ declare global {
   interface Window {
     ownerCalls: { name: string; args: Record<string, unknown> }[];
     ownerFail?: string;
+    ownerZero?: boolean;
   }
 }

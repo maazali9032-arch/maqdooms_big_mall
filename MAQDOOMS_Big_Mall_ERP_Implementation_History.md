@@ -5776,3 +5776,96 @@ REMAINING:
 
 NEXT PHASE:
 - None. Publish only the three approved Owner workspaces to main.
+
+
+PHASE:
+- Owner-approved visual reference refinement for Dashboard, Reports and Audit.
+- Date: 13 October 2026. Objective: improve the actual interfaces using the three
+  new visual samples while retaining approved workflows and recorded-data semantics.
+STATUS:
+- Implemented and locally verified; production build verification recorded below.
+
+IMPLEMENTED:
+- Dashboard: Business Overview heading; distinct coloured icon KPI cards, previous/
+  next day and Today controls, refresh icon, sales amount/count columns and paid-sale
+  doughnut with exact values/rounded proportion labels. Charts use recorded values,
+  include accessible labels/tooltips, and do not invent growth or nonzero zero-state
+  maxima. Bookings stay separate from collected sales.
+- Desktop dashboard main area has two sales charts and compact inventory/production/
+  tailoring cards; right rail contains current recorded reviews and six icon quick
+  actions including View Inventory. Mobile stacks the same content. Stock previews
+  show at most ten groups with a labelled link to full records when more exist.
+- Reports: icon category navigation, desktop selected-category report sidebar and
+  mobile report selector. Existing date/context filters and full-record tables remain.
+  Definitions/limitations moved into an accessible disclosure while applied period
+  remains visible. All 24 existing datasets retained; no extra fabricated category.
+- Audit: protected-history banner and four supported summary cards; categories may
+  overlap. Stock events classified by recorded module; financial evidence counts
+  differing captured monetary fields, not inferred historical values.
+- Audit desktop now uses a compact table with date/user/action/module/reference/
+  inspection controls. Mobile retains readable event rows. Right-hand accessible
+  Sheet replaces centred dialog, preserving focus/close behaviour and all captured
+  evidence. Measurement labels match displayed metre units; money labels show rupees.
+- Scoped navy/gold styling, serif card headings, spacing, table hover states, coloured
+  module tags, responsive layouts and readable status labels.
+
+MODIFIED:
+- src/features/reports/OwnerDashboard.tsx, OwnerReports.tsx, OwnerAudit.tsx,
+  EvidenceViews.tsx; src/routes/_authenticated/dashboard.tsx.
+- New src/features/reports/OwnerVisuals.tsx and owner-workspace.css.
+- scripts/fixtures/owner-workspace/client.ts: synthetic zero-value test switch only.
+- New scripts/owner-dashboard-visual-test.mjs, owner-reports-visual-test.mjs,
+  owner-audit-visual-test.mjs and docs/OWNER_VISUAL_* evidence/screenshots.
+- Master Plan Section 49 and this permanent history.
+
+REUSED:
+- Existing Owner report RPCs/datasets, exact financial/quantity model, pagination,
+  role guards, queries, workflow links and Radix Sheet accessibility.
+- Existing ERP brand/theme and icon library; charts are native SVG with no new dependency.
+
+DATABASE CHANGES:
+- None. No migration, schema/function/constraint/index/RLS/ACL, seed, live business-data
+  or manual database change. No earlier applied migration modified.
+
+SECURITY / PERMISSIONS:
+- Owner-only pages/query execution and read-only audit behaviour preserved.
+- No role defaults, user grants, record ownership or sensitive-data boundaries changed.
+- No salary/P2P module or figures added.
+
+TESTS:
+- 18 Dashboard visual/browser checks pass, including actual column/doughnut charts,
+  day arrows, zero-value maximum, existing KPI/booking/stock rules and mobile/desktop fit.
+- 23 Reports checks pass with the desktop report navigation/mobile selector; all 24
+  datasets, filters, complete evidence, sorting, pagination and date semantics retained.
+- 18 Audit checks pass with desktop table/mobile rows/Sheet, captured before/after
+  values, missing legacy evidence, read-only controls, filter and retry behaviours.
+- 32 exact evidence-model and 9 existing report-display/date regressions pass.
+- Total: 59 browser checks plus 41 model/display checks; no browser runtime errors.
+- TypeScript noEmit and git diff --check pass. Scoped ESLint has zero errors;
+  two Fast Refresh warnings for non-component helper/icon exports are nongating.
+- Desktop/mobile/dashboard-chart/report/audit/evidence-drawer screenshots visually
+  inspected. Synthetic fixtures only; no live records mutated.
+- Evidence: docs/OWNER_VISUAL_DASHBOARD_UI_VERIFICATION.json,
+  OWNER_VISUAL_REPORTS_UI_VERIFICATION.json, OWNER_VISUAL_AUDIT_UI_VERIFICATION.json,
+  OWNER_VISUAL_MODEL_VERIFICATION.json and accompanying PNGs. Prior proof files
+  restored unchanged rather than replacing historical verification artifacts.
+
+BUILD:
+- Final isolated Vercel-preset production build passed 2026-10-13T09:42:17.663Z
+  (15:12:17.663 IST), with patched TanStack server-core 1.169.39 retained.
+- docs/OWNER_VISUAL_BUILD_VERIFICATION.json records the actual final result.
+- No manual hosting deployment or Vercel rollout completion asserted.
+
+BUSINESS RULES VERIFIED:
+- Visual references do not substitute sample values for recorded evidence.
+- Single selected day, current stock/workload, separate bookings and paid collections,
+  unknown historical evidence and protected audit access remain intact.
+
+REMAINING:
+- Unsupported payment methods/due dates/stock thresholds/shortage inputs remain
+  unavailable. No illustrative growth badges, notifications or week/month modes added.
+- Existing complete-result loading limitations and non-atomic cursor reads unchanged.
+- Hosted/live-device acceptance unverified. No later ERP phase started.
+
+NEXT PHASE:
+- None. Publish this approved visual refinement to main.

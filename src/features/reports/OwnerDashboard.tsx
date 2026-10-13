@@ -4,12 +4,25 @@ import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Panel, StatCard } from "@/shared/components/page";
+import { Panel } from "@/shared/components/page";
 import { QueryState } from "@/shared/components/query-state";
 import { reportDateRange, reportMoney, reportQuantity } from "./report-value";
 import { useEvidence } from "./use-evidence";
 import { indiaDay, inRange, group, quantityTotal, paid, title } from "./evidence-model";
 import { Bars, RecordTable } from "./EvidenceViews";
+import { OwnerKpi, ColumnChart, DonutChart } from "./OwnerVisuals";
+import {
+  ArrowLeft,
+  ArrowRight,
+  RefreshCw,
+  Boxes,
+  ArrowLeftRight,
+  ShoppingCart,
+  Scissors,
+  Factory,
+} from "lucide-react";
+import { shiftDay } from "./evidence-model";
+import "./owner-workspace.css";
 
 type Overview = {
   paid_sales: { kind: string; orders: string; total_paise: string }[];
@@ -125,7 +138,7 @@ export function OwnerDashboard() {
     };
   });
   return (
-    <div className="space-y-5">
+    <div className="owner-workspace owner-dashboard space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-card p-4">
         <label className="text-sm font-medium">
           Operational date (India)
@@ -139,6 +152,28 @@ export function OwnerDashboard() {
             }}
           />
         </label>
+        <div className="flex gap-1">
+          <Button
+            aria-label="Previous dashboard day"
+            variant="outline"
+            size="icon"
+            onClick={() => setDay(shiftDay(day, -1))}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <Button
+            aria-label="Next dashboard day"
+            variant="outline"
+            size="icon"
+            disabled={day >= indiaDay()}
+            onClick={() => setDay(shiftDay(day, 1))}
+          >
+            <ArrowRight className="size-4" />
+          </Button>
+          <Button variant="outline" onClick={() => setDay(indiaDay())}>
+            Today
+          </Button>
+        </div>
         <div className="text-right">
           <p className="mb-2 text-xs text-muted-foreground">
             Overview last updated:{" "}
@@ -147,25 +182,11 @@ export function OwnerDashboard() {
               : "Not loaded"}
           </p>
           <Button variant="outline" onClick={refresh}>
+            <RefreshCw className="mr-2 size-4" />
             Refresh dashboard
           </Button>
         </div>
       </div>
-      <Panel title="Quick actions">
-        <div className="flex flex-wrap gap-2">
-          {[
-            ["/inventory/receiving", "Stock Entry"],
-            ["/inventory/transfers", "Stock Transfer"],
-            ["/pos", "Create Bill"],
-            ["/tailoring#customer", "New Tailoring Job"],
-            ["/tailoring#production", "Create Production"],
-          ].map(([href, name]) => (
-            <Button asChild variant="outline" key={href}>
-              <a href={href}>{name}</a>
-            </Button>
-          ))}
-        </div>
-      </Panel>
       {cardState(overview)}
       {overview.data && !overview.error && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -196,290 +217,331 @@ export function OwnerDashboard() {
               report("orders", "&sale=customer_tailoring&status=completed"),
               "Booked value; separate from collected sales",
             ],
-          ].map(([name, value, href, hint]) => (
+          ].map(([name, value, href, hint], index) => (
             <a href={href} key={name}>
-              <StatCard label={name!} value={reportMoney(value!)} hint={hint!} />
+              <OwnerKpi index={index} label={name!} value={reportMoney(value!)} hint={hint!} />
             </a>
           ))}
         </div>
       )}
-      <Panel
-        title="Today's alerts & current reviews"
-        description="Current recorded checks, independent of the selected historical day. No invented thresholds or due dates."
-      >
-        {overview.error ? (
-          <p>Alerts could not load. Refresh to retry.</p>
-        ) : overview.data ? (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {Object.entries(overview.data.controls).map(([key, count]) => (
-              <a
-                href="/reports#controls"
-                key={key}
-                className="flex items-center justify-between rounded-lg border p-3 text-sm"
-              >
-                <span>{title(key)}</span>
-                <strong>{count}</strong>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p>Loading alerts…</p>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Low-stock thresholds, tailoring due dates and material-shortage requirements are not
-          exposed by the existing reports. Those alerts are unavailable. Transfers post immediately;
-          there is no pending-receipt queue.
-        </p>
-      </Panel>
-      <div className="grid items-start gap-5 xl:grid-cols-2">
-        <Panel
-          title="Sales trend"
-          description={`Payment-confirmed sales completed on ${day}; India hourly activity.`}
-          actions={selector("Sales trend", trend, setTrend, [
-            ["amount", "Sales amount"],
-            ["bills", "Number of bills"],
-            ["type", "Sales by sale type"],
-          ])}
-        >
-          {cardState(orders)}
-          {orders.data && !orders.error && (
-            <Bars
-              values={group(
-                hourly,
-                trend === "type" ? "kind" : "hour",
-                trend === "bills" ? undefined : "final_customer_price_paise",
-              ).sort((a, b) => (trend === "type" ? 0 : a.name.localeCompare(b.name)))}
-              money={trend !== "bills"}
-            />
-          )}
-        </Panel>
-        <Panel
-          title="Sales breakdown"
-          description="Selected-day paid sales. Payment-method/category charts require recorded classification data. Top items use current catalogue names and bill-line counts, not mixed-unit quantities."
-          actions={selector("Sales breakdown", breakdown, setBreakdown, [
-            ["kind", "Fabric vs finished products"],
-            ["products", "Top-selling items by bill-line count"],
-          ])}
-        >
-          {cardState(orders)}
-          {orders.data &&
-            !orders.error &&
-            (breakdown === "kind" ? (
-              <Bars values={group(sales, "kind", "final_customer_price_paise")} money />
-            ) : (
-              <div>
-                {cardState(productNames)}
-                {cardState(fabricNames)}
-                {productNames.data &&
-                  fabricNames.data &&
-                  !productNames.error &&
-                  !fabricNames.error && (
-                    <Bars
-                      values={group(
-                        sales.flatMap((r) =>
-                          (Array.isArray(r.data["items"]) ? r.data["items"] : []).map(
-                            (item, index) => {
-                              const data = item as Record<string, unknown>;
-                              return {
-                                key: r.key + ":" + index,
-                                event_at: r.event_at,
-                                data: {
-                                  item:
-                                    (data["finished_product_id"]
-                                      ? (productNames.data?.find(
-                                          (p) => p.data["id"] === data["finished_product_id"],
-                                        )?.data["product"] ?? data["finished_product_id"])
-                                      : (fabricNames.data?.find(
-                                          (p) => p.data["id"] === data["fabric_stock_id"],
-                                        )?.data["fabric"] ?? data["fabric_stock_id"])) ??
-                                    "Unclassified recorded item",
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="min-w-0 space-y-5">
+          {" "}
+          <div className="owner-dashboard-cards grid items-start gap-4 md:grid-cols-2">
+            <Panel
+              title="Sales trend"
+              description={`Payment-confirmed sales completed on ${day}; India hourly activity.`}
+              actions={selector("Sales trend", trend, setTrend, [
+                ["amount", "Sales amount"],
+                ["bills", "Number of bills"],
+                ["type", "Sales by sale type"],
+              ])}
+            >
+              {cardState(orders)}
+              {orders.data && !orders.error && (
+                <ColumnChart
+                  values={group(
+                    hourly,
+                    trend === "type" ? "kind" : "hour",
+                    trend === "bills" ? undefined : "final_customer_price_paise",
+                  ).sort((a, b) => (trend === "type" ? 0 : a.name.localeCompare(b.name)))}
+                  money={trend !== "bills"}
+                />
+              )}
+            </Panel>
+            <Panel
+              title="Sales breakdown"
+              description="Selected-day paid sales. Payment-method/category charts require recorded classification data. Top items use current catalogue names and bill-line counts, not mixed-unit quantities."
+              actions={selector("Sales breakdown", breakdown, setBreakdown, [
+                ["kind", "Fabric vs finished products"],
+                ["products", "Top-selling items by bill-line count"],
+              ])}
+            >
+              {cardState(orders)}
+              {orders.data &&
+                !orders.error &&
+                (breakdown === "kind" ? (
+                  <DonutChart values={group(sales, "kind", "final_customer_price_paise")} />
+                ) : (
+                  <div>
+                    {cardState(productNames)}
+                    {cardState(fabricNames)}
+                    {productNames.data &&
+                      fabricNames.data &&
+                      !productNames.error &&
+                      !fabricNames.error && (
+                        <Bars
+                          values={group(
+                            sales.flatMap((r) =>
+                              (Array.isArray(r.data["items"]) ? r.data["items"] : []).map(
+                                (item, index) => {
+                                  const data = item as Record<string, unknown>;
+                                  return {
+                                    key: r.key + ":" + index,
+                                    event_at: r.event_at,
+                                    data: {
+                                      item:
+                                        (data["finished_product_id"]
+                                          ? (productNames.data?.find(
+                                              (p) => p.data["id"] === data["finished_product_id"],
+                                            )?.data["product"] ?? data["finished_product_id"])
+                                          : (fabricNames.data?.find(
+                                              (p) => p.data["id"] === data["fabric_stock_id"],
+                                            )?.data["fabric"] ?? data["fabric_stock_id"])) ??
+                                        "Unclassified recorded item",
+                                    },
+                                  };
                                 },
-                              };
-                            },
-                          ),
-                        ),
-                        "item",
+                              ),
+                            ),
+                            "item",
+                          )}
+                        />
                       )}
+                  </div>
+                ))}
+            </Panel>
+            <Panel
+              title="Inventory"
+              description="Current ledger stock; not a historical snapshot of the selected date."
+              actions={selector("Inventory view", inventory, setInventory, [
+                ["location", "Stock by location"],
+                ["fabric", "Stock by fabric / item"],
+                ["movements", "Selected-day movements"],
+              ])}
+            >
+              {inventory === "movements" ? (
+                <>
+                  {cardState(movements)}
+                  {movements.data && !movements.error && (
+                    <RecordTable
+                      rows={movements.data}
+                      preferred={["movement_type", "source", "destination", "quantity", "unit"]}
                     />
                   )}
-              </div>
-            ))}
-        </Panel>
-        <Panel
-          title="Inventory"
-          description="Current ledger stock; not a historical snapshot of the selected date."
-          actions={selector("Inventory view", inventory, setInventory, [
-            ["location", "Stock by location"],
-            ["fabric", "Stock by fabric / item"],
-            ["movements", "Selected-day movements"],
-          ])}
-        >
-          {inventory === "movements" ? (
-            <>
-              {cardState(movements)}
-              {movements.data && !movements.error && (
-                <RecordTable
-                  rows={movements.data}
-                  preferred={["movement_type", "source", "destination", "quantity", "unit"]}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              {cardState(stocks)}
-              {stocks.data && !stocks.error && (
-                <div className="space-y-2">
-                  {!stockDetails.length && (
-                    <p className="text-sm text-muted-foreground">
-                      No current ledger stock recorded.
-                    </p>
-                  )}
-                  {stockDetails.map((s) => (
-                    <div key={s.name} className="rounded-lg border p-3 text-sm">
-                      <strong>{s.name}</strong>
-                      <p className="text-muted-foreground">
-                        {s.units
-                          .map(
-                            (u) =>
-                              reportQuantity(u.total.value, u.unit) +
-                              (u.total.unknown
-                                ? ` · ${u.total.unknown} quantities not recorded`
-                                : ""),
-                          )
-                          .join(" · ")}
-                      </p>
+                </>
+              ) : (
+                <>
+                  {cardState(stocks)}
+                  {stocks.data && !stocks.error && (
+                    <div className="space-y-2">
+                      {!stockDetails.length && (
+                        <p className="text-sm text-muted-foreground">
+                          No current ledger stock recorded.
+                        </p>
+                      )}
+                      {stockDetails.slice(0, 10).map((s) => (
+                        <div key={s.name} className="rounded-lg border p-3 text-sm">
+                          <strong>{s.name}</strong>
+                          <p className="text-muted-foreground">
+                            {s.units
+                              .map(
+                                (u) =>
+                                  reportQuantity(u.total.value, u.unit) +
+                                  (u.total.unknown
+                                    ? ` · ${u.total.unknown} quantities not recorded`
+                                    : ""),
+                              )
+                              .join(" · ")}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </Panel>
-        <Panel
-          title="Production"
-          description={
-            production === "status"
-              ? "Current job status across all creation dates."
-              : `Issues/status activity on ${day}; piece allocations are current recorded evidence against those issues, not that day’s consumption.`
-          }
-          actions={selector("Production view", production, setProduction, [
-            ["status", "Current production status"],
-            ["issued", "Material issued"],
-            ["usage", "Recorded piece allocations"],
-            ["completed", "Status changes & Workshop receipts"],
-          ])}
-        >
-          {production === "status" ? (
-            <>
-              {cardState(jobs)}
-              {jobs.data && !jobs.error && <Bars values={group(jobs.data, "status")} />}
-            </>
-          ) : production === "completed" ? (
-            <>
-              {cardState(history)}
-              {history.data && !history.error && <RecordTable rows={history.data} />}
-            </>
-          ) : (
-            <>
-              {cardState(issues)}
-              {issues.data && !issues.error && (
-                <RecordTable
-                  rows={issues.data.filter((r) => r.data["job_kind"] === "owner_production")}
-                  preferred={
-                    production === "issued"
-                      ? ["job", "item", "quantity_issued", "unit"]
-                      : ["job", "item", "actual_piece_usage", "actual_usage_scope", "unit"]
-                  }
-                />
-              )}
-            </>
-          )}
-        </Panel>
-        <Panel
-          title="Tailoring & workload"
-          description="Current workload across all creation dates; Customer Tailoring and Owner Production stay separate."
-          actions={selector("Tailoring workload", tailoring, setTailoring, [
-            ["customer", "Customer tailoring jobs"],
-            ["production", "Owner production jobs"],
-          ])}
-        >
-          {cardState(tailoring === "customer" ? customers : jobs)}
-          {(tailoring === "customer" ? customers : jobs).data &&
-            !(tailoring === "customer" ? customers : jobs).error && (
-              <Bars
-                values={group(
-                  tailoring === "customer"
-                    ? active
-                    : (jobs.data ?? []).filter(
-                        (r) =>
-                          !["completed", "received", "cancelled"].includes(
-                            String(r.data["status"]),
-                          ),
-                      ),
-                  "status",
+              {stocks.data &&
+                !stocks.error &&
+                stockDetails.length > 10 &&
+                inventory !== "movements" && (
+                  <a className="mt-3 inline-block text-xs text-primary" href="/reports#stock">
+                    Showing 10 of {stockDetails.length} groups · View all stock →
+                  </a>
                 )}
+            </Panel>
+            <Panel
+              title="Production"
+              description={
+                production === "status"
+                  ? "Current job status across all creation dates."
+                  : `Issues/status activity on ${day}; piece allocations are current recorded evidence against those issues, not that day’s consumption.`
+              }
+              actions={selector("Production view", production, setProduction, [
+                ["status", "Current production status"],
+                ["issued", "Material issued"],
+                ["usage", "Recorded piece allocations"],
+                ["completed", "Status changes & Workshop receipts"],
+              ])}
+            >
+              {production === "status" ? (
+                <>
+                  {cardState(jobs)}
+                  {jobs.data && !jobs.error && <Bars values={group(jobs.data, "status")} />}
+                </>
+              ) : production === "completed" ? (
+                <>
+                  {cardState(history)}
+                  {history.data && !history.error && <RecordTable rows={history.data} />}
+                </>
+              ) : (
+                <>
+                  {cardState(issues)}
+                  {issues.data && !issues.error && (
+                    <RecordTable
+                      rows={issues.data.filter((r) => r.data["job_kind"] === "owner_production")}
+                      preferred={
+                        production === "issued"
+                          ? ["job", "item", "quantity_issued", "unit"]
+                          : ["job", "item", "actual_piece_usage", "actual_usage_scope", "unit"]
+                      }
+                    />
+                  )}
+                </>
+              )}
+            </Panel>
+            <Panel
+              title="Tailoring & workload"
+              description="Current workload across all creation dates; Customer Tailoring and Owner Production stay separate."
+              actions={selector("Tailoring workload", tailoring, setTailoring, [
+                ["customer", "Customer tailoring jobs"],
+                ["production", "Owner production jobs"],
+              ])}
+            >
+              {cardState(tailoring === "customer" ? customers : jobs)}
+              {(tailoring === "customer" ? customers : jobs).data &&
+                !(tailoring === "customer" ? customers : jobs).error && (
+                  <Bars
+                    values={group(
+                      tailoring === "customer"
+                        ? active
+                        : (jobs.data ?? []).filter(
+                            (r) =>
+                              !["completed", "received", "cancelled"].includes(
+                                String(r.data["status"]),
+                              ),
+                          ),
+                      "status",
+                    )}
+                  />
+                )}
+              <a
+                className="mt-3 inline-block text-sm text-primary"
+                href={tailoring === "customer" ? "/tailoring#customer" : "/tailoring#production"}
+              >
+                Open relevant jobs →
+              </a>
+            </Panel>
+          </div>
+          <Panel title="Recent activity">
+            <div role="tablist" aria-label="Recent activity" className="mb-4 flex flex-wrap gap-2">
+              {[
+                ["bills", "Recent Bills"],
+                ["tailoring", "Tailoring Jobs"],
+                ["movements", "Stock Movements"],
+                ["reviews", "Pending Reviews"],
+              ].map(([v, n]) => (
+                <Button
+                  key={v}
+                  role="tab"
+                  aria-selected={recent === v}
+                  variant={recent === v ? "default" : "outline"}
+                  onClick={() => setRecent(v!)}
+                >
+                  {n}
+                </Button>
+              ))}
+            </div>
+            {cardState(
+              recent === "bills"
+                ? orders
+                : recent === "tailoring"
+                  ? customers
+                  : recent === "movements"
+                    ? movements
+                    : controls,
+            )}
+            {!(
+              recent === "bills"
+                ? orders
+                : recent === "tailoring"
+                  ? customers
+                  : recent === "movements"
+                    ? movements
+                    : controls
+            ).error && (
+              <RecordTable
+                key={recent + day}
+                rows={
+                  recent === "bills"
+                    ? sales
+                    : recent === "tailoring"
+                      ? (customers.data ?? []).filter((r) => inRange(r.event_at, day, day))
+                      : recent === "movements"
+                        ? (movements.data ?? [])
+                        : (controls.data ?? [])
+                }
+                initialPageSize={10}
               />
             )}
-          <a
-            className="mt-3 inline-block text-sm text-primary"
-            href={tailoring === "customer" ? "/tailoring#customer" : "/tailoring#production"}
-          >
-            Open relevant jobs →
-          </a>
-        </Panel>
-      </div>
-      <Panel title="Recent activity">
-        <div role="tablist" aria-label="Recent activity" className="mb-4 flex flex-wrap gap-2">
-          {[
-            ["bills", "Recent Bills"],
-            ["tailoring", "Tailoring Jobs"],
-            ["movements", "Stock Movements"],
-            ["reviews", "Pending Reviews"],
-          ].map(([v, n]) => (
-            <Button
-              key={v}
-              role="tab"
-              aria-selected={recent === v}
-              variant={recent === v ? "default" : "outline"}
-              onClick={() => setRecent(v!)}
-            >
-              {n}
-            </Button>
-          ))}
+          </Panel>
         </div>
-        {cardState(
-          recent === "bills"
-            ? orders
-            : recent === "tailoring"
-              ? customers
-              : recent === "movements"
-                ? movements
-                : controls,
-        )}
-        {!(
-          recent === "bills"
-            ? orders
-            : recent === "tailoring"
-              ? customers
-              : recent === "movements"
-                ? movements
-                : controls
-        ).error && (
-          <RecordTable
-            key={recent + day}
-            rows={
-              recent === "bills"
-                ? sales
-                : recent === "tailoring"
-                  ? (customers.data ?? []).filter((r) => inRange(r.event_at, day, day))
-                  : recent === "movements"
-                    ? (movements.data ?? [])
-                    : (controls.data ?? [])
-            }
-            initialPageSize={10}
-          />
-        )}
-      </Panel>
+        <aside className="owner-dashboard-rail min-w-0 space-y-4" aria-label="Dashboard controls">
+          {" "}
+          <Panel
+            title="Today's alerts & current reviews"
+            description="Current recorded checks, independent of the selected historical day. No invented thresholds or due dates."
+          >
+            {overview.error ? (
+              <p>Alerts could not load. Refresh to retry.</p>
+            ) : overview.data ? (
+              <div className="space-y-1">
+                {Object.entries(overview.data.controls).map(([key, count]) => (
+                  <a href="/reports#controls" key={key} className="owner-alert-row">
+                    <span>{title(key)}</span>
+                    <strong>{count}</strong>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <p>Loading alerts…</p>
+            )}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Low-stock thresholds, tailoring due dates and material-shortage requirements are not
+              exposed by the existing reports. Those alerts are unavailable. Transfers post
+              immediately; there is no pending-receipt queue.
+            </p>
+          </Panel>
+          <Panel title="Quick actions">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["/inventory/receiving", "Stock Entry"],
+                ["/inventory/transfers", "Stock Transfer"],
+                ["/pos", "Create Bill"],
+                ["/tailoring#customer", "New Tailoring Job"],
+                ["/tailoring#production", "Create Production"],
+                ["/inventory", "View Inventory"],
+              ].map(([href, name], index) => (
+                <Button
+                  asChild
+                  variant="outline"
+                  className="h-auto min-h-20 whitespace-normal px-2 py-3 text-[11px]"
+                  key={href}
+                >
+                  <a href={href} className="flex flex-col items-center gap-2 text-center">
+                    {(() => {
+                      const Icon = [Boxes, ArrowLeftRight, ShoppingCart, Scissors, Factory, Boxes][
+                        index
+                      ]!;
+                      return <Icon className="size-5 text-primary" />;
+                    })()}
+                    {name}
+                  </a>
+                </Button>
+              ))}
+            </div>
+          </Panel>
+        </aside>
+      </div>
     </div>
   );
 }

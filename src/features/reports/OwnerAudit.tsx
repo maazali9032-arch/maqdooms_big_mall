@@ -4,12 +4,12 @@ import { Panel, StatCard } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet as Dialog,
+  SheetContent as DialogContent,
+  SheetHeader as DialogHeader,
+  SheetTitle as DialogTitle,
+  SheetDescription as DialogDescription,
+} from "@/components/ui/sheet";
 import { QueryState } from "@/shared/components/query-state";
 import { useEvidence, type EvidenceRow } from "./use-evidence";
 import {
@@ -23,6 +23,8 @@ import {
   title,
 } from "./evidence-model";
 import { reportDateRange } from "./report-value";
+import { ShieldCheck, Eye } from "lucide-react";
+import "./owner-workspace.css";
 import { fieldText } from "./EvidenceViews";
 
 type Filters = {
@@ -145,7 +147,55 @@ export function OwnerAudit() {
     current = Math.min(page, maxPage);
   if (!isOwner) return <p>Owner access is required.</p>;
   return (
-    <div className="space-y-5">
+    <div className="owner-workspace owner-audit space-y-5">
+      <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
+        <ShieldCheck className="size-6 shrink-0 text-primary" />
+        <div>
+          <strong className="block text-foreground">Protected audit history</strong>Recorded events
+          cannot be edited or deleted here.
+        </div>
+      </div>
+      {events.data && !events.error && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Matching audit events"
+            value={rows.length}
+            hint="Recorded events in the applied period"
+          />
+          <StatCard
+            label="Stock events"
+            value={
+              rows.filter((r) => ["Inventory", "Stock Entry", "Transfers"].includes(auditModule(r)))
+                .length
+            }
+            hint="Captured stock-module activity"
+          />
+          <StatCard
+            label="Financial evidence"
+            value={
+              rows.filter((r) => {
+                const old = r.data["previous_value"],
+                  next = r.data["new_value"];
+                const before =
+                  old && typeof old === "object" ? (old as Record<string, unknown>) : {};
+                const after =
+                  next && typeof next === "object" ? (next as Record<string, unknown>) : {};
+                return [...new Set([...Object.keys(before), ...Object.keys(after)])].some(
+                  (key) =>
+                    (key.includes("paise") || key === "cp" || key === "sp") &&
+                    JSON.stringify(before[key]) !== JSON.stringify(after[key]),
+                );
+              }).length
+            }
+            hint="Captured monetary fields differ; categories can overlap"
+          />
+          <StatCard
+            label="Permission events"
+            value={rows.filter((r) => auditAction(r) === "Permission Changed").length}
+            hint="Captured permission changes"
+          />
+        </div>
+      )}
       <Panel
         title="Search recorded events"
         description="Who changed what, when and which record was affected. Evidence is read-only; missing historical facts are not reconstructed."
@@ -288,18 +338,6 @@ export function OwnerAudit() {
       />
       {events.data && !events.error && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <StatCard
-              label="Matching audit events"
-              value={rows.length}
-              hint="Recorded events in the applied period"
-            />
-            <StatCard
-              label="Permission events"
-              value={rows.filter((r) => auditAction(r) === "Permission Changed").length}
-              hint="Captured permission changes"
-            />
-          </div>
           <Panel
             title="Recorded events"
             description="Newest first · India time · select an event to inspect its captured evidence."
@@ -323,34 +361,105 @@ export function OwnerAudit() {
             {!rows.length ? (
               <p>No matching recorded events.</p>
             ) : (
-              <div className="divide-y">
-                {rows.slice(current * size, (current + 1) * size).map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => setSelected(r)}
-                    className="flex w-full flex-col items-start justify-between sm:flex-row gap-3 rounded-lg p-3 text-left hover:bg-muted/50"
-                    aria-label={`Open audit event ${r.key}`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">
-                        {auditAction(r)} · {auditModule(r)}
-                      </p>
-                      <p className="mt-1 break-words text-sm">
-                        {text(r.data["reference"] ?? r.data["entity_id"])} · {recordType(r)}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {text(r.data["actor"] ?? r.data["actor_id"] ?? r.data["user_id"])} ·{" "}
-                        {text(r.data["source"])} evidence · action: {text(r.data["action"])}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {r.event_at
-                        ? new Date(r.event_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
-                        : "Timestamp not recorded"}{" "}
-                      →
-                    </span>
-                  </button>
-                ))}
+              <div>
+                <div className="divide-y md:hidden">
+                  {rows.slice(current * size, (current + 1) * size).map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => setSelected(r)}
+                      className="flex w-full flex-col items-start justify-between sm:flex-row gap-3 rounded-lg p-3 text-left hover:bg-muted/50"
+                      aria-label={`Open audit event ${r.key}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          {auditAction(r)} · {auditModule(r)}
+                        </p>
+                        <p className="mt-1 break-words text-sm">
+                          {text(r.data["reference"] ?? r.data["entity_id"])} · {recordType(r)}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {text(r.data["actor"] ?? r.data["actor_id"] ?? r.data["user_id"])} ·{" "}
+                          {text(r.data["source"])} evidence · action: {text(r.data["action"])}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {r.event_at
+                          ? new Date(r.event_at).toLocaleString("en-IN", {
+                              timeZone: "Asia/Kolkata",
+                            })
+                          : "Timestamp not recorded"}{" "}
+                        →
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[780px] text-left text-sm">
+                    <thead className="bg-muted/60">
+                      <tr>
+                        {[
+                          "Date & time",
+                          "Recorded user",
+                          "Action",
+                          "Module",
+                          "Record reference",
+                          "Evidence",
+                        ].map((n) => (
+                          <th key={n} className="px-3 py-3">
+                            {n}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.slice(current * size, (current + 1) * size).map((r) => (
+                        <tr
+                          key={r.key}
+                          className="border-b"
+                          data-selected={selected?.key === r.key}
+                        >
+                          <td className="whitespace-nowrap px-3 py-3 text-xs">
+                            {r.event_at
+                              ? new Date(r.event_at).toLocaleString("en-IN", {
+                                  timeZone: "Asia/Kolkata",
+                                })
+                              : "Not recorded"}
+                          </td>
+                          <td className="max-w-40 break-words px-3 py-3">
+                            {text(r.data["actor"] ?? r.data["actor_id"] ?? r.data["user_id"])}
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="owner-audit-tag">{auditAction(r)}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="owner-audit-tag" data-module={auditModule(r)}>
+                              {auditModule(r)}
+                            </span>
+                          </td>
+                          <td className="max-w-52 break-all px-3 py-3">
+                            <p className="font-medium">
+                              {text(r.data["reference"] ?? r.data["entity_id"])}
+                            </p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">
+                              {recordType(r)} · {text(r.data["source"])}
+                            </p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelected(r)}
+                              aria-label={"Open audit event " + r.key}
+                            >
+                              <Eye className="mr-1 size-4" />
+                              Inspect
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>{" "}
               </div>
             )}
             <div className="mt-4 flex items-center gap-3">
@@ -381,8 +490,8 @@ export function OwnerAudit() {
           if (!open) setSelected(null);
         }}
       >
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
+        <DialogContent className="owner-workspace w-full overflow-y-auto bg-card sm:w-[520px] sm:max-w-[520px]">
+          <DialogHeader className="mb-5 border-b pb-4">
             <DialogTitle>Audit event details</DialogTitle>
             <DialogDescription>
               Only captured values are evidence. Missing values show Not recorded.
@@ -438,7 +547,13 @@ export function OwnerAudit() {
                     <tbody>
                       {fields.map((k) => (
                         <tr key={k} className="border-t">
-                          <th className="p-2 align-top">{title(k)}</th>
+                          <th className="p-2 align-top">
+                            {k.endsWith("_mm")
+                              ? title(k.slice(0, -3)) + " (metres)"
+                              : k.includes("paise")
+                                ? title(k.replace("_paise", "")) + " (₹)"
+                                : title(k)}
+                          </th>
                           <td className="max-w-64 whitespace-pre-wrap break-all p-2 align-top">
                             {fieldText(k, beforeObject?.[k], beforeObject ?? {})}
                           </td>

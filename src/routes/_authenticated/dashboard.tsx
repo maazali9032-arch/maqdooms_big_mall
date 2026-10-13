@@ -22,8 +22,12 @@ function DashboardPage() {
   return (
     <>
       <PageHeader
-        title={"Good day, " + (fullName.split(" ")[0] || "Owner")}
-        description="Daily operations, current stock and recorded work requiring attention."
+        title="Business Overview"
+        description={
+          "Good day, " +
+          (fullName.split(" ")[0] || "Owner") +
+          ". Your operational overview for the selected day."
+        }
       />
       <OwnerDashboard />
     </>

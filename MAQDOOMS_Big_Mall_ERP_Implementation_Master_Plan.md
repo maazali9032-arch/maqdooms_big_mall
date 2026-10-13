@@ -1746,3 +1746,23 @@ Approved 13 October 2026; implement after Reports validation.
   than reconstructed completion/cancellation events. Keep unmapped events visible.
 - Read-only Owner UI; retain existing Owner-protected RPCs and immutable database
   audit protections. No event edits/deletes, salary/P2P or invented suspicious scores.
+
+
+# 49. OWNER-APPROVED VISUAL REFERENCE REFINEMENT
+
+Approved 13 October 2026 from three visual interface samples. These references guide
+layout, hierarchy, spacing and presentation; sample figures, growth rates, alerts
+and unsupported controls do not create new business rules or recorded data.
+- Dashboard uses Business Overview heading, four clearer KPI cards, date navigation,
+  actual-data column/doughnut charts, compact operational cards and a right-hand
+  alerts/quick-actions rail. Keep the single-day scope and bookings/collections split.
+- Reports keeps all 24 datasets/seven categories. Desktop has icon category navigation
+  and a report sidebar; mobile retains the report selector. Definitions/limitations
+  remain accessible without dominating the working area.
+- Audit has a protected-history banner, supported event counts, a desktop evidence
+  table, mobile event rows, module/action tags and a right-hand evidence drawer.
+- Monetary audit summaries count actual captured differing monetary fields; categories
+  can overlap. They do not reconstruct missing prior values or infer suspiciousness.
+- Never copy illustrative growth percentages, notifications, stock snapshots,
+  customer counts or unsupported alerts. Preserve Owner-only access and immutable
+  history. No database change is required for this visual revision.
