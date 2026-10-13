@@ -274,6 +274,13 @@
       "when": 1791849660000,
       "tag": "0038_module_role_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1791849720000,
+      "tag": "0039_thaan_optional_colour_reason",
+      "breakpoints": true
     }
   ]
 }

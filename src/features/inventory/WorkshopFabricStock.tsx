@@ -178,7 +178,10 @@ export function WorkshopFabricStock({
           ? 0
           : quantityInput(fields.length, "mm")
         : null;
-      if (length !== currentLength) {
+      if (
+        length !== currentLength ||
+        (editing.original_mm === null && length !== null && length > 0)
+      ) {
         if (length === null) throw new Error("Recorded length cannot be cleared");
         changes["length_mm"] = length;
       }
@@ -190,7 +193,6 @@ export function WorkshopFabricStock({
         }
       }
       if (!Object.keys(changes).length) throw new Error("No changes to save");
-      if (!fields.reason.trim()) throw new Error("Enter a correction reason");
       save.mutate({
         request: crypto.randomUUID(),
         row: editing,
@@ -276,7 +278,7 @@ export function WorkshopFabricStock({
                           <tr>
                             <th className="p-2">Thaan</th>
                             <th>Colour</th>
-                            <th>Received length</th>
+                            <th>Recorded length</th>
                             <th>Workshop available</th>
                             <th>CP / metre</th>
                             <th>State</th>
@@ -316,7 +318,11 @@ export function WorkshopFabricStock({
                                     r.incomplete ? "text-amber-700" : "text-muted-foreground"
                                   }
                                 >
-                                  {r.incomplete ? "Incomplete" : r.status}
+                                  {r.incomplete
+                                    ? "Incomplete"
+                                    : r.original_mm === null
+                                      ? "Awaiting stock activation"
+                                      : r.status}
                                 </span>
                               </td>
                               <td className="text-right">
@@ -422,6 +428,12 @@ export function WorkshopFabricStock({
               fabric group.
             </DialogDescription>
           </DialogHeader>
+          {editing?.original_mm === null && (editing.saved_length_mm ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground">
+              This measurement is saved but has not been received into Workshop. Save details to
+              activate its recorded length.
+            </p>
+          )}
           {editing && (
             <>
               <fieldset disabled={frozen || !editing.can_edit} className="space-y-3">
@@ -438,7 +450,7 @@ export function WorkshopFabricStock({
                               ? "Actual length (metres)"
                               : "Workshop available length (metres)",
                           cp: "CP per metre",
-                          reason: "Correction reason",
+                          reason: "Correction reason (optional)",
                         }[key]
                       }
                     </Label>

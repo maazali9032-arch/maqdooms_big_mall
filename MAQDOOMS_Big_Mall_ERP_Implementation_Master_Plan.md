@@ -1766,3 +1766,23 @@ and unsupported controls do not create new business rules or recorded data.
 - Never copy illustrative growth percentages, notifications, stock snapshots,
   customer counts or unsupported alerts. Preserve Owner-only access and immutable
   history. No database change is required for this visual revision.
+
+# 50. OWNER-APPROVED THAAN ENTRY TREE AND OPTIONAL DETAILS
+
+Approved 13 October 2026.
+- Create Batch shows an always-open Batch/provider → Fabric Type → individual
+  Thaan hierarchy with indentation and connecting lines, on desktop and mobile.
+- Each fabric has optional shared length in metres and CP per metre in rupees.
+  Untouched/new rows inherit them; individual rows can override them. Apply to all
+  explicitly replaces supplied fields for that fabric only; blank defaults do not
+  erase saved input. Barcode identities and per-fabric printing remain unchanged.
+- Colour is optional. Positive length receives real Workshop stock even without
+  colour. Completeness requires positive length and CP, plus identifying names;
+  zero/missing CP remains incomplete. CP is still per metre, not total Thaan cost.
+- Correction reason is optional. Audit stores missing user reason as null; a
+  required quantity-movement description explicitly states when no user reason
+  was recorded. Keep correction permissions and immutable original quantities.
+- No automatic historical receipt backfill. Prior saved measurement drafts show
+  Awaiting stock activation until an authorized save receives their recorded length.
+- New forward-only migration 20261013000200_thaan_optional_colour_reason.sql,
+  mirrored as Drizzle 0039. Preserve all existing business rows and role boundaries.

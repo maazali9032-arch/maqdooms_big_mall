@@ -2,16 +2,7 @@ import { ScannedThaanRows } from "./ScannedThaanRows";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ArrowRight,
-  Barcode,
-  ChevronDown,
-  FileText,
-  Info,
-  Layers,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowRight, Barcode, FileText, Info, Layers, Plus, Trash2 } from "lucide-react";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuppliers } from "@/features/inventory";
@@ -69,16 +60,26 @@ type EntryRow = {
   id: string;
   name: string;
   quantity: string;
-  expanded: boolean;
+  sharedLength: string;
+  sharedCp: string;
   details: { colour: string; length: string; cp: string }[];
 };
 const emptyRow = (): EntryRow => ({
   id: crypto.randomUUID(),
   name: "",
   quantity: "",
-  expanded: false,
+  sharedLength: "",
+  sharedCp: "",
   details: [],
 });
+const thaanDetail = (row: EntryRow, index: number) => ({
+  colour: "",
+  length: row.sharedLength,
+  cp: row.sharedCp,
+  ...row.details[index],
+});
+const rowCount = (value: string) =>
+  /^[1-9]\d*$/.test(value) && Number(value) <= 500 ? Number(value) : 0;
 const metres = (v: number | null) =>
   v === null ? "Not measured" : reportQuantity(String(v), "mm");
 function BarcodeLabel({
@@ -324,7 +325,7 @@ export function StockRegistration() {
                 Optional: enter actual details now or leave blank and complete by scanning.
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Stock becomes available only when colour and length are recorded. CP can be added
+                A positive actual length makes stock available. Colour is optional; CP can be added
                 later.
               </p>
             </div>
@@ -371,244 +372,279 @@ export function StockRegistration() {
             description="Choose your fabrics and the number of physical Thaans for each."
           >
             <fieldset disabled={frozen} className="space-y-3">
-              {rows.map((r, i) => (
-                <section
-                  key={r.id}
-                  className="overflow-hidden rounded-xl border bg-card shadow-sm"
-                  aria-label={`Fabric group ${i + 1}`}
-                >
-                  <div className="flex items-center justify-between gap-3 border-b px-4 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Layers className="size-5" aria-hidden="true" />
-                      </span>
-                      <h3 className="text-sm font-semibold">Fabric Type {i + 1}</h3>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-8 gap-1.5 border-destructive/20 px-2.5 text-xs text-destructive hover:bg-destructive/5 hover:text-destructive"
-                      aria-label={`Remove Fabric Type ${i + 1}`}
-                      disabled={rows.length === 1}
-                      onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
-                    >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                      Remove
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-1 items-start gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor={`type-${r.id}`}
-                        className="mb-1.5 block text-xs text-muted-foreground"
-                      >
-                        Fabric Type {i + 1}
-                      </Label>
-                      <PickOrTypeInput
-                        id={`type-${r.id}`}
-                        value={r.name}
-                        options={fabricNames}
-                        placeholder="Choose a fabric or type a new name"
-                        onChange={(name) =>
-                          setRows((old) =>
-                            old.map((row) => (row.id === r.id ? { ...row, name } : row)),
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <Label
-                        htmlFor={`count-${r.id}`}
-                        className="mb-1.5 block text-xs text-muted-foreground"
-                      >
-                        Thaan count {i + 1}
-                      </Label>
-                      <Input
-                        id={`count-${r.id}`}
-                        inputMode="numeric"
-                        className="h-11"
-                        placeholder="e.g. 10"
-                        value={r.quantity}
-                        onChange={(e) =>
-                          setRows((old) =>
-                            old.map((row) =>
-                              row.id === r.id ? { ...row, quantity: e.target.value } : row,
-                            ),
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/25 px-4 py-2.5">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-8 gap-2 px-2 text-xs"
-                      aria-label={`${r.expanded ? "Hide" : "Enter"} optional Thaan details ${i + 1}`}
-                      aria-expanded={r.expanded}
-                      aria-controls={`details-${r.id}`}
-                      disabled={!/^[1-9]\d*$/.test(r.quantity) || Number(r.quantity) > 500}
-                      onClick={() =>
-                        setRows((old) =>
-                          old.map((row) =>
-                            row.id === r.id ? { ...row, expanded: !row.expanded } : row,
-                          ),
-                        )
-                      }
-                    >
-                      <ChevronDown
-                        className={`size-4 transition-transform ${r.expanded ? "rotate-180" : ""}`}
-                        aria-hidden="true"
-                      />
-                      {r.expanded ? "Hide details" : "Optional Thaan details"}
-                    </Button>
-                    <span className="flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-                      <Barcode className="size-3.5" aria-hidden="true" />
-                      {/^[1-9]\d*$/.test(r.quantity)
-                        ? `${r.quantity} labels`
-                        : "Enter a Thaan count"}
-                    </span>
-                  </div>
-                  {r.expanded && (
-                    <div id={`details-${r.id}`} className="border-t p-4">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold">Individual Thaans</p>
-                        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                          Optional
-                        </span>
+              <div className="rounded-lg bg-primary/5 p-3" aria-label="Batch hierarchy">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <FileText className="size-5 text-primary" />
+                  <span>New Batch — {provider.trim() || "Select a provider"}</span>
+                </div>
+                <p className="ml-7 mt-1 text-xs text-muted-foreground">
+                  Batch ID and individual barcode identities are generated on save.
+                </p>
+              </div>
+              <div className="ml-2 space-y-5 border-l-2 border-primary/25 pl-3 sm:ml-4 sm:pl-5">
+                {rows.map((r, i) => (
+                  <section
+                    key={r.id}
+                    aria-label={"Fabric group " + (i + 1)}
+                    className="relative min-w-0 before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-primary/25 sm:before:-left-5 sm:before:w-5"
+                  >
+                    <div className="rounded-lg border bg-muted/20 p-3">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h3 className="flex items-center gap-2 text-sm font-semibold">
+                          <Layers className="size-4 text-primary" />
+                          Fabric Type {i + 1}
+                          {r.name.trim() ? " — " + r.name : ""}
+                        </h3>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          aria-label={"Remove Fabric Type " + (i + 1)}
+                          disabled={rows.length === 1}
+                          onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span className="sr-only sm:not-sr-only">Remove</span>
+                        </Button>
                       </div>
-                      <div
-                        className="max-h-[32rem] overflow-y-auto rounded-lg border"
-                        tabIndex={0}
-                        aria-label={`Thaan rows for fabric ${i + 1}`}
-                      >
-                        <div className="sticky top-0 z-10 hidden grid-cols-[2rem_minmax(10rem,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-3 border-b bg-muted/70 px-3 py-2.5 text-xs font-medium text-muted-foreground lg:grid">
-                          <span>#</span>
-                          <span>Barcode status</span>
-                          <span>Colour</span>
-                          <span>Length (m)</span>
-                          <span>CP per metre (optional)</span>
-                          <span className="sr-only">Actions</span>
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_7rem_1fr_1fr]">
+                        <div className="min-w-0">
+                          <Label htmlFor={"type-" + r.id}>Fabric Type {i + 1}</Label>
+                          <PickOrTypeInput
+                            id={"type-" + r.id}
+                            value={r.name}
+                            options={fabricNames}
+                            placeholder="Choose or type a fabric"
+                            onChange={(name) =>
+                              setRows((old) =>
+                                old.map((row) => (row.id === r.id ? { ...row, name } : row)),
+                              )
+                            }
+                          />
                         </div>
-                        {Array.from(
-                          { length: Math.min(500, Math.max(0, Number(r.quantity) || 0)) },
-                          (_, n) => (
-                            <div
-                              key={n}
-                              className="grid gap-3 border-b bg-card p-3 last:border-b-0 sm:grid-cols-3 lg:grid-cols-[2rem_minmax(10rem,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2.5rem] lg:items-center"
-                            >
-                              <span className="text-xs font-semibold text-muted-foreground sm:col-span-3 lg:col-span-1">
-                                <span className="lg:hidden">Thaan </span>
-                                {String(n + 1).padStart(2, "0")}
-                              </span>
-                              <div className="flex min-w-0 items-center gap-2 sm:col-span-3 lg:col-span-1">
-                                <Barcode
-                                  className="size-7 shrink-0 text-muted-foreground"
-                                  aria-hidden="true"
-                                />
-                                <div className="min-w-0">
-                                  <span className="inline-block rounded bg-primary/10 px-2 py-1 text-[10px] font-medium text-primary">
-                                    Barcode generated on save
-                                  </span>
-                                  <p className="mt-1 text-[11px] text-muted-foreground">
-                                    Thaan {n + 1} (fabric {i + 1})
-                                  </p>
-                                </div>
-                              </div>
-                              {(
-                                [
-                                  ["colour", "Colour"],
-                                  ["length", "Length (metres)"],
-                                  ["cp", "CP per metre (optional)"],
-                                ] as const
-                              ).map(([field, label]) => (
-                                <div key={field} className="min-w-0">
-                                  <Label
-                                    htmlFor={`${r.id}-${n}-${field}`}
-                                    className="mb-1 block text-xs text-muted-foreground lg:sr-only"
-                                  >
-                                    {label}
-                                    <span className="sr-only">
-                                      {" "}
-                                      - fabric {i + 1}, Thaan {n + 1}
-                                    </span>
-                                  </Label>
-                                  <Input
-                                    id={`${r.id}-${n}-${field}`}
-                                    className="h-10"
-                                    value={r.details[n]?.[field] ?? ""}
-                                    disabled={!can("stock.measure_thaan")}
-                                    placeholder={
-                                      field === "colour"
-                                        ? "e.g. Navy blue"
-                                        : field === "length"
-                                          ? "Metres"
-                                          : "Optional CP"
-                                    }
-                                    inputMode={field === "colour" ? "text" : "decimal"}
-                                    onChange={(e) =>
-                                      setRows((old) =>
-                                        old.map((row) => {
-                                          if (row.id !== r.id) return row;
-                                          const details = [...row.details];
-                                          details[n] = {
-                                            colour: "",
-                                            length: "",
-                                            cp: "",
-                                            ...details[n],
-                                            [field]: e.target.value,
-                                          };
-                                          return { ...row, details };
-                                        }),
-                                      )
-                                    }
-                                  />
-                                </div>
-                              ))}
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="outline"
-                                className="size-8 justify-self-end border-destructive/20 text-destructive hover:bg-destructive/5 sm:col-span-3 lg:col-span-1"
-                                aria-label={`Remove Thaan ${n + 1} from Fabric Type ${i + 1}`}
-                                disabled={Number(r.quantity) <= 1}
-                                onClick={() =>
-                                  setRows((old) =>
-                                    old.map((row) =>
-                                      row.id !== r.id
-                                        ? row
-                                        : {
-                                            ...row,
-                                            quantity: String(Number(row.quantity) - 1),
-                                            details: Array.from(
-                                              {
-                                                length: Math.max(
-                                                  Number(row.quantity),
-                                                  row.details.length,
-                                                ),
-                                              },
-                                              (_, index) =>
-                                                row.details[index] ?? {
-                                                  colour: "",
-                                                  length: "",
-                                                  cp: "",
-                                                },
-                                            ).filter((_, index) => index !== n),
+                        <div>
+                          <Label htmlFor={"count-" + r.id}>Thaan count {i + 1}</Label>
+                          <Input
+                            id={"count-" + r.id}
+                            value={r.quantity}
+                            placeholder="e.g. 10"
+                            inputMode="numeric"
+                            onChange={(e) =>
+                              setRows((old) =>
+                                old.map((row) =>
+                                  row.id === r.id ? { ...row, quantity: e.target.value } : row,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={"bulk-length-" + r.id}>Length for all (m)</Label>
+                          <Input
+                            id={"bulk-length-" + r.id}
+                            aria-label={"Length for all fabric " + (i + 1)}
+                            inputMode="decimal"
+                            placeholder="Optional metres"
+                            value={r.sharedLength}
+                            disabled={!can("stock.measure_thaan")}
+                            onChange={(e) =>
+                              setRows((old) =>
+                                old.map((row) =>
+                                  row.id === r.id ? { ...row, sharedLength: e.target.value } : row,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={"bulk-cp-" + r.id}>CP for all / metre (₹)</Label>
+                          <Input
+                            id={"bulk-cp-" + r.id}
+                            aria-label={"CP for all fabric " + (i + 1)}
+                            inputMode="decimal"
+                            placeholder="Optional CP"
+                            value={r.sharedCp}
+                            disabled={
+                              !can("stock.measure_thaan") || !can("inventory.view_registered_cp")
+                            }
+                            onChange={(e) =>
+                              setRows((old) =>
+                                old.map((row) =>
+                                  row.id === r.id ? { ...row, sharedCp: e.target.value } : row,
+                                ),
+                              )
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Defaults apply to new rows. Individual rows can have different values.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            !rowCount(r.quantity) ||
+                            !can("stock.measure_thaan") ||
+                            (!r.sharedLength.trim() && !r.sharedCp.trim())
+                          }
+                          onClick={() => {
+                            try {
+                              if (r.sharedLength.trim()) quantityInput(r.sharedLength, "mm");
+                              if (r.sharedCp.trim()) fabricMoneyInput(r.sharedCp);
+                              setRows((old) =>
+                                old.map((row) =>
+                                  row.id !== r.id
+                                    ? row
+                                    : {
+                                        ...row,
+                                        details: Array.from(
+                                          {
+                                            length: Math.max(
+                                              rowCount(row.quantity),
+                                              row.details.length,
+                                            ),
                                           },
-                                    ),
+                                          (_, n) =>
+                                            n >= rowCount(row.quantity)
+                                              ? row.details[n]!
+                                              : {
+                                                  ...thaanDetail(row, n),
+                                                  ...(row.sharedLength.trim()
+                                                    ? { length: row.sharedLength }
+                                                    : {}),
+                                                  ...(row.sharedCp.trim()
+                                                    ? { cp: row.sharedCp }
+                                                    : {}),
+                                                },
+                                        ),
+                                      },
+                                ),
+                              );
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Check default values");
+                            }
+                          }}
+                        >
+                          Apply to all {rowCount(r.quantity) || ""} Thaans
+                        </Button>
+                      </div>
+                    </div>
+                    <div
+                      className="ml-2 mt-3 space-y-2 border-l border-primary/25 pl-3 sm:ml-4 sm:pl-4"
+                      aria-label={"Thaan rows for fabric " + (i + 1)}
+                    >
+                      {!rowCount(r.quantity) && (
+                        <p className="py-2 text-xs text-muted-foreground">
+                          Enter 1–500 Thaans to show their rows.
+                        </p>
+                      )}
+                      {Array.from({ length: rowCount(r.quantity) }, (_, n) => (
+                        <div
+                          key={n}
+                          className="relative grid min-w-0 gap-2 rounded-md border bg-card p-3 before:absolute before:-left-3 before:top-5 before:w-3 before:border-t before:border-primary/25 sm:grid-cols-3 lg:grid-cols-[minmax(6rem,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] sm:before:-left-4 sm:before:w-4"
+                        >
+                          <div className="flex items-center gap-2 sm:col-span-3 lg:col-span-1">
+                            <Barcode className="size-4 shrink-0 text-primary" />
+                            <div>
+                              <p className="text-xs font-semibold">
+                                Thaan {String(n + 1).padStart(2, "0")}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                Barcode generated on save
+                              </p>
+                            </div>
+                          </div>
+                          {(
+                            [
+                              ["colour", "Colour (optional)"],
+                              ["length", "Length (metres)"],
+                              ["cp", "CP per metre (optional)"],
+                            ] as const
+                          ).map(([field, label]) => (
+                            <div key={field} className="min-w-0">
+                              <Label
+                                htmlFor={r.id + "-" + n + "-" + field}
+                                className="mb-1 block text-[11px] text-muted-foreground"
+                              >
+                                {label}
+                                <span className="sr-only">
+                                  {" "}
+                                  - fabric {i + 1}, Thaan {n + 1}
+                                </span>
+                              </Label>
+                              <Input
+                                id={r.id + "-" + n + "-" + field}
+                                className="h-9"
+                                value={thaanDetail(r, n)[field]}
+                                inputMode={field === "colour" ? "text" : "decimal"}
+                                disabled={
+                                  !can("stock.measure_thaan") ||
+                                  (field === "cp" && !can("inventory.view_registered_cp"))
+                                }
+                                placeholder={
+                                  field === "colour"
+                                    ? "Optional colour"
+                                    : field === "length"
+                                      ? "Metres"
+                                      : "Optional CP"
+                                }
+                                onChange={(e) =>
+                                  setRows((old) =>
+                                    old.map((row) => {
+                                      if (row.id !== r.id) return row;
+                                      const details = [...row.details];
+                                      details[n] = {
+                                        ...thaanDetail(row, n),
+                                        [field]: e.target.value,
+                                      };
+                                      return { ...row, details };
+                                    }),
                                   )
                                 }
-                              >
-                                <Trash2 className="size-3.5" aria-hidden="true" />
-                              </Button>
+                              />
                             </div>
-                          ),
-                        )}
-                      </div>
+                          ))}
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 justify-self-end text-destructive sm:col-span-3 lg:col-span-1"
+                            aria-label={"Remove Thaan " + (n + 1) + " from Fabric Type " + (i + 1)}
+                            disabled={rowCount(r.quantity) <= 1}
+                            onClick={() =>
+                              setRows((old) =>
+                                old.map((row) =>
+                                  row.id !== r.id
+                                    ? row
+                                    : {
+                                        ...row,
+                                        quantity: String(rowCount(row.quantity) - 1),
+                                        details: Array.from(
+                                          {
+                                            length: Math.max(
+                                              rowCount(row.quantity),
+                                              row.details.length,
+                                            ),
+                                          },
+                                          (_, index) => thaanDetail(row, index),
+                                        ).filter((_, index) => index !== n),
+                                      },
+                                ),
+                              )
+                            }
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                </section>
-              ))}
+                  </section>
+                ))}
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -678,12 +714,12 @@ export function StockRegistration() {
                         name: r.name.trim(),
                         quantity: Number(r.quantity),
                         rows: Array.from({ length: Number(r.quantity) }, (_, n) => ({
-                          colour: r.details[n]?.colour.trim() || null,
-                          length_mm: r.details[n]?.length.trim()
-                            ? quantityInput(r.details[n].length, "mm")
+                          colour: thaanDetail(r, n).colour.trim() || null,
+                          length_mm: thaanDetail(r, n).length.trim()
+                            ? quantityInput(thaanDetail(r, n).length, "mm")
                             : null,
-                          cp_paise_per_m: r.details[n]?.cp.trim()
-                            ? fabricMoneyInput(r.details[n].cp)
+                          cp_paise_per_m: thaanDetail(r, n).cp.trim()
+                            ? fabricMoneyInput(thaanDetail(r, n).cp)
                             : null,
                         })),
                       })),

@@ -80,7 +80,6 @@ export function ScannedThaanRows() {
     let work = pending;
     try {
       if (!work.length) {
-        if (!reason.trim()) throw new Error("Enter a reason for these stock details.");
         work = selected
           .map((entry) => {
             const r = entry.record;
@@ -88,7 +87,10 @@ export function ScannedThaanRows() {
             const changes: Save["changes"] = {};
             if (entry.colour !== (r.colour ?? "")) changes["colour"] = entry.colour.trim();
             const originalLength = r.original_mm === null ? r.saved_length_mm : r.workshop_mm;
-            if (entry.length !== (originalLength === null ? "" : String(originalLength / 1000)))
+            if (
+              entry.length !== (originalLength === null ? "" : String(originalLength / 1000)) ||
+              (r.original_mm === null && entry.length.trim())
+            )
               changes["length_mm"] = quantityInput(entry.length, "mm");
             if (
               r.cp_visible &&
@@ -285,12 +287,12 @@ export function ScannedThaanRows() {
             aria-label="Scanned Thaan edit reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Reason for recording/correcting these details"
+            placeholder="Reason for recording/correcting these details (optional)"
             disabled={frozen}
           />
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={busy || (!pending.length && (!selected.length || !reason.trim()))}
+              disabled={busy || (!pending.length && !selected.length)}
               onClick={() => void save()}
             >
               {pending.length ? "Retry pending saves" : "Save selected Thaans"}

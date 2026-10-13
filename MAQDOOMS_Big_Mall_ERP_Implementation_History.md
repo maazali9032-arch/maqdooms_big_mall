@@ -5869,3 +5869,78 @@ REMAINING:
 
 NEXT PHASE:
 - None. Publish this approved visual refinement to main.
+
+======================================================================
+PHASE: OWNER-APPROVED THAAN ENTRY TREE AND OPTIONAL DETAILS (SECTION 50)
+STATUS: IMPLEMENTED, TESTED; LIVE MIGRATION APPLIED 13 OCTOBER 2026
+
+IMPLEMENTED:
+- Always-open Batch/provider → Fabric Type → individual Thaan hierarchy, with
+  connecting lines and responsive fields. Removed fabric detail collapse controls.
+- Shared optional length and CP-per-metre fields per fabric; untouched/new rows
+  inherit defaults, individual rows can override, explicit Apply to all replaces
+  supplied fields within that fabric. Blank defaults do not erase row input.
+- Optional correction reason in Inventory and multi-scan editing.
+- Optional colour: positive actual length can receive Workshop stock without it.
+  Positive length and CP with identifying names are complete; zero/missing CP
+  remains incomplete. Existing saved drafts display Awaiting stock activation
+  until explicitly saved by authorized staff. Recorded length label is accurate.
+
+MODIFIED:
+- StockRegistration.tsx, WorkshopFabricStock.tsx, ScannedThaanRows.tsx.
+- New forward-only Supabase migration 20261013000200_thaan_optional_colour_reason.sql,
+  identical Drizzle 0039 mirror and journal entry; no earlier migration modified.
+- New disposable database/browser fixtures, tests, controlled rollout runner and
+  THAAN_OPTIONAL_DETAILS_* / THAAN_TREE_* verification artifacts.
+- Master Plan Section 50 and this permanent history.
+
+REUSED:
+- Existing barcode identity, batch/request retries, per-fabric label printing,
+  exact mm/paise conversion, action permissions and immutable inventory ledger.
+
+DATABASE CHANGES:
+- Replaced workshop_fabric_inventory, complete_barcode_thaan,
+  save_registered_thaan_details and edit_workshop_thaan only; existing ACL retained.
+- No tables/columns/constraints added, no historical business-data backfill.
+- Migration SHA256 d7a30808d9f28ef068a2c23c126ba63c8818da34dee605ebb92da8d14b311f6f.
+- Live canonical schema/ACL checks and atomic locked original-column fingerprints
+  verified; all pre-existing public business rows preserved. Ledger entry recorded.
+- Host DNS failed locally; a temporary process-only public-DNS resolver restored
+  connectivity with the original hostname/TLS behaviour. No .env/system DNS edits.
+
+SECURITY / PERMISSIONS:
+- Module/action permissions unchanged; staff cannot bypass completed CP or Workshop
+  balance correction restrictions. Creator metadata and cross-role protections retained.
+- Missing user reason is JSON/SQL null. Required adjustment descriptions explicitly
+  say user reason was not recorded, rather than fabricating an explanation.
+- Original received lengths, recorded costs, immutable movements and barcode IDs
+  remain preserved. Clearing an existing recorded colour remains guarded.
+
+TESTS:
+- 687 cumulative database checks pass across populated/clean Supabase and populated
+  Drizzle chains, including no-data migration, optional colour/reason, prior drafts,
+  exact retries/no duplicate receipts, CP zero, stale versions and role denies.
+- 26 browser checks pass: tree, defaults, isolated fabric overrides, exact payloads,
+  request retry, label sequencing, optional reasons, draft activation and responsive
+  widths 320/390/768/1440. No browser runtime errors. Screenshots visually inspected.
+- TypeScript noEmit and scoped ESLint pass with zero errors; existing component/helper
+  Fast Refresh warnings are nongating. Application diffs pass whitespace checks;
+  the new migration has one whitespace-only line retained byte-for-byte after live
+  application so its recorded SHA256 is not rewritten.
+
+BUILD:
+- Isolated Vercel-preset production build passed 2026-10-13T13:35:54.733Z.
+- Patched TanStack server-core 1.169.39 retained. Historical build proof restored;
+  task-specific proof is THAAN_OPTIONAL_DETAILS_BUILD_VERIFICATION.json.
+
+BUSINESS RULES VERIFIED:
+- No invented measurements/costs; blank colour does not block real measured stock.
+- CP remains per metre; zero CP remains incomplete. Bulk defaults are fabric-local.
+- Saved historical drafts require explicit authorized receipt; no silent stock posting.
+
+REMAINING:
+- Hosted frontend/device acceptance is unverified; a successful build/push does not
+  confirm hosting deployment. No unrelated ERP phase or salary work added.
+
+NEXT PHASE:
+- Publish this approved change to main with a normal commit/push.

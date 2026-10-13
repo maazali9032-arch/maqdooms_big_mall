@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-10-13T13:39:52.062Z",
+  "finished_at": "2026-10-13T13:40:07.757Z",
+  "applied": [
+    "20261013000200_thaan_optional_colour_reason.sql"
+  ],
+  "verified": [
+    "20261013000200_thaan_optional_colour_reason.sql"
+  ],
+  "preservation_basis": "Full original-column fingerprints and metadata row sets checked inside locked migration transaction; normal post-commit app writes are permitted",
+  "existing_rows_preserved": true,
+  "migration_sha256": "d7a30808d9f28ef068a2c23c126ba63c8818da34dee605ebb92da8d14b311f6f",
+  "error": null
+}
