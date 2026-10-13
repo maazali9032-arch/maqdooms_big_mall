@@ -5655,3 +5655,124 @@ REMAINING:
 
 NEXT PHASE:
 - None. Publish only this approved UI refinement to main.
+
+
+PHASE:
+- Owner-approved Dashboard, Reports & Analytics, Audit Trail refinement.
+- Date: 13 October 2026. Implemented and browser-validated in that sequence.
+STATUS:
+- Implemented and locally verified. No new ERP phase or database rollout performed.
+
+IMPLEMENTED:
+- Stage 1 / Dashboard: selected India day, four fixed clickable KPI cards, five
+  quick actions, current controls/alerts, explicit last overview update and refresh.
+  Sales trend shows hourly amount/count or sale-type amount; sales breakdown shows
+  paid sale types or item rankings by bill-line count using current catalogue names.
+  Current stock groups by location or fabric/item, preserving separate units.
+  Production views distinguish current job status, selected-day issues/status/receipt
+  activity, and current recorded piece allocations against selected-day issues.
+  Workload keeps Customer Tailoring separate from Owner Production. Recent activity
+  has bills, tailoring, movements and reviews tabs.
+- Stage 2 / Reports: all 24 existing datasets mapped once into seven categories.
+  Contextual report selectors/filters, applied-range labels and report-specific
+  summaries. Search, exact numeric/string sorting, page size and previous/next pages
+  cover the complete loaded result. Full-record disclosure retains returned fields.
+  Paid-sales drill-down filters by completion date, including earlier-created bills;
+  bookings use creation date and remain outside paid collection totals. Current-state
+  reports disable historical date controls. Missing piece costs are counted separately;
+  no fabricated margins or unfinalized production-cost totals.
+- Stage 3 / Audit: dedicated OwnerAudit component replacing the generic report page.
+  Newest-first canonical/legacy evidence; exact captured identifier search, recorded
+  user/module/action/record-type filters and Today/Yesterday/7-day/30-day/custom ranges.
+  Event dialog shows captured actor/ID/time/reference/reason and before/after fields.
+  Missing evidence explicitly Not recorded. Generic row updates are not reconstructed
+  completion events; explicit recorded domain actions retain meaningful classifications.
+  Ambiguous material-issue events remain unclassified rather than assigned by guess.
+  Read-only UI retains all immutable historical evidence.
+
+MODIFIED:
+- src/features/reports/OwnerDashboard.tsx, OwnerReports.tsx, report-value.ts.
+- New src/features/reports/OwnerAudit.tsx, EvidenceViews.tsx, evidence-model.ts,
+  use-evidence.ts.
+- src/routes/_authenticated/dashboard.tsx, reports.tsx and audit.tsx.
+- New scripts/fixtures/owner-workspace/{index.html,main.tsx,client.ts},
+  scripts/owner-dashboard-ui-test.mjs, owner-reports-ui-test.mjs,
+  owner-audit-ui-test.mjs and owner-workspace-model-test.mjs.
+- docs/OWNER_* screenshots/verification evidence.
+- Master Plan Sections 46–48 and this permanent implementation history.
+
+REUSED:
+- Existing owner_erp_overview and owner_erp_report RPCs, all 24 datasets, Owner session
+  gating, QueryState, existing ERP styling/cards/inputs/dialogs and workflow routes.
+- Existing audit immutability triggers and protected RPC permissions, unchanged.
+- Cursor pages of 200 records are collected per needed dataset with cancellation,
+  repeated-cursor protection and 30-second query caching before complete-result client
+  filtering/sorting/pagination. Optional datasets load only when their view is selected.
+- All monetary calculations retain exact integer paise. Stock aggregation handles
+  exact fractional SQL numeric strings, zero-decimal transport and negative balances.
+
+DATABASE CHANGES:
+- None. No migration created/applied; no live schema/RLS/function/index/constraint,
+  manual database, seed, opening quantity, price or historical business-data changes.
+- No existing applied migration file modified. No past audit events reconstructed.
+
+SECURITY / PERMISSIONS:
+- Owner-only rendering and query execution. Staff browser fixtures make zero report,
+  dashboard or audit requests. Existing server Owner checks remain authoritative.
+- No role defaults, individual grants, RLS, ACL or immutable-history changes.
+- No staff salary/P2P/advance/deduction dataset added to these pages.
+
+TESTS:
+- Dashboard first: 13 browser checks pass (KPI separation/drilldown, selected day,
+  dropdown independence, stock scope/units, recorded usage/reviews, responsive fit,
+  non-Owner request denial and runtime errors).
+- Reports next: 23 browser checks pass (24 unique datasets, paid-versus-booked values,
+  completion-date drilldown, contextual filters, full records, current-state date
+  controls, unfinalized cost evidence, page-size/next-page/sorting, date rejection,
+  mobile/desktop fit and non-Owner denial).
+- Audit next: 18 browser checks pass (complete cursor evidence, recorded before/after
+  lengths, missing reasons/legacy evidence, read-only controls, user/module/action/type
+  filters, load failure/retry, mobile/desktop fit and non-Owner denial).
+- 32 model checks pass: India half-open date boundaries, invalid calendar dates,
+  exact huge money, SQL decimal units/negative stock/sorting, unknown cost/quantity,
+  bookings separation, explicit versus generic audit actions and ambiguous modules.
+- Existing 9 Phase 15 money/quantity/date regression checks pass.
+- Total: 54 browser checks plus 41 model/display checks; no browser runtime errors.
+- TypeScript noEmit and git diff --check pass; scoped ESLint zero errors, one
+  Fast Refresh warning for the shared field formatter export (no runtime failure).
+- Synthetic fixtures only; no live financial/stock/audit data mutated by tests.
+- Evidence: docs/OWNER_DASHBOARD_UI_VERIFICATION.json,
+  OWNER_REPORTS_UI_VERIFICATION.json, OWNER_AUDIT_UI_VERIFICATION.json,
+  OWNER_WORKSPACE_MODEL_VERIFICATION.json and accompanying mobile/desktop/event PNGs.
+  Visual review completed; earlier historical proof files preserved.
+
+BUILD:
+- Final isolated Vercel-preset build passed 2026-10-13T09:05:46.405Z
+  (14:35:46.405 IST), patched TanStack server-core 1.169.39.
+- docs/OWNER_WORKSPACE_BUILD_VERIFICATION.json records the successful production build.
+- No manual Vercel deployment performed or hosted rollout completion asserted.
+
+BUSINESS RULES VERIFIED:
+- Selected-day paid sales/booking activity versus explicitly current stock/workload.
+- Exact recorded costs/quantities, preserved unknowns, separate units, no inferred
+  margins, no material-issued-as-consumed substitution.
+- Owner audit evidence remains read-only and attributable only to captured facts.
+
+REMAINING:
+- Existing APIs expose no recorded payment methods/category classification, tailoring
+  due dates, low-stock thresholds or production shortage requirements. Related views/
+  alerts are unavailable rather than fabricated; none was silently added to schema.
+- Top-selling item ranking uses bill-line frequency and current catalogue labels;
+  it does not combine fabric metres with finished-piece quantities or claim historical
+  product names. Consumption view is explicitly recorded piece allocation evidence.
+- Complete-result client filtering requires reading all relevant cursor pages.
+  Very large/all-history datasets can load slowly; no large-volume benchmark was run.
+  Paid orders currently require the full order dataset to apply completion dates
+  correctly because the existing generic report filters orders by creation date.
+- Existing cursor reports are live reads across requests, not a database-wide atomic
+  snapshot. Refresh after concurrent changes; no retrospective stock snapshot created.
+- Hosted/live-device acceptance unverified. Earlier four legacy job-domain/assignment
+  Owner decisions remain intentionally unchanged.
+
+NEXT PHASE:
+- None. Publish only the three approved Owner workspaces to main.

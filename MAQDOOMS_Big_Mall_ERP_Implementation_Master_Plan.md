@@ -1703,3 +1703,46 @@ Approved 13 October 2026 from the four Stock Entry/Inventory/Transfer screenshot
   page. Finished Product Stock remains reachable through its permitted sidebar link.
 - Preserve module/action permissions, original quantities and historical movements.
   No receipt approval, invented measurements/prices, database schema changes or new roles.
+
+
+# 46. OWNER-APPROVED DAILY DASHBOARD WORKSPACE
+
+Approved 13 October 2026. Attached images explain behaviour, not visual styling.
+Use the existing ERP visual language and responsive layout.
+- A selected India date defaults to today. Four fixed clickable KPIs: paid fabric
+  plus finished-product collections, fabric sales, finished-product sales and
+  Customer Tailoring bookings separately.
+- Always show quick actions, refresh/last-update state and current recorded alerts.
+- Sales Trend, Sales Breakdown, Inventory and Production have meaningful independent
+  view selectors. Tailoring workload stays separate from Owner Production.
+- Recent Activity uses tabs for bills, tailoring, stock movements and reviews.
+- Current stock/workload/control checks do not become historical snapshots when
+  selecting another day. Paid sales use recorded completion dates; bookings use
+  creation dates. Material issues and current recorded piece allocations are distinct.
+- Unsupported payment-method/category, due-date, low-stock and shortage views must
+  remain unavailable until actual source data/definitions exist. Do not invent them.
+
+# 47. OWNER-APPROVED REPORTS & ANALYTICS WORKSPACE
+
+Approved 13 October 2026; implement after Dashboard validation.
+- Organise all 24 existing Owner datasets into seven categories: Sales & Payments,
+  Stock & Inventory, Production & Costs, Orders & Tailoring, Finished Products,
+  Transfers & Locations, Audit & Reconciliation.
+- Select a report and display only supported relevant filters, report-specific
+  summaries and complete underlying evidence, with search, sorting and pagination.
+- Date ranges apply to recorded activity. Disable historical-date controls for
+  current-state datasets. Show the applied period independently of draft filters.
+- Paid sales, bookings, unknown costs and legacy evidence remain distinct. Never
+  infer cost/margin from missing evidence. No salary/P2P/advance/deduction reporting.
+
+# 48. OWNER-APPROVED IMMUTABLE AUDIT EVIDENCE WORKSPACE
+
+Approved 13 October 2026; implement after Reports validation.
+- Audit is a searchable newest-first evidence log, not a sales analytics dashboard.
+- Search captured identifiers; filter recorded users, module, action, record type
+  and date presets/custom ranges. Open an event for actor, timestamp, reference,
+  recorded reason and captured before/after values.
+- Missing evidence says Not recorded. Generic row updates remain updates, rather
+  than reconstructed completion/cancellation events. Keep unmapped events visible.
+- Read-only Owner UI; retain existing Owner-protected RPCs and immutable database
+  audit protections. No event edits/deletes, salary/P2P or invented suspicious scores.

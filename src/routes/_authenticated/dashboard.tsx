@@ -23,7 +23,7 @@ function DashboardPage() {
     <>
       <PageHeader
         title={"Good day, " + (fullName.split(" ")[0] || "Owner")}
-        description="Current canonical stock, payment-confirmed sales today and recorded Owner review checks."
+        description="Daily operations, current stock and recorded work requiring attention."
       />
       <OwnerDashboard />
     </>

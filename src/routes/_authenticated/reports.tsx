@@ -22,8 +22,8 @@ function ReportsPage() {
   return (
     <>
       <PageHeader
-        title="Owner reports"
-        description="Canonical stock, transactions, production, financial history and Owner review controls."
+        title="Reports & Analytics"
+        description="Business performance, recorded evidence and transaction reconciliation."
       />
       <OwnerReports key={hash} initialDataset={hash} />
     </>

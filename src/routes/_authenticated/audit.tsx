@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/shared/components/page";
-import { OwnerReports } from "@/features/reports/OwnerReports";
+import { OwnerAudit } from "@/features/reports/OwnerAudit";
 
 export const Route = createFileRoute("/_authenticated/audit")({
   head: () => ({
@@ -22,9 +22,9 @@ function AuditPage() {
     <>
       <PageHeader
         title="Audit trail"
-        description="Canonical and legacy evidence, with actual previous/new values for recorded changes."
+        description="Who changed what, when and which record was affected."
       />
-      <OwnerReports auditOnly />
+      <OwnerAudit />
     </>
   );
 }

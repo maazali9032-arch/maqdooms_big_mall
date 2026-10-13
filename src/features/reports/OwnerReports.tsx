@@ -1,232 +1,318 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "@/app/providers/session";
-import { supabase } from "@/integrations/supabase/client";
-import { Panel } from "@/shared/components/page";
+import { Panel, StatCard } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { formatDateTime } from "@/shared/utils/format";
-import { reportDateRange, reportMoney, reportQuantity } from "./report-value";
 import { QueryState } from "@/shared/components/query-state";
+import { useEvidence } from "./use-evidence";
+import {
+  categories,
+  snapshots,
+  indiaDay,
+  inRange,
+  orderDate,
+  paid,
+  text,
+  title,
+  sum,
+  quantityTotal,
+} from "./evidence-model";
+import { reportDateRange, reportMoney, reportQuantity } from "./report-value";
+import { RecordTable } from "./EvidenceViews";
 
-const datasets = [
-  ["stock", "Current stock by location"],
-  ["fabric_stock", "Fabric + Batch / CP / SP"],
-  ["batches", "Batches"],
-  ["thans", "Internal Thans"],
-  ["consumables", "Consumables"],
-  ["consumable_receipts", "Consumable receipts / CP"],
-  ["customer_tailoring", "Customer Tailoring Jobs / charges"],
-  ["configuration", "Factories / Sections / Tailors / assignments / charges / Designs"],
-  ["material_issues", "Material Issues"],
-  ["tailor_usage", "Tailor issued materials / recorded piece usage"],
-  ["production_jobs", "Owner Production Jobs"],
-  ["production_costs", "Complete Production Cost revisions"],
-  ["finished_products", "Finished Products / SP / cost"],
-  ["transfers", "Stock Transfers"],
-  ["movements", "Stock / material movement history"],
-  ["orders", "Order history / financial snapshots"],
-  ["production_history", "Production status / Workshop receipt history"],
-  ["reconciliation", "Legacy reconciliation records"],
-  ["controls", "Records requiring Owner review"],
-  ["access", "Staff access / roles / overrides"],
-  ["audit", "Canonical + legacy audit"],
-  ["legacy_sales", "Legacy sales (separate history)"],
-  ["legacy_tailoring", "Legacy tailoring (separate history)"],
-  ["legacy_movements", "Legacy movements (separate history)"],
-] as const;
-type Row = { key: string; event_at: string | null; data: Record<string, unknown> };
-type Report = { rows: Row[]; total_rows: string; next_cursor: string | null };
-type Overview = {
-  stock: {
-    location_id: string;
-    location: string;
-    kind: string;
-    parent_id: string | null;
-    unit: string;
-    quantity: string;
-  }[];
-  paid_sales: { kind: string; orders: string; total_paise: string }[];
-  customer_tailoring_bookings: { orders: string; booked_customer_price_paise: string };
-  controls: Record<string, number>;
-};
-const label = (key: string) => key.replace(/_/g, " ");
-function valueText(key: string, value: unknown, row: Record<string, unknown>) {
-  if (value === null || value === undefined) return "Not recorded";
-  if (typeof value === "object") return JSON.stringify(value, null, 2);
-  if (key.includes("paise") && /^-?\d+$/.test(String(value))) return reportMoney(String(value));
-  if (
-    (key.endsWith("_mm") || (key.includes("quantity") && row["unit"] === "mm")) &&
-    /^-?\d+(?:\.0+)?$/.test(String(value))
-  )
-    return reportQuantity(String(value), "mm");
-  if (key.endsWith("_at") && typeof value === "string") return formatDateTime(value);
-  return String(value);
+function initialFilters() {
+  const search = typeof window === "undefined" ? "" : window.location.search,
+    p = new URLSearchParams(search);
+  let from = p.get("from") ?? indiaDay(),
+    through = p.get("through") ?? indiaDay();
+  try {
+    reportDateRange(from, through);
+  } catch {
+    from = indiaDay();
+    through = indiaDay();
+  }
+  return {
+    from,
+    through,
+    search: "",
+    location: "",
+    status: p.get("status") ?? "",
+    sale: p.get("sale") ?? "",
+    payment: p.get("payment") ?? "",
+    fabric: "",
+    movement: "",
+    product: "",
+    job: "",
+    cost: "",
+    action: "",
+    actor: "",
+    record: "",
+  };
 }
-
-export function OwnerReports({
-  auditOnly = false,
-  initialDataset,
-}: {
-  auditOnly?: boolean;
-  initialDataset?: string;
-}) {
+export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
   const { isOwner } = useSession();
-  const qc = useQueryClient();
-  const [dataset, setDataset] = useState(
-    auditOnly
-      ? "audit"
-      : datasets.some(([key]) => key === initialDataset)
-        ? initialDataset!
-        : "stock",
+  const all = categories.flatMap((c) => c.reports);
+  const start = all.some(([key]) => key === initialDataset) ? initialDataset! : "orders";
+  const [dataset, setDataset] = useState(start),
+    [filters, setFilters] = useState(initialFilters),
+    [applied, setApplied] = useState(initialFilters),
+    [validation, setValidation] = useState("");
+  const category = categories.find((c) => c.reports.some(([key]) => key === dataset))!;
+  const snapshot = snapshots.has(dataset);
+  const range = useMemo(
+    () => (snapshot || dataset === "orders" ? {} : reportDateRange(applied.from, applied.through)),
+    [snapshot, dataset, applied.from, applied.through],
   );
-  const [from, setFrom] = useState("");
-  const [through, setThrough] = useState("");
-  const [search, setSearch] = useState("");
-  const [applied, setApplied] = useState<{ p_from?: string; p_to?: string; p_search?: string }>({});
-  const [validation, setValidation] = useState("");
-  const overview = useQuery({
-    queryKey: ["owner-report-overview", applied.p_from, applied.p_to],
-    enabled: isOwner && !auditOnly,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("owner_erp_overview", {
-        ...(applied.p_from ? { p_from: applied.p_from } : {}),
-        ...(applied.p_to ? { p_to: applied.p_to } : {}),
-      });
-      if (error) throw error;
-      return data as unknown as Overview;
-    },
-  });
-  const records = useInfiniteQuery({
-    queryKey: ["owner-report", dataset, applied],
-    enabled: isOwner,
-    initialPageParam: "",
-    queryFn: async ({ pageParam }) => {
-      const { data, error } = await supabase.rpc("owner_erp_report", {
-        p_dataset: dataset,
-        p_limit: 50,
-        ...applied,
-        ...(pageParam ? { p_after: pageParam } : {}),
-      });
-      if (error) throw error;
-      return data as unknown as Report;
-    },
-    getNextPageParam: (page) => page.next_cursor ?? undefined,
-  });
+  const records = useEvidence(dataset, range);
   const rows = useMemo(
-    () => records.data?.pages.flatMap((page) => page.rows) ?? [],
-    [records.data],
+    () =>
+      (records.data ?? []).filter((r) => {
+        const d = r.data;
+        if (dataset === "orders" && !inRange(orderDate(r), applied.from, applied.through))
+          return false;
+        if (
+          applied.search &&
+          !JSON.stringify(d).toLowerCase().includes(applied.search.toLowerCase())
+        )
+          return false;
+        if (
+          applied.location &&
+          !["location", "source", "destination"].some(
+            (k) => String(d[k] ?? "") === applied.location,
+          )
+        )
+          return false;
+        if (applied.status && String(d["status"] ?? d["piece_status"] ?? "") !== applied.status)
+          return false;
+        if (applied.sale && d["kind"] !== applied.sale) return false;
+        if (
+          applied.payment &&
+          (applied.payment === "payment_confirmed"
+            ? !paid(r)
+            : applied.payment === "bookings"
+              ? d["kind"] !== "customer_tailoring" || d["status"] !== "completed"
+              : paid(r) || d["kind"] === "customer_tailoring")
+        )
+          return false;
+        if (
+          applied.fabric &&
+          String(d["fabric"] ?? (d["kind"] === "fabric" ? d["item"] : "") ?? "") !== applied.fabric
+        )
+          return false;
+        if (applied.product && String(d["product"] ?? "") !== applied.product) return false;
+        if (applied.job && String(d["job"] ?? "") !== applied.job) return false;
+        if (applied.movement && String(d["movement_type"] ?? d["kind"] ?? "") !== applied.movement)
+          return false;
+        if (applied.cost && String(d["finalized"]) !== applied.cost) return false;
+        if (applied.action && String(d["action"] ?? "") !== applied.action) return false;
+        if (applied.actor && String(d["actor_id"] ?? d["user_id"] ?? "") !== applied.actor)
+          return false;
+        if (applied.record && String(d["entity_table"] ?? "") !== applied.record) return false;
+        return true;
+      }),
+    [records.data, applied, dataset],
   );
-  const columns = useMemo(() => {
-    const available = new Set(rows.flatMap((row) => Object.keys(row.data)));
-    const preferred = [
-      "code",
-      "barcode",
-      "fabric",
-      "batch",
-      "item",
-      "location",
-      "quantity",
-      "unit",
-      "status",
-      "action",
-      "entity_table",
-      "actor",
-      "occurred_at",
-      "created_at",
-      "control",
-      "job",
-      "customer",
-      "sp_paise",
-      "cp_paise_per_m",
-      "sp_paise_per_m",
-    ];
-    const selected = preferred.filter((key) => available.has(key));
-    return (selected.length ? selected : [...available]).slice(0, 8);
-  }, [rows]);
+  const options = (keys: string[]) =>
+    [
+      ...new Set(
+        (records.data ?? []).flatMap((r) =>
+          keys.map((k) => r.data[k]).filter((v) => typeof v === "string" && v),
+        ),
+      ),
+    ]
+      .map(String)
+      .sort();
+  const field = (
+    key: keyof typeof filters,
+    name: string,
+    values: string[],
+    labels?: Record<string, string>,
+  ) =>
+    values.length ? (
+      <label className="min-w-0 text-xs font-medium">
+        {name}
+        <select
+          aria-label={name}
+          className="mt-1 h-11 w-full rounded-lg border bg-background px-2 text-sm"
+          value={filters[key]}
+          onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+        >
+          <option value="">All</option>
+          {values.map((v) => (
+            <option key={v} value={v}>
+              {labels?.[v] ?? title(v)}
+            </option>
+          ))}
+        </select>
+      </label>
+    ) : null;
+  function select(next: string) {
+    setDataset(next);
+    const reset = {
+      ...filters,
+      search: "",
+      location: "",
+      status: "",
+      sale: "",
+      payment: "",
+      fabric: "",
+      movement: "",
+      product: "",
+      job: "",
+      cost: "",
+    };
+    setFilters(reset);
+    setApplied({ ...reset, from: applied.from, through: applied.through });
+    setValidation("");
+  }
   if (!isOwner) return <p>Owner access is required.</p>;
-  const summary = overview.error ? undefined : overview.data;
+  const paidRows = rows.filter(paid),
+    bookings = rows.filter(
+      (r) => r.data["kind"] === "customer_tailoring" && r.data["status"] === "completed",
+    );
+  const moneyField = dataset === "finished_products" ? "production_cost_paise" : null;
+  const amounts = moneyField ? sum(rows, moneyField) : null;
+  const units = [...new Set(rows.map((r) => String(r.data["unit"] ?? "")).filter(Boolean))];
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <nav
+        aria-label="Report categories"
+        className="grid gap-2 rounded-xl border bg-card p-2 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        {categories.map((c) => (
+          <Button
+            key={c.name}
+            variant={category.name === c.name ? "default" : "ghost"}
+            className="h-auto min-h-11 whitespace-normal text-left"
+            onClick={() => select(c.reports[0]![0])}
+          >
+            {c.name}
+          </Button>
+        ))}
+      </nav>
       <Panel
-        title={auditOnly ? "Complete audit history" : "Owner reports"}
-        description="Reports read recorded data. Financial and audit details are restricted to Owner access."
+        title={category.name}
+        description="Choose a report, apply its relevant filters and inspect the complete recorded evidence."
       >
         <form
-          className="space-y-3"
+          className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             try {
-              setApplied({
-                ...reportDateRange(from, through),
-                ...(search.trim() ? { p_search: search.trim() } : {}),
-              });
+              reportDateRange(filters.from, filters.through);
+              setApplied({ ...filters, search: filters.search.trim() });
               setValidation("");
-            } catch (err) {
-              setValidation(err instanceof Error ? err.message : "Invalid date range");
+            } catch (error) {
+              setValidation(error instanceof Error ? error.message : "Invalid dates");
             }
           }}
         >
-          {!auditOnly ? (
-            <div>
-              <Label htmlFor="owner-report-dataset">Report</Label>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="text-xs font-medium">
+              Report
               <select
-                id="owner-report-dataset"
-                className="h-11 w-full rounded border bg-background p-2"
+                aria-label="Report"
+                className="mt-1 h-11 w-full rounded-lg border bg-background px-2 text-sm"
                 value={dataset}
-                onChange={(e) => setDataset(e.target.value)}
+                onChange={(e) => select(e.target.value)}
               >
-                {datasets.map(([key, title]) => (
+                {category.reports.map(([key, name]) => (
                   <option key={key} value={key}>
-                    {title}
+                    {name}
                   </option>
                 ))}
               </select>
-            </div>
-          ) : null}
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <Label htmlFor={`${dataset}-from`}>From date (India)</Label>
+            </label>
+            <label className="text-xs font-medium">
+              From date (India)
               <Input
-                id={`${dataset}-from`}
+                aria-label="From date"
                 type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
+                disabled={snapshot}
+                value={filters.from}
+                onChange={(e) => setFilters({ ...filters, from: e.target.value })}
               />
-            </div>
-            <div>
-              <Label htmlFor={`${dataset}-through`}>Through date (India)</Label>
+            </label>
+            <label className="text-xs font-medium">
+              Through date (India)
               <Input
-                id={`${dataset}-through`}
+                aria-label="Through date"
                 type="date"
-                value={through}
-                onChange={(e) => setThrough(e.target.value)}
+                disabled={snapshot}
+                value={filters.through}
+                onChange={(e) => setFilters({ ...filters, through: e.target.value })}
               />
-            </div>
-            <div>
-              <Label htmlFor={`${dataset}-search`}>Record / barcode / keyword</Label>
-              <Input
-                id={`${dataset}-search`}
-                value={search}
-                maxLength={200}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+            </label>
           </div>
-          {validation ? <p role="alert">{validation}</p> : null}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="text-xs font-medium">
+              Search recorded evidence
+              <Input
+                aria-label="Search report"
+                placeholder="Barcode, bill, order or reference"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              />
+            </label>
+            {field("location", "Location", options(["location", "source", "destination"]))}
+            {field("status", "Status", options(["status", "piece_status"]))}
+            {dataset === "orders" && field("sale", "Sale type", options(["kind"]))}
+            {dataset === "orders" &&
+              field(
+                "payment",
+                "Payment / booking state",
+                ["payment_confirmed", "bookings", "not_confirmed"],
+                {
+                  payment_confirmed: "Paid fabric/product sales",
+                  bookings: "Tailoring bookings",
+                  not_confirmed: "Not payment-confirmed",
+                },
+              )}
+            {field(
+              "fabric",
+              "Fabric",
+              dataset === "stock"
+                ? [
+                    ...new Set(
+                      (records.data ?? [])
+                        .filter((r) => r.data["kind"] === "fabric")
+                        .map((r) => String(r.data["item"])),
+                    ),
+                  ].sort()
+                : options(["fabric"]),
+            )}
+            {field("product", "Product", options(["product"]))}
+            {field("job", "Production / job reference", options(["job"]))}
+            {dataset === "movements" &&
+              field("movement", "Movement type", options(["movement_type", "kind"]))}
+            {dataset === "audit" && field("action", "Recorded action", options(["action"]))}
+            {dataset === "audit" &&
+              field("actor", "Recorded user ID", options(["actor_id", "user_id"]))}
+            {dataset === "audit" && field("record", "Record table", options(["entity_table"]))}
+            {dataset === "production_costs" &&
+              field("cost", "Cost evidence", ["true", "false"], {
+                true: "Finalised recorded revision",
+                false: "Not finalised",
+              })}
+          </div>
+          {validation && <p role="alert">{validation}</p>}
           <div className="flex flex-wrap gap-2">
             <Button>Apply filters</Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => {
-                setFrom("");
-                setThrough("");
-                setSearch("");
+                const reset = {
+                  ...initialFilters(),
+                  from: "",
+                  through: "",
+                  sale: "",
+                  payment: "",
+                  status: "",
+                };
+                setFilters(reset);
+                setApplied(reset);
                 setValidation("");
-                setApplied({});
               }}
             >
               Clear filters
@@ -234,176 +320,108 @@ export function OwnerReports({
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                void qc.invalidateQueries({ queryKey: ["owner-report"] });
-                void qc.invalidateQueries({ queryKey: ["owner-report-overview"] });
-              }}
+              disabled={records.isFetching}
+              onClick={() => void records.refetch()}
             >
-              Refresh reports
+              Refresh report
             </Button>
           </div>
-          <p className="text-sm">
-            Stock, catalogue, access and control reports show current recorded state. Dates filter
-            transaction/history reports; undated records remain visible. Search applies to report
-            records; overview totals use the date range.
+          <p className="text-xs text-muted-foreground">
+            Applied period:{" "}
+            {snapshot
+              ? "Current state; dates do not apply"
+              : `${applied.from || "All history"} through ${applied.through || "latest recorded activity"} (India)`}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {snapshot
+              ? "Current recorded state — date range does not apply; this is not a historical stock snapshot."
+              : dataset === "orders"
+                ? "Paid fabric/product sales use completion date. Tailoring bookings and other orders use creation date. These amounts stay separate."
+                : "Dates filter recorded event/creation time. Current status and any recorded cost evidence are displayed; they are not reconstructed historical values."}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Payment methods, due dates and unrecorded margins are unavailable. Material issues are
+            not consumption. Legacy reports are separate evidence.
           </p>
         </form>
       </Panel>
-      {!auditOnly ? (
+      <QueryState
+        loading={records.isPending}
+        error={records.error}
+        retry={() => void records.refetch()}
+      />
+      {records.data && !records.error && (
         <>
-          <Panel
-            title="Canonical stock and sales totals"
-            description="Totals include every matching canonical record, independently of the pages loaded below. Stock quantities use their own units; legacy history is separate."
-          >
-            {overview.error ? (
-              <QueryState error={overview.error} retry={() => void overview.refetch()} />
-            ) : overview.isPending ? (
-              <p>Loading totals…</p>
-            ) : summary ? (
-              <div className="space-y-3">
-                {summary.stock.map((s) => (
-                  <p key={`${s.location_id}-${s.unit}`}>
-                    {s.location}: {reportQuantity(s.quantity, s.unit)}
-                  </p>
-                ))}
-                {!summary.stock.length ? <p>No located canonical stock recorded.</p> : null}
-                {summary.paid_sales.map((s) => (
-                  <p key={s.kind}>
-                    {label(s.kind)} · {s.orders} payment-confirmed orders ·{" "}
-                    {reportMoney(s.total_paise)}
-                  </p>
-                ))}
-                {!summary.paid_sales.length ? (
-                  <p>No payment-confirmed canonical sales in this range.</p>
-                ) : null}
-                <p>
-                  Customer Tailoring bookings: {summary.customer_tailoring_bookings.orders} · booked
-                  customer price{" "}
-                  {reportMoney(summary.customer_tailoring_bookings.booked_customer_price_paise)}.
-                  Booking values are separate from paid sales.
-                </p>
-              </div>
-            ) : null}
-          </Panel>
-          <Panel
-            title="Owner review and controls"
-            description="Checks identify recorded exceptions without guessing a correction. Use the existing controlled workflows to make changes."
-          >
-            {summary ? (
-              <div className="space-y-2">
-                {Object.entries(summary.controls).map(([key, count]) => (
-                  <p key={key}>
-                    {label(key)}: {count}
-                  </p>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setDataset("controls");
-                    setFrom("");
-                    setThrough("");
-                    setSearch("");
-                    setValidation("");
-                    setApplied({});
-                  }}
-                >
-                  Review exact records
-                </Button>
-              </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              label="Matching records"
+              value={rows.length}
+              hint="All matching records after applied filters"
+            />
+            {dataset === "orders" ? (
+              <>
+                <StatCard
+                  label="Paid sales"
+                  value={reportMoney(sum(paidRows, "final_customer_price_paise").total.toString())}
+                  hint={`${paidRows.length} payment-confirmed fabric/product bills`}
+                />
+                <StatCard
+                  label="Tailoring bookings"
+                  value={reportMoney(sum(bookings, "final_customer_price_paise").total.toString())}
+                  hint="Booked value; not collected sales"
+                />
+              </>
+            ) : dataset === "stock" ? (
+              units.map((unit) => (
+                <StatCard
+                  key={unit}
+                  label={`Current stock · ${unit === "mm" ? "metres" : unit}`}
+                  value={reportQuantity(
+                    quantityTotal(rows.filter((r) => r.data["unit"] === unit)).value,
+                    unit,
+                  )}
+                  hint="Units remain separate"
+                />
+              ))
+            ) : amounts ? (
+              <>
+                <StatCard
+                  label="Recorded piece costs"
+                  value={reportMoney(amounts.total.toString())}
+                  hint="Recorded allocations only"
+                />
+                <StatCard
+                  label="Costs not recorded"
+                  value={amounts.unknown}
+                  hint="No inferred cost or margin"
+                />
+              </>
             ) : (
-              <p>Load the overview to see checks.</p>
+              <StatCard
+                label="Report basis"
+                value={snapshot ? "Current state" : "Recorded activity"}
+                hint={snapshot ? "Independent of selected dates" : "Selected event range"}
+              />
             )}
-            <div className="mt-3 flex flex-wrap gap-3">
-              <Link to="/inventory">Inventory / locations</Link>
-              <Link to="/tailoring">Tailoring / production / pricing</Link>
-              <Link to="/access">Staff access</Link>
-              <Link to="/audit">Audit</Link>
-            </div>
+          </div>
+          <Panel
+            title={all.find(([key]) => key === dataset)?.[1]}
+            description="Search and sorting cover all matching records. Full record opens the captured underlying evidence."
+          >
+            <RecordTable
+              key={dataset + JSON.stringify(applied)}
+              rows={
+                dataset === "orders"
+                  ? rows.map((r) => ({
+                      ...r,
+                      event_at: typeof orderDate(r) === "string" ? String(orderDate(r)) : null,
+                    }))
+                  : rows
+              }
+            />
           </Panel>
         </>
-      ) : null}
-      <Panel
-        title={datasets.find(([key]) => key === dataset)?.[1] ?? "Records"}
-        description={
-          auditOnly
-            ? "Newest events first. Row events show actual previous/new values; legacy details remain identified as legacy evidence."
-            : "Every matching row is accessible through pagination. Nested evidence can be expanded."
-        }
-      >
-        {records.error ? (
-          <QueryState error={records.error} retry={() => void records.refetch()} />
-        ) : records.isPending ? (
-          <p>Loading records…</p>
-        ) : (
-          <>
-            <p role="status" aria-live="polite">
-              {rows.length} loaded of {records.data?.pages[0]?.total_rows ?? "0"} matching records.
-            </p>
-            {!rows.length ? (
-              <p>No matching records.</p>
-            ) : (
-              <div
-                className="max-h-[65vh] overflow-auto"
-                tabIndex={0}
-                aria-label="Report records; scroll for more columns"
-              >
-                <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 bg-card">
-                    <tr>
-                      {columns.map((key) => (
-                        <th key={key} className="min-w-32 px-2 py-2 capitalize">
-                          {label(key)}
-                        </th>
-                      ))}
-                      <th className="px-2 py-2">Complete record</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((r) => (
-                      <tr key={r.key} className="border-t">
-                        {columns.map((key) => (
-                          <td key={key} className="max-w-sm px-2 py-2 align-top">
-                            {typeof r.data[key] === "object" && r.data[key] !== null ? (
-                              <details>
-                                <summary>View {label(key)}</summary>
-                                <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all text-xs">
-                                  {valueText(key, r.data[key], r.data)}
-                                </pre>
-                              </details>
-                            ) : (
-                              <span className="break-words">
-                                {valueText(key, r.data[key], r.data)}
-                              </span>
-                            )}
-                          </td>
-                        ))}
-                        <td className="max-w-sm px-2 py-2">
-                          <details>
-                            <summary className="cursor-pointer">View all fields</summary>
-                            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all text-xs">
-                              {JSON.stringify(r.data, null, 2)}
-                            </pre>
-                          </details>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {records.hasNextPage ? (
-              <Button
-                className="mt-3"
-                variant="outline"
-                disabled={records.isFetchingNextPage}
-                onClick={() => records.fetchNextPage()}
-              >
-                {records.isFetchingNextPage ? "Loading records…" : "Load more records"}
-              </Button>
-            ) : null}
-          </>
-        )}
-      </Panel>
+      )}
     </div>
   );
 }
