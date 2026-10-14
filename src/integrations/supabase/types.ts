@@ -1138,6 +1138,57 @@ export type Database = {
       };
     };
     Functions: {
+      production_fabric_catalog: { Args: { p_barcode?: string | null }; Returns: Json };
+      create_production_batch: {
+        Args: {
+          p_request: string;
+          p_product: string;
+          p_design: string | null;
+          p_custom_design: string | null;
+          p_size: string;
+          p_quantity: number;
+          p_assignments: Json;
+          p_source: string;
+          p_items: Json;
+          p_notes: string | null;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      production_job_document: { Args: { p_code: string }; Returns: Json };
+      workshop_production_pieces: { Args: { p_job: string }; Returns: Json };
+      issue_additional_production_fabric: {
+        Args: {
+          p_request: string;
+          p_code: string;
+          p_barcode: string;
+          p_source: string;
+          p_quantity_mm: number;
+          p_reason: string;
+        };
+        Returns: string;
+      };
+      set_workshop_product_sp: {
+        Args: { p_request: string; p_job: string; p_updates: Json; p_reason: string };
+        Returns: string;
+      };
+      pos_reserve_variants: { Args: { p_barcode: string }; Returns: Json };
+      complete_production_batch: {
+        Args: { p_request: string; p_job: string; p_expected_status: string; p_reason: string };
+        Returns: string;
+      };
+      showroom_stock: { Args: { p_kind?: string | null }; Returns: Json };
+      ecommerce_listing_stock: { Args: Record<PropertyKey, never>; Returns: Json };
+      storefront_catalog: { Args: Record<string, never>; Returns: Json };
+      link_showroom_listing: {
+        Args: { p_listing: string; p_kind: string; p_stock: string; p_link: boolean };
+        Returns: undefined;
+      };
+      owner_register_staff: {
+        Args: { p_user: string; p_name: string; p_roles: string[] };
+        Returns: undefined;
+      };
+      update_account_name: { Args: { p_name: string }; Returns: undefined };
       workshop_fabric_inventory: { Args: Record<string, never>; Returns: Json };
       edit_workshop_thaan: {
         Args: {

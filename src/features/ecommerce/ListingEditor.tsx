@@ -68,7 +68,7 @@ export function ListingEditor({
     seo_description: listing?.seo_description ?? "",
     price: rupees(listing?.price_paise ?? null),
     sale: rupees(listing?.sale_price_paise ?? null),
-    stock_mode: (listing?.stock_mode ?? "manual") as ListingInput["stock_mode"],
+    stock_mode: (listing?.stock_mode ?? "linked") as ListingInput["stock_mode"],
   });
   const [kept, setKept] = useState<string[]>(listing?.images ?? []);
   const [files, setFiles] = useState<File[]>([]);
@@ -220,12 +220,13 @@ export function ListingEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="linked">Linked Showroom stock</SelectItem>
                   <SelectItem value="manual">Manual quantity (sizes)</SelectItem>
                   <SelectItem value="untracked">Untracked (showcase / enquiry)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Online-only — no physical inventory is created.
+                Link actual stock from Showroom Fabric or Showroom Finished Products after saving.
               </p>
             </div>
           ) : null}

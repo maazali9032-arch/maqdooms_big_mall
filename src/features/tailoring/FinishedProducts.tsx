@@ -36,6 +36,9 @@ type Issue = {
   }[];
 };
 type Piece = {
+  size?: string | null;
+  issued_at?: string | null;
+  finished_at?: string | null;
   id: string;
   barcode: string;
   piece_number: number;
@@ -75,7 +78,7 @@ type Piece = {
 };
 type Args = Database["public"]["Functions"]["receive_finished_products"]["Args"];
 
-export function FinishedProducts() {
+export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyReceipt?: boolean }) {
   const { isOwner, roles } = useSession();
   const permitted = isOwner || roles.includes("counter") || roles.includes("tailor");
   const qc = useQueryClient();
@@ -88,7 +91,7 @@ export function FinishedProducts() {
   const labels = useRef<HTMLDivElement>(null);
   const jobs = useQuery({
     queryKey: ["owner-production", "history"],
-    enabled: isOwner,
+    enabled: isOwner && allowLegacyReceipt,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("owner_production_history");
       if (error) throw error;
@@ -97,7 +100,7 @@ export function FinishedProducts() {
   });
   const issues = useQuery({
     queryKey: ["finished-products", "issue-options", jobId],
-    enabled: isOwner && !!jobId,
+    enabled: isOwner && allowLegacyReceipt && !!jobId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("material_issue_history", {
         p_job: jobId,
@@ -195,7 +198,7 @@ export function FinishedProducts() {
           {e!.message}
         </p>
       ))}
-      {isOwner && (
+      {isOwner && allowLegacyReceipt && (
         <details className="mb-4">
           <summary>Receive completed production into Workshop</summary>
           <fieldset disabled={receive.isPending || !!pending} className="space-y-3 py-3">
@@ -317,8 +320,8 @@ export function FinishedProducts() {
       {(products.data?.length ?? 0) > 0 && (
         <>
           <p>
-            Showing {products.data!.length} pieces (up to 100). SP setup and production costing
-            await Phase 12.
+            Showing {products.data!.length} pieces (up to 100). Set SP in Workshop before
+            transferring to Showroom.
           </p>
           <Button
             variant="outline"
@@ -340,6 +343,11 @@ export function FinishedProducts() {
           <article key={p.id} className="rounded border p-3">
             <p className="font-medium">
               {p.product} · {p.design} · Piece {p.piece_number} / {p.job_quantity}
+            </p>
+            <p>
+              Size: {p.size ?? "Not recorded"} · Issued:{" "}
+              {p.issued_at ? new Date(p.issued_at).toLocaleString() : "Not recorded"} · Finished:{" "}
+              {p.finished_at ? new Date(p.finished_at).toLocaleString() : "Not recorded"}
             </p>
             <p>
               {p.production_job} · {p.job_status} · {p.factory} → {p.section ?? "No Section"} →{" "}
@@ -373,6 +381,12 @@ export function FinishedProducts() {
               </p>
             )}
             <p className="font-medium">Actual material usage for this piece</p>
+            {!p.materials.length && (
+              <p>
+                Not recorded. Workshop CP is based on recorded fabric issues, including additional
+                issues.
+              </p>
+            )}
             {p.materials.map((m, i) => (
               <p key={i}>
                 {m.name} {m.batch && `· ${m.batch}`}{" "}
@@ -408,6 +422,10 @@ function ProductLabel({ piece }: { piece: Piece }) {
     <div className="break-inside-avoid rounded border bg-white p-3 text-black">
       <p>
         {piece.product} · {piece.design} · Piece {piece.piece_number}
+      </p>
+      <p>
+        Size: {piece.size ?? "Not recorded"} · SP:{" "}
+        {piece.sp_paise != null ? `₹${(piece.sp_paise / 100).toFixed(2)}` : "Not set"}
       </p>
       <svg
         role="img"

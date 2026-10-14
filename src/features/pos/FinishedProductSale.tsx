@@ -30,6 +30,7 @@ type Piece = {
   location_id: string;
   location: string;
   location_active: boolean;
+  saleable_source: boolean;
   status: string;
   available: boolean;
   sp_paise: number | null;
@@ -169,6 +170,9 @@ export function FinishedProductSale() {
           ["customers"],
           ["salesperson-work"],
           ["dashboard-metrics"],
+          ["showroom-stock"],
+          ["listing-showroom-stock"],
+          ["listing-availability"],
         ].map((queryKey) => qc.invalidateQueries({ queryKey })),
       );
     },
@@ -181,10 +185,11 @@ export function FinishedProductSale() {
     if (
       !piece?.available ||
       !piece.location_active ||
+      !piece.saleable_source ||
       piece.sp_paise === null ||
       !piece.sp_version_id
     ) {
-      toast.error("Available piece with Owner SP at an active location required");
+      toast.error("Choose an available Showroom piece with saved Workshop SP");
       return;
     }
     if (cart.some((p) => p.id === piece.id)) {
@@ -248,10 +253,17 @@ export function FinishedProductSale() {
               <p className="break-all font-mono">{piece.barcode}</p>
               <p>
                 SP:{" "}
-                {piece.sp_paise === null ? "Owner SP not set" : formatMoney(Number(piece.sp_paise))}{" "}
+                {piece.sp_paise === null
+                  ? "Workshop SP not set"
+                  : formatMoney(Number(piece.sp_paise))}{" "}
                 · {piece.available ? "Available" : piece.status} · {piece.location}
                 {!piece.location_active ? " (inactive)" : ""}
               </p>
+              {!piece.saleable_source && (
+                <p>
+                  Workshop reserve is for viewing. Transfer this piece to Showroom before selling.
+                </p>
+              )}
               {isOwner && piece.production_summary && (
                 <p>
                   Production totals · Planned: {piece.production_summary.planned} · Produced:{" "}
@@ -295,6 +307,7 @@ export function FinishedProductSale() {
                   lookup.isFetching ||
                   !can("pos.sell") ||
                   !piece.available ||
+                  !piece.saleable_source ||
                   !piece.location_active ||
                   piece.sp_paise === null ||
                   !piece.sp_version_id

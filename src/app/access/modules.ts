@@ -41,10 +41,11 @@ const ALL = Object.keys(MODULE_PATHS) as ModuleKey[];
 export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
   stock_entry: ["stock_entry", "stock_transfer", "inventory", "settings"],
-  counter: ["pos", "settings"],
+  counter: ["pos", "tailoring", "settings"],
   salesperson: ["salesperson_work", "settings"],
-  ecommerce_manager: ["inventory", "ecommerce", "whatsapp", "settings"],
+  ecommerce_manager: ["ecommerce", "settings"],
   tailor: ["tailoring", "settings"],
+  production: ["tailoring", "settings"],
 };
 
 /** Union of modules across all of the user's roles; Settings is always available. */
@@ -75,6 +76,12 @@ export function moduleForPath(pathname: string): ModuleKey | null {
  * in Postgres.
  */
 export function canAccessPath(roles: string[], permissions: string[], pathname: string): boolean {
+  if (
+    pathname === "/tailoring" &&
+    roles.includes("production") &&
+    !roles.some((r) => ["owner", "counter", "tailor"].includes(r))
+  )
+    return permissions.includes("production.view");
   if (pathname === "/my-work" || pathname.startsWith("/my-work/"))
     return (
       roles.includes("owner") ||

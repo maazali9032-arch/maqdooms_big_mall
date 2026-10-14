@@ -1804,3 +1804,35 @@ linked sales, tailoring jobs and online orders were test data and requested remo
   check preservation inside the transaction and verify empty inventory after commit.
 - This is one authorized maintenance operation, not an application deletion feature
   or standing permission to erase future data. No schema migration or UI change.
+
+# 52. APPROVED ROLE WORKSPACES AND PRODUCTION ID RECEIPT
+
+Approved 14 October 2026; supersedes Section 50's length-only stock activation rule.
+- Seven roles: Stock Entry, Counter/POS, E-commerce, Salesperson, Tailor, Production,
+  Owner. Staff receive the specifically approved workspace menus plus Account.
+  Roles combine; Owner retains all workflows and grouped Administration.
+- CP belongs to stock workflows across creators. Active stock requires positive
+  recorded length AND CP; colour and inventory correction reason remain optional.
+- Godown means Workshop. Counter sells only Showroom/floor stock while viewing
+  matching fabric variants and Workshop reserve quantities without CP.
+- Production issues scanned fabric immediately at the selected Workshop/Showroom
+  source. Save product, predefined/custom design, size, count and selected Tailors.
+  Generate a stable Production ID document with no printed CP. Custom design is
+  per production job; only Owner manages predefined Products & Designs.
+- Counter may scan that Production ID and issue additional scanned fabric. Capture
+  positive issue-time CP privately for initial and additional issues, atomically.
+- All finished pieces return together to Workshop. Production/Tailor marks finished;
+  Stock Entry/Owner (or eligible explicit receipt exception) receives the whole batch.
+  Divide all recorded issued-fabric CP across the planned pieces with exact paise
+  rounding. No inferred consumption, returns, waste, labour or historical CP.
+- Stock Entry/Owner sets or corrects finished SP at Workshop before Showroom transfer.
+  Print product/design/size/SP/barcode labels. POS uses saved SP. Owner's scan retains
+  production identity, count, issue/finish dates, recorded per-piece CP and SP.
+- E-commerce and its future separate website see Showroom availability only. POS
+  sales change ledger-derived public listing availability. Owner will connect that
+  website manually; no storefront deployment is included here.
+- Self-signups wait for Owner-assigned work access. Owner can add staff and create
+  Tailor accounts directly while retaining the Owner session. Account supports own
+  name/email/password; provider email-confirmation and signup policies apply.
+- Forward-only migration 20261014000000_role_workspaces.sql / Drizzle 0040.
+  Preserve existing business, account and audit rows; no real-data fixtures live.

@@ -16,6 +16,21 @@ export function useListings() {
     },
   });
 }
+export function useLinkedShowroomStock() {
+  return useQuery({
+    queryKey: ["listing-showroom-stock"],
+    refetchInterval: 10000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("ecommerce_listing_stock");
+      if (error) throw error;
+      return data as unknown as {
+        listing_id: string;
+        kind: string;
+        stock: { barcode: string; available_pieces?: number }[];
+      }[];
+    },
+  });
+}
 
 /**
  * Online availability for a linked listing is the LARGEST single remaining
@@ -24,6 +39,7 @@ export function useListings() {
 export function useListingAvailability() {
   return useQuery({
     queryKey: ["listing-availability"],
+    refetchInterval: 10000,
     queryFn: async () => {
       const { data, error } = await supabase.from("v_listing_availability").select("*");
       if (error) throw error;

@@ -28,6 +28,76 @@ export type NavSection = { label: string; items: NavItem[] };
 /** Reuse existing workflow routes without expanding any role's page access. */
 export function sidebarSections(roles: string[], permissions: string[]): NavSection[] {
   const owner = roles.includes("owner");
+  if (!owner) {
+    const items: NavItem[] = [];
+    const add = (
+      to: string,
+      hash: string | undefined,
+      label: string,
+      module: ModuleKey,
+      icon = Boxes,
+      permission?: string,
+    ) => {
+      if (permission && !permissions.includes(permission)) return;
+      if (!canAccessPath(roles, permissions, to)) return;
+      if (!items.some((i) => i.to === to && i.hash === hash))
+        items.push({ to, hash, label, module, icon });
+    };
+    if (roles.includes("stock_entry")) {
+      add("/inventory/receiving", undefined, "Stock Entry", "stock_entry");
+      add(
+        "/inventory/transfers",
+        undefined,
+        "Stock Transfer",
+        "stock_transfer",
+        Boxes,
+        "stock.transfer",
+      );
+      add("/inventory", "fabric-stock", "Stock Inventory", "inventory");
+      add(
+        "/inventory",
+        "finished-products",
+        "Finished Products",
+        "inventory",
+        Boxes,
+        permissions.includes("stock.transfer_finished")
+          ? "stock.transfer_finished"
+          : permissions.includes("production.receive")
+            ? "production.receive"
+            : "stock.price_finished",
+      );
+    }
+    if (roles.includes("counter")) {
+      add("/pos", undefined, "Counter / POS", "pos", ShoppingCart);
+      add("/pos", "customer", "Customer Tailoring", "pos", Scissors);
+      add("/tailoring", "production", "Owner Production", "tailoring", Scissors, "production.view");
+    }
+    if (roles.includes("ecommerce_manager")) {
+      add("/ecommerce", "fabric", "Showroom Fabric", "ecommerce");
+      add("/ecommerce", "products", "Showroom Finished Products", "ecommerce");
+    }
+    if (roles.includes("salesperson"))
+      add("/my-work", undefined, "My Work", "salesperson_work", UserRound);
+    if (roles.includes("tailor")) {
+      add("/tailoring", "customer", "Customer Tailoring", "tailoring", Scissors);
+      add("/tailoring", "production", "Production Tailoring", "tailoring", Scissors);
+    }
+    if (roles.includes("production")) {
+      add("/tailoring", "fabric", "Fabric", "tailoring", Boxes, "production.view");
+      add("/tailoring", "ongoing", "Ongoing Production", "tailoring", Scissors, "production.view");
+    }
+    if (!roles.includes("stock_entry") && permissions.includes("production.receive"))
+      add("/tailoring", "receipt", "Workshop receipt", "tailoring", Boxes, "production.receive");
+    return [
+      ...(items.length ? [{ label: "Work", items }] : []),
+      {
+        label: "Account",
+        items: [
+          { to: "/settings", label: "Account", icon: Settings, module: "settings" as ModuleKey },
+        ],
+      },
+    ];
+  }
   const counter = owner || roles.includes("counter");
   const allowed = allowedModules(roles);
   const sections: NavSection[] = [
@@ -151,7 +221,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
     {
       label: "Reports & Tracking",
       items: [
-        { to: "/reports", label: "Reports", icon: BarChart3, module: "reports" },
+        { to: "/reports", label: "Reports & Analytics", icon: BarChart3, module: "reports" },
         { to: "/audit", label: "Audit Trail", icon: ClipboardList, module: "audit" },
       ],
     },
@@ -161,7 +231,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
         {
           to: "/tailoring",
           hash: "hierarchy",
-          label: "Factories, Sections & Tailors",
+          label: "Factories & Tailors",
           icon: Users,
           module: "tailoring",
           ownerOnly: true,

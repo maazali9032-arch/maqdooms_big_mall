@@ -108,6 +108,17 @@ export function DirectFabricSale() {
   const request = useRef<{ id: string; signature: string } | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const stock = stocks.data?.find((s) => s.id === stockId);
+  const reserveVariants = useQuery({
+    queryKey: ["pos-reserve-variants", stock?.barcode],
+    enabled: !!stock,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("pos_reserve_variants", {
+        p_barcode: stock!.barcode,
+      });
+      if (error) throw error;
+      return data as unknown as Stock[];
+    },
+  });
   const total = cart.reduce((sum, cut) => sum + cut.amount, 0);
   const costs = useQuery({
     queryKey: ["direct-fabric-sale", "costs", selectedOrder],
@@ -188,6 +199,9 @@ export function DirectFabricSale() {
           "dashboard-metrics",
           "customers",
           "salesperson-work",
+          "pos-reserve-variants",
+          "showroom-stock",
+          "listing-availability",
         ].map((key) => qc.invalidateQueries({ queryKey: [key] })),
       );
     },
@@ -344,11 +358,9 @@ export function DirectFabricSale() {
             setPaid(false);
           }}
         >
-          <option value="">Choose Workshop / Showroom</option>
+          <option value="">Choose Showroom / floor</option>
           {locations.data
-            ?.filter(
-              (l) => l.active && ["workshop", "showroom", "showroom_sublocation"].includes(l.kind),
-            )
+            ?.filter((l) => l.active && ["showroom", "showroom_sublocation"].includes(l.kind))
             .map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
@@ -377,6 +389,31 @@ export function DirectFabricSale() {
                   </span>
                 )),
               )}
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="mb-2 font-medium">
+                Matching fabric variants — Showroom and Workshop reserve
+              </p>
+              {reserveVariants.error && (
+                <p role="alert">
+                  Reserve availability could not load.{" "}
+                  <button className="underline" onClick={() => void reserveVariants.refetch()}>
+                    Retry
+                  </button>
+                </p>
+              )}
+              {reserveVariants.data?.map((variant) => (
+                <div key={variant.barcode} className="mb-2 text-sm">
+                  <span className="font-mono text-xs">{variant.barcode}</span>
+                  <p>
+                    {variant.cuts
+                      .flatMap((c) =>
+                        c.locations.map((l) => `${l.name}: ${l.quantity_mm / 1000} m`),
+                      )
+                      .join(" · ")}
+                  </p>
+                </div>
+              ))}
             </div>
             <Label htmlFor="counter-price-per-metre">Selling price per metre (₹)</Label>
             <Input

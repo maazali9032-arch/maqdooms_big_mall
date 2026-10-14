@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-10-14T15:33:59.670Z",
+  "checks": 35,
+  "passed": true,
+  "widths": [
+    320,
+    390,
+    768,
+    1440
+  ],
+  "synthetic_only": true
+}

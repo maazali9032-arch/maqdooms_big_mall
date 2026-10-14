@@ -16,6 +16,7 @@ import {
 import type { Consumable } from "@/features/inventory/Consumables";
 import { hierarchySections, hierarchyTailors, type HierarchyOption } from "./hierarchy-options";
 import type { Database } from "@/integrations/supabase/types";
+import { ProductionDocument } from "./ProductionDocument";
 
 type Functions = Database["public"]["Functions"];
 type CatalogItem = {
@@ -32,6 +33,7 @@ type Job = {
   design: string;
   quantity: number;
   status: string;
+  received?: boolean;
   notes: string | null;
   factory: string;
   section: string | null;
@@ -59,9 +61,21 @@ type Fabric = {
 };
 type Item = { id: string; name: string; unit: string; quantity: number; fabric: boolean };
 
-export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean }) {
+export function OwnerProduction({
+  catalogOnly = false,
+  mode = "all",
+}: {
+  catalogOnly?: boolean;
+  mode?: "all" | "create" | "ongoing";
+}) {
   const { isOwner, roles, can } = useSession();
-  const allowed = isOwner || (!catalogOnly && roles.includes("tailor"));
+  const allowed = isOwner || (!catalogOnly && (can("production.view") || roles.includes("tailor")));
+  const canCreate = isOwner || can("production.create");
+  const canView = isOwner || can("production.view");
+  const canProgress =
+    isOwner ||
+    can("production.progress") ||
+    (roles.includes("tailor") && can("tailoring.manage_jobs"));
   const qc = useQueryClient();
   const refresh = () => {
     for (const key of [
@@ -77,7 +91,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   };
   const catalog = useQuery({
     queryKey: ["owner-production", "catalog"],
-    enabled: isOwner,
+    enabled: canView,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("owner_production_catalog");
       if (error) throw error;
@@ -95,7 +109,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   });
   const assignments = useQuery({
     queryKey: ["tailoring-hierarchy", "options"],
-    enabled: isOwner,
+    enabled: canView,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("tailoring_assignment_options");
       if (error) throw error;
@@ -104,7 +118,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   });
   const locations = useQuery({
     queryKey: ["location-ledger", "locations"],
-    enabled: isOwner,
+    enabled: canView,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("inventory_locations");
       if (error) throw error;
@@ -113,11 +127,11 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   });
   const fabrics = useQuery({
     queryKey: ["material-issues", "fabrics"],
-    enabled: isOwner,
+    enabled: canView,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("customer_tailoring_catalog");
+      const { data, error } = await supabase.rpc("production_fabric_catalog", {});
       if (error) throw error;
-      return (data as unknown as { stocks: Fabric[] }).stocks;
+      return data as unknown as Fabric[];
     },
   });
   const materials = useQuery({
@@ -132,7 +146,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   const scanFabric = useMutation({
     mutationFn: async (code: string) => {
       if (!code) throw new Error("Scan a fabric Thaan barcode");
-      const { data, error } = await supabase.rpc("direct_fabric_sale_catalog", { p_barcode: code });
+      const { data, error } = await supabase.rpc("production_fabric_catalog", { p_barcode: code });
       if (error) throw error;
       const fabric = (data as unknown as Fabric[]).find((f) => f.barcode === code);
       if (!fabric) throw new Error("No available fabric matches this barcode");
@@ -144,19 +158,21 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   });
   const [product, setProduct] = useState("");
   const [design, setDesign] = useState("");
+  const [customDesign, setCustomDesign] = useState("");
+  const [size, setSize] = useState("");
+  const [documentCode, setDocumentCode] = useState("");
   const [quantity, setQuantity] = useState("");
   const [factory, setFactory] = useState("");
   const [section, setSection] = useState("");
   const [assignedTailors, setAssignedTailors] = useState<string[]>([]);
   const [fabricBarcode, setFabricBarcode] = useState("");
+  const [fabricSearch, setFabricSearch] = useState("");
   const [scannedFabric, setScannedFabric] = useState<Fabric | null>(null);
   const [source, setSource] = useState("");
   const [notes, setNotes] = useState("");
   const [reason, setReason] = useState("");
   const [lines, setLines] = useState([{ item: "", quantity: "" }]);
-  const [pending, setPending] = useState<
-    Functions["create_owner_production_shared"]["Args"] | null
-  >(null);
+  const [pending, setPending] = useState<Functions["create_production_batch"]["Args"] | null>(null);
   const [config, setConfig] = useState({
     kind: "product",
     id: "",
@@ -174,13 +190,14 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
     Functions["progress_owner_production"]["Args"] | null
   >(null);
   const create = useMutation({
-    mutationFn: async (args: Functions["create_owner_production_shared"]["Args"]) => {
+    mutationFn: async (args: Functions["create_production_batch"]["Args"]) => {
       setPending(args);
-      const { data, error } = await supabase.rpc("create_owner_production_shared", args);
+      const { data, error } = await supabase.rpc("create_production_batch", args);
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (id) => {
+      setDocumentCode(id);
       setPending(null);
       setLines([{ item: "", quantity: "" }]);
       setQuantity("");
@@ -277,6 +294,8 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
       if (
         !product ||
         !design ||
+        !size.trim() ||
+        (design === "custom" && !customDesign.trim()) ||
         !source ||
         !reason.trim() ||
         !assignedTailors.length ||
@@ -308,7 +327,9 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
       create.mutate({
         p_request: crypto.randomUUID(),
         p_product: product,
-        p_design: design,
+        p_design: design === "custom" ? null : design,
+        p_custom_design: design === "custom" ? customDesign.trim() : null,
+        p_size: size.trim(),
         p_quantity: Number(quantity),
         p_assignments: [...assignedTailors].sort(),
         p_source: source,
@@ -324,7 +345,15 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
   const options = assignments.data ?? [];
   return (
     <Panel
-      title={catalogOnly ? "Products & Designs" : "Owner Production"}
+      title={
+        catalogOnly
+          ? "Products & Designs"
+          : mode === "create"
+            ? "Fabric — issue new production"
+            : mode === "ongoing"
+              ? "Ongoing Production"
+              : "Owner Production"
+      }
       description="Internal manufacturing of identical products. A different Design requires a separate Production Job."
     >
       {[
@@ -341,6 +370,60 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
             {e!.message}
           </p>
         ))}
+      {!catalogOnly && mode === "create" && (
+        <div className="mb-5 space-y-3">
+          <Input
+            aria-label="Search production fabric"
+            placeholder="Search fabric or Thaan barcode"
+            value={fabricSearch}
+            onChange={(e) => setFabricSearch(e.target.value)}
+          />
+          <div className="divide-y rounded-lg border">
+            {fabrics.data
+              ?.filter((f) =>
+                `${f.fabric_name} ${f.batch_code} ${f.barcode}`
+                  .toLowerCase()
+                  .includes(fabricSearch.trim().toLowerCase()),
+              )
+              .map((f) => (
+                <article
+                  key={f.barcode}
+                  className="flex flex-wrap items-center justify-between gap-3 p-3"
+                >
+                  <div>
+                    <p className="font-medium">
+                      {f.fabric_name} · {f.batch_code}
+                    </p>
+                    <p className="break-all font-mono text-xs text-muted-foreground">{f.barcode}</p>
+                    <p className="text-sm">
+                      {f.cuts
+                        .flatMap((c) =>
+                          c.locations.map(
+                            (l) =>
+                              `${locations.data?.find((location) => location.id === l.id)?.name ?? l.id}: ${quantityText(Number(l.quantity_mm), "mm")}`,
+                          ),
+                        )
+                        .join(" · ")}
+                    </p>
+                  </div>
+                  {canCreate && (
+                    <Button
+                      variant="outline"
+                      disabled={create.isPending || !!pending}
+                      onClick={() => {
+                        setFabricBarcode(f.barcode);
+                        setScannedFabric(f);
+                      }}
+                    >
+                      Select fabric for production
+                    </Button>
+                  )}
+                </article>
+              ))}
+          </div>
+          {fabrics.data?.length === 0 && <p>No fabric available in Workshop or Showroom.</p>}
+        </div>
+      )}
       {isOwner && (
         <details className="mb-4" open={catalogOnly ? true : undefined}>
           <summary>Product and Design configuration</summary>
@@ -460,7 +543,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
           </Button>
         </details>
       )}
-      {isOwner && !catalogOnly && (
+      {canCreate && !catalogOnly && mode !== "ongoing" && (
         <div className="space-y-3">
           <fieldset
             disabled={create.isPending || !!pending || scanFabric.isPending}
@@ -477,7 +560,10 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
             >
               <option value="">Source location</option>
               {locations.data
-                ?.filter((l) => l.active)
+                ?.filter(
+                  (l) =>
+                    l.active && ["workshop", "showroom", "showroom_sublocation"].includes(l.kind),
+                )
                 .map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
@@ -571,6 +657,7 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
               onChange={(e) => setDesign(e.target.value)}
             >
               <option value="">Design</option>
+              <option value="custom">Custom design</option>
               {catalog.data?.designs
                 .filter((i) => i.active)
                 .map((i) => (
@@ -579,6 +666,22 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
                   </option>
                 ))}
             </select>
+            {design === "custom" && (
+              <Input
+                aria-label="Custom production design"
+                maxLength={120}
+                placeholder="Enter custom design"
+                value={customDesign}
+                onChange={(e) => setCustomDesign(e.target.value)}
+              />
+            )}
+            <Input
+              aria-label="Production size"
+              maxLength={40}
+              placeholder="Size (e.g. 38)"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+            />
             <Input
               aria-label="Production piece count"
               placeholder="Quantity (identical pieces)"
@@ -711,9 +814,10 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
             {pending ? "Retry same Production Job" : "Create Production Job and issue materials"}
           </Button>
           {pending && <p>Request awaiting confirmation. Retry with the same values.</p>}
+          {documentCode && <ProductionDocument code={documentCode} />}
         </div>
       )}
-      {!catalogOnly && (isOwner || can("tailoring.manage_jobs")) && (
+      {!catalogOnly && mode !== "create" && canProgress && (
         <div className="my-4">
           <Input
             aria-label="Production status reason"
@@ -729,33 +833,38 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
           )}
         </div>
       )}
-      {!catalogOnly && (
+      {!catalogOnly && mode !== "create" && (
         <div className="mt-4 space-y-3">
-          {jobs.data?.map((j) => (
-            <article key={j.id} className="rounded border p-3">
-              <p className="font-medium">
-                {j.code} · {j.product} · {j.design} · {j.quantity} identical pieces
-              </p>
-              <p>
-                {j.factory} → {j.section ?? "No Section"} → {j.tailor} · {j.status}
-              </p>
-              {j.notes && <p>{j.notes}</p>}
-              <p>
-                Required quantities:{" "}
-                {j.requirements
-                  .map(
-                    (r) =>
-                      `${r.name}${r.batch ? ` · ${r.batch}` : ""}${r.thaan_id ? ` · Than ${r.thaan_id.slice(0, 8)}` : ""}: ${quantityText(r.quantity, r.unit)}`,
-                  )
-                  .join("; ")}
-              </p>
-              {j.events.map((e, i) => (
-                <p key={i}>
-                  {e.status} · {e.reason} · {new Date(e.recorded_at).toLocaleString()}
+          {jobs.data
+            ?.filter((j) => mode !== "ongoing" || ["open", "in_progress"].includes(j.status))
+            .map((j) => (
+              <article key={j.id} className="rounded border p-3">
+                <p className="font-medium">
+                  {j.code} · {j.product} · {j.design} · {j.quantity} identical pieces
                 </p>
-              ))}
-              {(isOwner || can("tailoring.manage_jobs")) &&
-                ["open", "in_progress"].includes(j.status) && (
+                <Button variant="outline" onClick={() => setDocumentCode(j.code)}>
+                  View Production ID
+                </Button>
+                {documentCode === j.code && <ProductionDocument code={j.code} />}
+                <p>
+                  {j.factory} → {j.section ?? "No Section"} → {j.tailor} · {j.status}
+                </p>
+                {j.notes && <p>{j.notes}</p>}
+                <p>
+                  Required quantities:{" "}
+                  {j.requirements
+                    .map(
+                      (r) =>
+                        `${r.name}${r.batch ? ` · ${r.batch}` : ""}${r.thaan_id ? ` · Than ${r.thaan_id.slice(0, 8)}` : ""}: ${quantityText(r.quantity, r.unit)}`,
+                    )
+                    .join("; ")}
+                </p>
+                {j.events.map((e, i) => (
+                  <p key={i}>
+                    {e.status} · {e.reason} · {new Date(e.recorded_at).toLocaleString()}
+                  </p>
+                ))}
+                {canProgress && !j.received && ["open", "in_progress"].includes(j.status) && (
                   <Button
                     disabled={progress.isPending || !!statusPending || !statusReason.trim()}
                     onClick={() =>
@@ -768,12 +877,16 @@ export function OwnerProduction({ catalogOnly = false }: { catalogOnly?: boolean
                       })
                     }
                   >
-                    {j.status === "open" ? "Start production" : "Confirm job completed"}
+                    {j.status === "open"
+                      ? "Start production"
+                      : "Mark finished — awaiting Workshop receipt"}
                   </Button>
                 )}
-            </article>
-          ))}
-          {jobs.data?.length === 0 && <p>No Owner Production Jobs available.</p>}
+              </article>
+            ))}
+          {jobs.data?.filter(
+            (j) => mode !== "ongoing" || ["open", "in_progress"].includes(j.status),
+          ).length === 0 && <p>No production jobs available.</p>}
         </div>
       )}
     </Panel>

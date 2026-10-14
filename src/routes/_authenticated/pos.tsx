@@ -18,6 +18,7 @@ import { DirectFabricSale } from "@/features/pos/DirectFabricSale";
 import { CustomerTailoring } from "@/features/tailoring/CustomerTailoring";
 import { FinishedProducts } from "@/features/tailoring/FinishedProducts";
 import { MaterialIssues } from "@/features/tailoring/MaterialIssues";
+import { ProductionFabricIssue } from "@/features/pos/ProductionFabricIssue";
 import { PageHeader, Panel, StatusBadge, EmptyState } from "@/shared/components/page";
 import { formatMetres, formatMoney, lineAmountPaise, parseMetreInput } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
@@ -788,6 +789,11 @@ function PosPage() {
           { id: "products", label: "Finished Product Sale", content: <FinishedProductSale /> },
           { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
           { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
+          {
+            id: "production-issue",
+            label: "Additional production fabric",
+            content: <ProductionFabricIssue />,
+          },
           { id: "scan", label: "Product genealogy", content: <FinishedProducts /> },
           { id: "history", label: "Sales History", content: <SalesHistory /> },
           { id: "legacy", label: "Legacy records", content: <LegacyPosPage /> },

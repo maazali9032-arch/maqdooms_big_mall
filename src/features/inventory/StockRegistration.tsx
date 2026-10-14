@@ -325,8 +325,8 @@ export function StockRegistration() {
                 Optional: enter actual details now or leave blank and complete by scanning.
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                A positive actual length makes stock available. Colour is optional; CP can be added
-                later.
+                Positive actual length and CP are required before stock becomes available. Colour is
+                optional. Details can be added later.
               </p>
             </div>
           </div>

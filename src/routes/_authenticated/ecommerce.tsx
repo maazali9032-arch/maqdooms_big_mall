@@ -8,6 +8,7 @@ import {
   useOnlineOrders,
   useTogglePublish,
   useUpdateOrderStatus,
+  useLinkedShowroomStock,
 } from "@/features/ecommerce";
 import {
   PageHeader,
@@ -21,6 +22,9 @@ import { formatMetres, formatMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useWorkflowRoute } from "@/shared/components/use-workflow-route";
+import { ShowroomStock } from "@/features/ecommerce/ShowroomStock";
+import { useSession } from "@/app/providers/session";
 
 export const Route = createFileRoute("/_authenticated/ecommerce")({
   head: () => ({
@@ -41,8 +45,11 @@ export const Route = createFileRoute("/_authenticated/ecommerce")({
 });
 
 function EcommercePage() {
+  const navigation = useWorkflowRoute();
+  const { isOwner } = useSession();
   const listings = useListings();
   const availability = useListingAvailability();
+  const linkedStock = useLinkedShowroomStock();
   const orders = useOnlineOrders();
   const holds = useHolds();
   const togglePublish = useTogglePublish();
@@ -50,6 +57,23 @@ function EcommercePage() {
   const [editing, setEditing] = useState<EditableListing | null | undefined>(undefined);
 
   const availabilityMap = new Map((availability.data ?? []).map((a) => [a.listing_id, a]));
+  const linkedMap = new Map((linkedStock.data ?? []).map((a) => [a.listing_id, a]));
+  if (
+    navigation.activeId === "fabric" ||
+    navigation.activeId === "products" ||
+    (!isOwner && !navigation.activeId)
+  ) {
+    return (
+      <>
+        <PageHeader title="E-commerce" description="Showroom stock for your online catalog." />
+        <ShowroomStock
+          key={navigation.activeId}
+          kind={navigation.activeId === "products" ? "product" : "fabric"}
+          onManageListings={() => navigation.onChange("listings")}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -58,7 +82,7 @@ function EcommercePage() {
         description="Nothing becomes public automatically — only listings published here are exposed to the storefront."
         actions={
           <Button size="sm" onClick={() => setEditing(null)}>
-            New online-only product
+            New online listing
           </Button>
         }
       />
@@ -99,7 +123,7 @@ function EcommercePage() {
           </DemoNotice>
           {(listings.data ?? []).map((l) => {
             const a = availabilityMap.get(l.id);
-            const links = (l.listing_thaan_links ?? []) as { thaans: { barcode: string } | null }[];
+            const linked = linkedMap.get(l.id);
             const variants = (l.listing_variants ?? []) as {
               id: string;
               label: string;
@@ -150,26 +174,31 @@ function EcommercePage() {
                   {l.stock_mode === "linked" ? (
                     <>
                       <div>
-                        <p className="label-eyebrow">Largest available piece</p>
+                        <p className="label-eyebrow">
+                          {linked?.kind === "product"
+                            ? "Available Showroom pieces"
+                            : "Largest available Showroom Thaan"}
+                        </p>
                         <p className="numeric text-sm font-semibold">
-                          {formatMetres(a?.largest_piece_mm ?? 0)}
+                          {linked?.kind === "product"
+                            ? linked.stock.length || "Sold out"
+                            : formatMetres(a?.largest_piece_mm ?? 0)}
                         </p>
                       </div>
                       <div>
-                        <p className="label-eyebrow">Linked thaans</p>
+                        <p className="label-eyebrow">Available Showroom barcodes</p>
                         <p className="numeric text-sm">
-                          {links
-                            .map((k) => k.thaans?.barcode)
-                            .filter(Boolean)
-                            .join(", ") || "—"}
+                          {(linked?.stock ?? []).map((k) => k.barcode).join(", ") || "—"}
                         </p>
                       </div>
-                      <div>
-                        <p className="label-eyebrow">Total linked (not orderable)</p>
-                        <p className="numeric text-sm text-muted-foreground">
-                          {formatMetres(a?.total_linked_mm ?? 0)}
-                        </p>
-                      </div>
+                      {linked?.kind !== "product" && (
+                        <div>
+                          <p className="label-eyebrow">Total linked (not orderable)</p>
+                          <p className="numeric text-sm text-muted-foreground">
+                            {formatMetres(a?.total_linked_mm ?? 0)}
+                          </p>
+                        </div>
+                      )}
                     </>
                   ) : null}
                   {l.stock_mode === "manual" ? (

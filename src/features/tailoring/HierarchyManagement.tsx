@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/shared/utils/format";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import type { Database } from "@/integrations/supabase/types";
+import { CreateStaff } from "@/features/access/CreateStaff";
 type Factory = { id: string; code: string; name: string; active: boolean };
 type Section = Factory & { factory_id: string };
 type Tailor = {
@@ -48,6 +49,7 @@ const empty = {
 };
 export function HierarchyManagement() {
   const { isOwner } = useSession();
+  const [createLogin, setCreateLogin] = useState(false);
   const qc = useQueryClient();
   const catalog = useQuery({
     queryKey: ["tailoring-hierarchy"],
@@ -136,9 +138,10 @@ export function HierarchyManagement() {
       !form.code.trim() ||
       !form.name.trim() ||
       !form.reason.trim() ||
+      (form.kind === "tailor" && !form.id && !form.profile) ||
       (form.kind === "section" && !form.factory)
     ) {
-      toast.error("Enter the identity, required Factory and reason");
+      toast.error("Enter identity and reason; new Tailors need an existing or newly created login");
       return;
     }
     save.mutate({
@@ -253,7 +256,7 @@ export function HierarchyManagement() {
           )}
           {form.kind === "tailor" && (
             <label>
-              Optional Tailor login
+              Tailor login
               <select
                 disabled={
                   !!form.profile &&
@@ -264,7 +267,7 @@ export function HierarchyManagement() {
                 value={form.profile}
                 onChange={(e) => setForm({ ...form, profile: e.target.value })}
               >
-                <option value="">Business Tailor without login</option>
+                <option value="">Choose a Tailor login</option>
                 {data?.profiles.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -274,6 +277,14 @@ export function HierarchyManagement() {
                   <option value={form.profile}>Existing inactive login · {form.profile}</option>
                 )}
               </select>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                onClick={() => setCreateLogin(true)}
+              >
+                Create new Tailor account
+              </Button>
             </label>
           )}
           <label className="flex gap-2">
@@ -375,6 +386,13 @@ export function HierarchyManagement() {
           <p role="alert">Result is uncertain. Retry the same request to confirm it.</p>
           <Button onClick={() => save.mutate(pending)}>Retry same change</Button>
         </div>
+      )}
+      {createLogin && (
+        <CreateStaff
+          initialRole="tailor"
+          onClose={() => setCreateLogin(false)}
+          onCreated={(id) => setForm((current) => ({ ...current, profile: id }))}
+        />
       )}
       <div className="mt-5 space-y-3">
         <h3 className="font-semibold">Assignment history</h3>

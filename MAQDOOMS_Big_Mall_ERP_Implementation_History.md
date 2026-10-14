@@ -6023,3 +6023,84 @@ REMAINING:
 
 NEXT PHASE:
 - Owner can create the next real batch through existing Stock Entry.
+
+# 52. ROLE WORKSPACES, PRODUCTION ID AND WORKSHOP PRICING — 14 OCTOBER 2026
+
+IMPLEMENTED:
+- Seven approved role workspaces, role unions and Account access. Production is a
+  new role; Owner retains the full grouped navigation and Administration. New
+  self-signups wait for Owner-assigned work access instead of receiving Counter.
+- Owner Add Staff uses an isolated signup client and Owner-authorized registration;
+  the Owner session is retained. Factories & Tailors offers creation of a Tailor
+  login. Newly defined Tailors require an existing active Tailor login; historical
+  business Tailors without logins remain preserved. Own name/email/password settings.
+- Positive recorded length AND CP now gate active/usable Thaan stock. Partial
+  lengths and zero/missing CP stay drafts until authorized completion; colour and
+  inventory correction reason remain optional. No historical activation backfill.
+- Counter sales require Showroom/floor sources; matching variants and Workshop
+  reserve quantities are visible without CP. Both fabric and finished-sale overloads
+  enforce source restrictions. Finished POS uses saved Workshop SP.
+- Production creates a stable Production ID for product, predefined/custom design,
+  size, quantity and shared Tailor assignments, immediately deducting exact issued
+  fabric from the selected Workshop/Showroom source. Printed Production ID excludes
+  CP. Counter scans that ID to issue additional fabric against the same job.
+- Every initial/additional production fabric issue captures immutable issue-time CP
+  atomically with its stock deduction. Production and Counter cannot read these costs.
+- Production/Tailor marks finished. Stock Entry/Owner receives all planned pieces
+  into Workshop, generates stable individual barcodes and divides all recorded
+  issued-fabric CP across pieces with exact paise remainders. Partial receipt and
+  inferred consumed/returned/wasted fabric are not implemented. Historical unknown
+  issue CP is explicitly blocked from silent calculation.
+- Stock Entry/Owner sets/corrects finished SP at Workshop, individually or across
+  that production's available pieces. Showroom transfer requires SP. Labels print
+  name/design/size/SP/barcode. Scans retain production count, dates, CP and SP with
+  protected cost visibility.
+- Showroom-only E-commerce projections, listing links and read-only published
+  storefront RPC. POS sales change ledger-derived availability; internal views poll
+  every 10 seconds. Public catalog excludes Workshop, CP, accounts and unpublished
+  or legacy manual/untracked listings. The future website is not connected here.
+
+DATABASE / PRESERVATION:
+- Applied forward-only 20261014000000_role_workspaces.sql; mirrored byte-for-byte as
+  Drizzle 0040, journal entry appended. The two new SQL files retain byte hashes on
+  Windows checkouts. Previously published/applied migration files unchanged.
+- Applied and canonical schema/RLS/ACL/trigger/constraint verification completed
+  2026-10-14T15:44:21.143Z (21:14:21.143 IST).
+- SHA256 b53c480c18eda3c92f1ebfa0cb9a50796833fc8b42eac8dc195e350eed66833e.
+- Original-column fingerprints and existing metadata/audit row sets preserved
+  inside the locked migration transaction. No business test fixtures or signup
+  accounts created live. Existing active stock without positive CP count verified zero.
+- New receipt/cost/request records are prospective; no missing historical costs,
+  size, custom designs or consumption were reconstructed. Recorded creator IDs and
+  historical stock/financial evidence remain unchanged.
+- Separate read-only checks passed for real Owner, Stock Entry, Counter and
+  E-commerce role RPCs and anonymous storefront API at 2026-10-14T15:46:32.402Z.
+  New Production-role mutations were verified in disposable databases only.
+
+TESTS / BUILD:
+- 933 cumulative database assertions across Supabase-populated, Drizzle-populated
+  and Supabase-clean replay. Covers role boundaries/CP privacy, drafts, initial and
+  extra issues, exact retry payloads, custom designs/size, all-piece receipt/SP,
+  Showroom-only sales, sold-out storefront, self-signup and own account updates.
+- 35 actual-component browser checks with synthetic backend/accounts; exact role
+  menus/unions, source barcode scans, 25m creation, additional 1m, whole receipt,
+  SP propagation, retries, isolated signup, password clearing and 320/390/768/1440px
+  layout. No real auth/signup, printer, stock or transaction writes in browser tests.
+- TypeScript passes. Scoped ESLint has zero errors; three prior session warnings
+  and one development-only mixed hook/component export warning remain.
+- Isolated Vercel production build passes; reused clean dependency installation,
+  no private database credentials copied. Build verification is not hosted deployment
+  acceptance. No rewritten Git history or force push.
+- Proof: docs/ROLE_WORKSPACES_DATABASE_VERIFICATION.json,
+  ROLE_WORKSPACES_UI_VERIFICATION.json, ROLE_WORKSPACES_BUILD_VERIFICATION.json,
+  ROLE_WORKSPACES_ROLLOUT_VERIFICATION.json, ROLE_WORKSPACES_LIVE_READ_VERIFICATION.json.
+  Workflow/API/verification instructions: docs/ROLE_WORKSPACES.md.
+
+REMAINING / LIMITS:
+- Owner still connects the separate E-commerce website manually to the controlled
+  read-only API. That website determines its own refresh/realtime behavior.
+- Hosted signup availability, rate limits and email confirmation follow the current
+  authentication provider. Email changes require its configured confirmation.
+- No live sample production, new staff signup or real printer acceptance was run;
+  existing business/account data was preserved. Consumption, unused returns, waste
+  and partial receipt remain outside this approved workflow.

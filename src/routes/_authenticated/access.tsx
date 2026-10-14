@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
+import { CreateStaff } from "@/features/access/CreateStaff";
 import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
 
 export const Route = createFileRoute("/_authenticated/access")({
@@ -56,6 +57,7 @@ function AccessPage() {
   const setRole = useSetUserRole();
   const setActive = useSetActive();
   const [search, setSearch] = useState("");
+  const [creatingStaff, setCreatingStaff] = useState(false);
   const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
 
@@ -97,27 +99,22 @@ function AccessPage() {
     }
   }
 
-  async function copyStaffSignupLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/auth`);
-      toast.success("Staff sign-up link copied. Assign roles after the account is created.");
-    } catch {
-      toast.error("Could not copy the sign-up link");
-    }
-  }
-
   return (
     <>
       <PageHeader
         title="Manage Access"
         description="Control staff roles and access across Maqdoom's Big Mall."
         actions={
-          <Button onClick={() => void copyStaffSignupLink()} title="Copy the staff sign-up link">
+          <Button
+            onClick={() => setCreatingStaff(true)}
+            title="Create a staff account and assign its role"
+          >
             <UserPlus />
             Add Staff
           </Button>
         }
       />
+      {creatingStaff && <CreateStaff onClose={() => setCreatingStaff(false)} />}
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard

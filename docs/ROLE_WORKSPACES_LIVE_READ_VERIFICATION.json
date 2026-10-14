@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-10-14T15:46:32.402Z",
+  "read_only": true,
+  "roles": [
+    "owner",
+    "stock_entry",
+    "counter",
+    "ecommerce_manager"
+  ],
+  "public_catalog_verified": true,
+  "migration": {
+    "filename": "20261014000000_role_workspaces.sql",
+    "sha256": "b53c480c18eda3c92f1ebfa0cb9a50796833fc8b42eac8dc195e350eed66833e",
+    "mode": "applied"
+  },
+  "production_defaults": [
+    "production.create",
+    "production.progress",
+    "production.view"
+  ]
+}

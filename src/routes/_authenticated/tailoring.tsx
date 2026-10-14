@@ -20,6 +20,7 @@ import { OwnerProduction } from "@/features/tailoring/OwnerProduction";
 import { FinishedProductInventory } from "@/features/inventory/FinishedProductInventory";
 import { FinishedProducts } from "@/features/tailoring/FinishedProducts";
 import { MaterialIssues } from "@/features/tailoring/MaterialIssues";
+import { ProductionReceipt } from "@/features/inventory/ProductionReceipt";
 import { PageHeader, Panel, StatusBadge, EmptyState, StatCard } from "@/shared/components/page";
 import { formatMetres, formatMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
@@ -365,7 +366,10 @@ function LegacyTailoringPage() {
 
 function TailoringPage() {
   const navigation = useWorkflowRoute();
-  const { isOwner } = useSession();
+  const { isOwner, roles, can } = useSession();
+  const customerAccess = isOwner || roles.includes("tailor") || roles.includes("counter");
+  const productionAccess =
+    isOwner || roles.includes("tailor") || (roles.includes("counter") && can("production.view"));
   return (
     <>
       <PageHeader
@@ -375,12 +379,46 @@ function TailoringPage() {
       <WorkflowTabs
         {...navigation}
         items={[
-          { id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> },
-          { id: "production", label: "Owner Production", content: <OwnerProduction /> },
+          ...(!isOwner && can("production.receive")
+            ? [{ id: "receipt", label: "Workshop receipt", content: <ProductionReceipt /> }]
+            : []),
+          ...(roles.includes("production") && can("production.view")
+            ? [
+                { id: "fabric", label: "Fabric", content: <OwnerProduction mode="create" /> },
+                {
+                  id: "ongoing",
+                  label: "Ongoing Production",
+                  content: <OwnerProduction mode="ongoing" />,
+                },
+              ]
+            : []),
+          ...(customerAccess
+            ? [{ id: "customer", label: "Customer Tailoring", content: <CustomerTailoring /> }]
+            : []),
+          ...(productionAccess
+            ? [
+                {
+                  id: "production",
+                  label:
+                    roles.includes("tailor") && !isOwner
+                      ? "Production Tailoring"
+                      : "Owner Production",
+                  content: (
+                    <OwnerProduction
+                      mode={
+                        roles.includes("tailor") && !can("production.create") ? "ongoing" : "all"
+                      }
+                    />
+                  ),
+                },
+              ]
+            : []),
           ...(isOwner
             ? [{ id: "cost", label: "Production Costing", content: <ProductionCosting /> }]
             : []),
-          { id: "products", label: "Finished Products", content: <FinishedProducts /> },
+          ...(isOwner
+            ? [{ id: "products", label: "Finished Products", content: <FinishedProducts /> }]
+            : []),
           ...(isOwner
             ? [
                 {
@@ -390,7 +428,9 @@ function TailoringPage() {
                 },
               ]
             : []),
-          { id: "issues", label: "Material Issues", content: <MaterialIssues /> },
+          ...(isOwner
+            ? [{ id: "issues", label: "Material Issues", content: <MaterialIssues /> }]
+            : []),
           ...(isOwner
             ? [
                 {
@@ -405,7 +445,9 @@ function TailoringPage() {
                 },
               ]
             : []),
-          { id: "legacy", label: "Legacy records", content: <LegacyTailoringPage /> },
+          ...(isOwner
+            ? [{ id: "legacy", label: "Legacy records", content: <LegacyTailoringPage /> }]
+            : []),
         ]}
       />
     </>

@@ -10,8 +10,17 @@ import { Label } from "@/components/ui/label";
 import { formatDateTime } from "@/shared/utils/format";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { ProductionReceipt } from "./ProductionReceipt";
 
 type Piece = {
+  size?: string | null;
+  design_code?: string | null;
+  sp_paise?: number | null;
+  cp_paise?: number | null;
+  cp_visible?: boolean;
+  production_quantity?: number;
+  issued_at?: string | null;
+  finished_at?: string | null;
   id: string;
   barcode: string;
   piece_number: number;
@@ -54,6 +63,7 @@ type Request = {
 export function FinishedProductInventory() {
   const { isOwner, roles, can } = useSession();
   const allowed = isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
+  const workshopAllowed = isOwner || can("production.receive") || can("stock.price_finished");
   const formId = useId();
   const label = useRef<HTMLDivElement>(null);
   const [barcode, setBarcode] = useState("");
@@ -180,7 +190,7 @@ export function FinishedProductInventory() {
     },
     onError: (e) => toast.error(e.message),
   });
-  if (!allowed) return null;
+  if (!allowed) return workshopAllowed ? <ProductionReceipt /> : null;
   const loaded = inventory.data?.pages.flat() ?? [];
   const rows = [
     ...loaded.filter((p) => !scannedPieces.some((s) => s.id === p.id)),
@@ -213,6 +223,7 @@ export function FinishedProductInventory() {
   );
   return (
     <div className="space-y-4">
+      <ProductionReceipt />
       <Panel
         title="Finished Product inventory & transfers"
         description="Each Product Barcode represents one physical piece. Move Workshop → Showroom → its sublocation; returns follow the same path in reverse."
@@ -251,7 +262,12 @@ export function FinishedProductInventory() {
             <div>
               <div ref={label} className="max-w-sm rounded border p-3">
                 <p>
-                  {scanned.product} / {scanned.design} · Piece {scanned.piece_number}
+                  {scanned.product} / {scanned.design_code ?? scanned.design} · Piece{" "}
+                  {scanned.piece_number}
+                </p>
+                <p>
+                  Size: {scanned.size ?? "Not recorded"} · SP:{" "}
+                  {scanned.sp_paise != null ? `₹${(scanned.sp_paise / 100).toFixed(2)}` : "Not set"}
                 </p>
                 <svg
                   role="img"
@@ -279,6 +295,27 @@ export function FinishedProductInventory() {
               >
                 Reprint same Product Barcode
               </Button>
+            </div>
+          )}
+          {scanned && (
+            <div className="rounded border p-3 text-sm">
+              <p>
+                Production ID: {scanned.job_code} · Produced together:{" "}
+                {scanned.production_quantity ?? "Not recorded"}
+              </p>
+              <p>
+                Issued: {scanned.issued_at ? formatDateTime(scanned.issued_at) : "Not recorded"} ·
+                Finished:{" "}
+                {scanned.finished_at ? formatDateTime(scanned.finished_at) : "Not recorded"}
+              </p>
+              {scanned.cp_visible && (
+                <p>
+                  CP per piece:{" "}
+                  {scanned.cp_paise != null
+                    ? `₹${(scanned.cp_paise / 100).toFixed(2)}`
+                    : "Not recorded"}
+                </p>
+              )}
             </div>
           )}
           <Input

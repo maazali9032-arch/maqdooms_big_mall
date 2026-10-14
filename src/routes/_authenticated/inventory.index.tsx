@@ -207,7 +207,11 @@ function InventoryPage() {
   const showCost = isOwner || can("inventory.view_registered_cp");
   const canCorrectIncomplete = can("inventory.receive") && can("inventory.edit_thaan");
   const showOperationalHistory = can("inventory.receive") || can("reports.view");
-  const showFinishedProducts = isOwner || can("stock.transfer_finished");
+  const showFinishedProducts =
+    isOwner ||
+    can("stock.transfer_finished") ||
+    can("production.receive") ||
+    can("stock.price_finished");
   const activeTab = [
     "fabric-stock",
     "thaans",

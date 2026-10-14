@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSession, ROLE_LABELS } from "@/app/providers/session";
 import { PageHeader, Panel, DemoNotice } from "@/shared/components/page";
+import { AccountSettings } from "@/features/access/AccountSettings";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -15,11 +16,14 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function SettingsPage() {
-  const { fullName, email, roles, permissions } = useSession();
+  const { fullName, email, roles, isOwner } = useSession();
 
   return (
     <>
-      <PageHeader title="Settings" description="Account and platform configuration." />
+      <PageHeader
+        title={isOwner ? "Settings" : "Account"}
+        description="Your name, email and password settings."
+      />
 
       <Panel title="Your account">
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -35,27 +39,28 @@ function SettingsPage() {
             <dt className="label-eyebrow">Roles</dt>
             <dd>{roles.map((r) => ROLE_LABELS[r] ?? r).join(", ") || "None assigned"}</dd>
           </div>
-          <div>
-            <dt className="label-eyebrow">Permissions</dt>
-            <dd className="numeric text-xs">{permissions.join(", ") || "—"}</dd>
-          </div>
         </dl>
       </Panel>
+      <AccountSettings />
+      {isOwner && (
+        <Panel title="Unit &amp; money system">
+          <p className="text-sm text-muted-foreground">
+            Lengths are stored as integer millimetres and displayed in metres; money is stored as
+            integer paise. Yards are not an active business unit.
+          </p>
+        </Panel>
+      )}
 
-      <Panel title="Unit &amp; money system">
-        <p className="text-sm text-muted-foreground">
-          Lengths are stored as integer millimetres and displayed in metres; money is stored as
-          integer paise. Yards are not an active business unit.
-        </p>
-      </Panel>
-
-      <Panel title="Integrations">
-        <DemoNotice>
-          WhatsApp automation, payment gateways and the public storefront are deliberately not
-          connected. The storefront will be a separate application reading a controlled set of
-          public views from this same database.
-        </DemoNotice>
-      </Panel>
+      {isOwner && (
+        <Panel title="Integrations">
+          <DemoNotice>
+            WhatsApp automation, payment gateways and the public storefront are deliberately not
+            connected. The storefront will be a separate application reading a controlled set of
+            Showroom-only storefront API from this same database. POS sales update its stock
+            availability.
+          </DemoNotice>
+        </Panel>
+      )}
     </>
   );
 }
