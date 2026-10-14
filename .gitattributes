@@ -1,3 +1,5 @@
 # Preserve the recorded byte hashes of these new, mirrored migrations on Windows.
 supabase/migrations/20261014000000_role_workspaces.sql -text
 drizzle/migrations/0040_role_workspaces.sql -text
+supabase/migrations/20261014000100_owner_business_analytics.sql -text
+drizzle/migrations/0041_owner_business_analytics.sql -text

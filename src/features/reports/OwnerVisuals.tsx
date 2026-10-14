@@ -184,7 +184,7 @@ export function DonutChart({ values }: { values: { name: string; value: bigint }
           Paid sales
         </text>
         <text x="90" y="108" textAnchor="middle" fontSize="11" fill="currentColor">
-          {values.length} sale types
+          {values.length} groups
         </text>
       </svg>
       <ul className="min-w-0 flex-1 space-y-4">

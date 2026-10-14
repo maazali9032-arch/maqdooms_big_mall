@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-10-14T20:40:03.217Z",
+  "checks": 10,
+  "passed": true,
+  "read_only": true,
+  "roles_tested": [
+    "counter",
+    "ecommerce_manager",
+    "owner",
+    "production",
+    "salesperson",
+    "stock_entry",
+    "tailor"
+  ]
+}

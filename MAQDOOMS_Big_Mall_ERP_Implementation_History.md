@@ -6104,3 +6104,69 @@ REMAINING / LIMITS:
 - No live sample production, new staff signup or real printer acceptance was run;
   existing business/account data was preserved. Consumption, unused returns, waste
   and partial receipt remain outside this approved workflow.
+
+# 53. OWNER DAILY OPERATIONS AND MONTHLY BUSINESS ANALYTICS — 15 OCTOBER 2026
+
+OWNER APPROVAL:
+- Extend the Owner Dashboard with today's Counter + E-commerce sales and daily
+  stock entry, transfers, production issue/finish and Customer Tailoring activity.
+- Reports defaults to the previous completed month, compares the preceding month,
+  and ranks fabric/vendor, finished products and credited Salespeople using actual
+  sold quantities, collected revenue and recorded cost evidence.
+- Future website posts verified paid orders through a protected API which deducts
+  Showroom stock. Online self-service Salesperson attribution is optional;
+  Counter attribution remains mandatory. One checkout may span Showroom floors.
+
+IMPLEMENTED:
+- Four fixed daily sales/booking KPIs plus always-visible daily operations cards;
+  stock entry distinguishes registered labels from received metres. Production
+  finished status and physical receipt counts remain separate. India half-open days.
+- Paid online checkout becomes one canonical order with per-line actual floor
+  evidence, exact snapshots and ledger deductions in one transaction. Fabric cuts
+  and whole finished pieces can share a cart. Server service-role-only RPC, explicit
+  configured active Owner/E-commerce account, immutable payment/order references,
+  exact idempotent retries, saved garment SP checks and all-or-nothing failures.
+- Monthly period/previous-period comparisons, daily sales chart, channel chart and
+  fabric+vendor/vendor/product/Salesperson/channel rankings. Metres, pieces and bills
+  have distinct measures. Rankings/table search, sorting, pagination and full evidence.
+  Charts use dates/location; detailed transaction filters explicitly apply to the table.
+- New paid-sale dimensions captured prospectively. Historical missing CP is null;
+  current catalogue CP never substitutes it. New names survive catalogue/staff rename.
+  Partial cost groups do not present a complete margin. Unknown/walk-in customers
+  remain unidentified bills rather than invented people. No salary data in reports.
+- Custom-design jobs/pieces no longer disappear from predefined-design joins.
+  Paid order reports use completion time, including old-created bills; bookmarks
+  retain Dashboard-selected dates. Current stock remains labelled current state.
+
+DATABASE / DATA PRESERVATION:
+- Forward migration 20261014000100_owner_business_analytics.sql / Drizzle 0041
+  applied and verified 2026-10-14T20:38:33.102Z (15 October, India).
+- Matching SHA256: efa1b464904f3cbc0db09401556d3932f1ac80037d82300bcd26986778f059db.
+  Git preserves exact migration bytes. No earlier migration was rewritten.
+- Locked transaction checks verified original-column fingerprints for all 84
+  pre-existing public tables; accounts, stock, transaction and audit rows preserved.
+  No real stock/payment/production fixtures, new users or live sale postings.
+- Ten read-only live checks passed using existing role accounts. Owner data RPCs
+  available; staff denied; paid ingress executable only by service_role.
+
+VERIFICATION:
+- 1,194 cumulative database assertions across populated Supabase, populated Drizzle
+  and clean Supabase replay. Payment retries, multi-floor mixed carts, stock rollback,
+  exact CP margins, India midnight, historic cost gaps, snapshot names and RLS/ACLs.
+- 39 exact-money/period/model assertions; 31 actual-component browser checks,
+  320/390/768/1440px layouts, default month/comparison, quantity selectors, complete
+  evidence pagination, error/retry and no Owner requests from unauthorized staff.
+- TypeScript passes. Scoped ESLint zero errors; two pre-existing mixed export
+  development refresh warnings. Isolated Vercel production build passes.
+- New proof files in docs/OWNER_BUSINESS_ANALYTICS_*; workflow and protected API
+  contract in docs/OWNER_BUSINESS_ANALYTICS.md. Synthetic screenshots in docs.
+
+LIMITS:
+- Separate storefront and payment provider remain future integration work. The
+  trusted website server verifies settlement; this RPC does not verify a gateway
+  signature, collect payment, create refunds, reserve stock or deploy that website.
+- Unpaid online requests are never assumed settled. Recorded margin excludes
+  unrecorded labour/expenses. Old descriptive names may use current catalogue
+  where no sale-time snapshot existed. No reconstructed stock/date/cost history.
+- No hosted browser-login or payment gateway/printer acceptance run. Production
+  build and live DB acceptance do not assert external hosting deployment status.

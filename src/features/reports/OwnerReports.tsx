@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useSession } from "@/app/providers/session";
 import { Panel, StatCard } from "@/shared/components/page";
@@ -22,17 +23,20 @@ import { RecordTable } from "./EvidenceViews";
 import { reportIcons } from "./OwnerVisuals";
 import { ChevronRight } from "lucide-react";
 import "./owner-workspace.css";
+import { MonthlyBusiness } from "./MonthlyBusiness";
+import { monthPeriod, previousMonthPeriod } from "./business-period";
 
 function initialFilters() {
   const search = typeof window === "undefined" ? "" : window.location.search,
     p = new URLSearchParams(search);
-  let from = p.get("from") ?? indiaDay(),
-    through = p.get("through") ?? indiaDay();
+  const previous = previousMonthPeriod();
+  let from = p.get("from") ?? previous.from,
+    through = p.get("through") ?? previous.through;
   try {
     reportDateRange(from, through);
   } catch {
-    from = indiaDay();
-    through = indiaDay();
+    from = previous.from;
+    through = previous.through;
   }
   return {
     from,
@@ -43,19 +47,21 @@ function initialFilters() {
     sale: p.get("sale") ?? "",
     payment: p.get("payment") ?? "",
     fabric: "",
+    vendor: "",
     movement: "",
     product: "",
     job: "",
     cost: "",
     action: "",
     actor: "",
-    record: "",
+    record: p.get("channel") ?? "",
   };
 }
 export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
   const { isOwner } = useSession();
+  const queryClient = useQueryClient();
   const all = categories.flatMap((c) => c.reports);
-  const start = all.some(([key]) => key === initialDataset) ? initialDataset! : "orders";
+  const start = all.some(([key]) => key === initialDataset) ? initialDataset! : "sales_lines";
   const [dataset, setDataset] = useState(start),
     [filters, setFilters] = useState(initialFilters),
     [applied, setApplied] = useState(initialFilters),
@@ -63,8 +69,8 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
   const category = categories.find((c) => c.reports.some(([key]) => key === dataset))!;
   const snapshot = snapshots.has(dataset);
   const range = useMemo(
-    () => (snapshot || dataset === "orders" ? {} : reportDateRange(applied.from, applied.through)),
-    [snapshot, dataset, applied.from, applied.through],
+    () => (snapshot ? {} : reportDateRange(applied.from, applied.through)),
+    [snapshot, applied.from, applied.through],
   );
   const records = useEvidence(dataset, range);
   const rows = useMemo(
@@ -82,7 +88,8 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
           applied.location &&
           !["location", "source", "destination"].some(
             (k) => String(d[k] ?? "") === applied.location,
-          )
+          ) &&
+          !(Array.isArray(d["source_names"]) && d["source_names"].includes(applied.location))
         )
           return false;
         if (applied.status && String(d["status"] ?? d["piece_status"] ?? "") !== applied.status)
@@ -102,15 +109,28 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
           String(d["fabric"] ?? (d["kind"] === "fabric" ? d["item"] : "") ?? "") !== applied.fabric
         )
           return false;
+        if (applied.vendor && String(d["vendor"] ?? "") !== applied.vendor) return false;
         if (applied.product && String(d["product"] ?? "") !== applied.product) return false;
         if (applied.job && String(d["job"] ?? "") !== applied.job) return false;
         if (applied.movement && String(d["movement_type"] ?? d["kind"] ?? "") !== applied.movement)
           return false;
         if (applied.cost && String(d["finalized"]) !== applied.cost) return false;
         if (applied.action && String(d["action"] ?? "") !== applied.action) return false;
-        if (applied.actor && String(d["actor_id"] ?? d["user_id"] ?? "") !== applied.actor)
+        if (
+          applied.actor &&
+          String(
+            dataset === "sales_lines"
+              ? (d["salesperson_id"] ?? "unassigned")
+              : (d["actor_id"] ?? d["user_id"] ?? ""),
+          ) !== applied.actor
+        )
           return false;
-        if (applied.record && String(d["entity_table"] ?? "") !== applied.record) return false;
+        if (
+          applied.record &&
+          String(dataset === "sales_lines" ? d["channel"] : (d["entity_table"] ?? "")) !==
+            applied.record
+        )
+          return false;
         return true;
       }),
     [records.data, applied, dataset],
@@ -119,7 +139,9 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
     [
       ...new Set(
         (records.data ?? []).flatMap((r) =>
-          keys.map((k) => r.data[k]).filter((v) => typeof v === "string" && v),
+          keys
+            .flatMap((k) => (Array.isArray(r.data[k]) ? r.data[k] : [r.data[k]]))
+            .filter((v) => typeof v === "string" && v && v !== "Multiple Showroom floors"),
         ),
       ),
     ]
@@ -159,10 +181,14 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
       sale: "",
       payment: "",
       fabric: "",
+      vendor: "",
       movement: "",
       product: "",
       job: "",
       cost: "",
+      action: "",
+      actor: "",
+      record: "",
     };
     setFilters(reset);
     setApplied({ ...reset, from: applied.from, through: applied.through });
@@ -220,7 +246,6 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
           ))}
         </aside>
         <div className="min-w-0 space-y-4">
-          {" "}
           <Panel
             title={all.find(([key]) => key === dataset)?.[1] ?? category.name}
             description="Choose a report, apply its relevant filters and inspect the complete recorded evidence."
@@ -239,6 +264,26 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
               }}
             >
               <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-2">
+                {!snapshot && (
+                  <label className="text-xs font-medium">
+                    Month shortcut
+                    <input
+                      aria-label="Report month"
+                      type="month"
+                      className="mt-1 h-11 w-full rounded border bg-background px-2 text-sm"
+                      max={indiaDay().slice(0, 7)}
+                      value={filters.from.slice(0, 7)}
+                      onChange={(e) => {
+                        if (!e.target.value) return;
+                        try {
+                          setFilters({ ...filters, ...monthPeriod(e.target.value) });
+                        } catch (error) {
+                          setValidation((error as Error).message);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
                 <label className="text-xs font-medium lg:hidden">
                   Report
                   <select
@@ -285,9 +330,31 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                   />
                 </label>
-                {field("location", "Location", options(["location", "source", "destination"]))}
+                {field(
+                  "location",
+                  "Location",
+                  options(["location", "source", "destination", "source_names"]),
+                )}
                 {field("status", "Status", options(["status", "piece_status"]))}
-                {dataset === "orders" && field("sale", "Sale type", options(["kind"]))}
+                {["orders", "sales_lines"].includes(dataset) &&
+                  field("sale", "Sale type", options(["kind"]))}
+                {dataset === "sales_lines" &&
+                  field(
+                    "actor",
+                    "Credited Salesperson",
+                    [...options(["salesperson_id"]), "unassigned"],
+                    Object.fromEntries([
+                      ...(records.data ?? [])
+                        .filter((r) => r.data["salesperson_id"])
+                        .map((r) => [
+                          String(r.data["salesperson_id"]),
+                          String(r.data["salesperson"] ?? r.data["salesperson_id"]),
+                        ]),
+                      ["unassigned", "Unassigned / not recorded"],
+                    ]),
+                  )}
+                {dataset === "sales_lines" &&
+                  field("record", "Sales channel", options(["channel"]))}
                 {dataset === "orders" &&
                   field(
                     "payment",
@@ -312,6 +379,7 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                       ].sort()
                     : options(["fabric"]),
                 )}
+                {dataset === "sales_lines" && field("vendor", "Vendor", options(["vendor"]))}
                 {field("product", "Product", options(["product"]))}
                 {field("job", "Production / job reference", options(["job"]))}
                 {dataset === "movements" &&
@@ -352,7 +420,10 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                   type="button"
                   variant="outline"
                   disabled={records.isFetching}
-                  onClick={() => void records.refetch()}
+                  onClick={() => {
+                    void records.refetch();
+                    void queryClient.invalidateQueries({ queryKey: ["owner-monthly-business"] });
+                  }}
                 >
                   Refresh report
                 </Button>
@@ -363,6 +434,12 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                   ? "Current state; dates do not apply"
                   : `${applied.from || "All history"} through ${applied.through || "latest recorded activity"} (India)`}
               </p>
+              {["sales_lines", "orders"].includes(dataset) && (
+                <p className="text-xs text-muted-foreground">
+                  Business charts compare the applied date range and location. Search, sale type,
+                  channel and Salesperson filters refine the transaction table only.
+                </p>
+              )}
               <details className="text-xs text-muted-foreground">
                 <summary className="cursor-pointer">Report definitions & limitations</summary>
                 <div className="mt-2 space-y-2">
@@ -382,6 +459,14 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
               </details>
             </form>
           </Panel>
+          {(dataset === "sales_lines" || dataset === "orders") && (
+            <MonthlyBusiness
+              from={applied.from}
+              through={applied.through}
+              location={applied.location}
+            />
+          )}
+
           <QueryState
             loading={records.isPending}
             error={records.error}
@@ -395,14 +480,36 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                   value={rows.length}
                   hint="All matching records after applied filters"
                 />
-                {dataset === "orders" ? (
+                {dataset === "sales_lines" ? (
+                  <>
+                    <StatCard
+                      label="Filtered collected sales"
+                      value={reportMoney(sum(rows, "revenue_paise").total.toString())}
+                      hint="Only transaction rows matching all applied filters"
+                    />
+                    <StatCard
+                      label="Filtered paid bills"
+                      value={new Set(rows.map((r) => r.data["order_id"])).size}
+                      hint="Distinct orders across matching sale lines"
+                    />
+                    <StatCard
+                      label="Filtered recorded margin"
+                      value={
+                        rows.length && sum(rows, "margin_paise").unknown === rows.length
+                          ? "Not recorded"
+                          : reportMoney(sum(rows, "margin_paise").total.toString())
+                      }
+                      hint={`${sum(rows, "margin_paise").unknown} lines have unknown cost`}
+                    />
+                  </>
+                ) : dataset === "orders" ? (
                   <>
                     <StatCard
                       label="Paid sales"
                       value={reportMoney(
                         sum(paidRows, "final_customer_price_paise").total.toString(),
                       )}
-                      hint={`${paidRows.length} payment-confirmed fabric/product bills`}
+                      hint={`${paidRows.length} paid bills · Full bill amounts; local line totals appear in Business performance`}
                     />
                     <StatCard
                       label="Tailoring bookings"
@@ -450,6 +557,11 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                 description="Search and sorting cover all matching records. Full record opens the captured underlying evidence."
               >
                 <RecordTable
+                  preferred={
+                    dataset === "sales_lines"
+                      ? ["code", "fabric", "product", "vendor", "salesperson", "revenue_paise"]
+                      : undefined
+                  }
                   key={dataset + JSON.stringify(applied)}
                   rows={
                     dataset === "orders"

@@ -3,6 +3,7 @@ export const categories: { name: string; reports: readonly (readonly [string, st
   {
     name: "Sales & Payments",
     reports: [
+      ["sales_lines", "Business performance & sold items"],
       ["orders", "Sales, bills & bookings"],
       ["legacy_sales", "Legacy sales"],
     ],
@@ -111,7 +112,9 @@ export function paid(r: EvidenceRow) {
   return (
     r.data["status"] === "completed" &&
     Boolean(r.data["payment_confirmed_at"]) &&
-    ["direct_fabric_sale", "finished_product_sale"].includes(String(r.data["kind"]))
+    ["direct_fabric_sale", "finished_product_sale", "ecommerce_sale"].includes(
+      String(r.data["kind"]),
+    )
   );
 }
 export function orderDate(r: EvidenceRow) {

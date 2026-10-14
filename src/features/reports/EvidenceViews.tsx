@@ -3,6 +3,19 @@ import type { EvidenceRow } from "./use-evidence";
 import { text, title, compareEvidence } from "./evidence-model";
 import { reportMoney, reportQuantity } from "./report-value";
 import { Button } from "@/components/ui/button";
+const labels: Record<string, string> = {
+  revenue_paise: "Collected revenue",
+  known_margin_paise: "Recorded margin",
+  margin_paise: "Recorded margin",
+  cost_paise: "Recorded cost",
+  fabric_mm: "Fabric sold (m)",
+  pieces: "Pieces sold",
+  bills: "Paid bills",
+  customers: "Registered customers",
+  unknown_cost_lines: "Lines with unknown cost",
+  unidentified_customer_bills: "Unidentified customer bills",
+};
+const fieldLabel = (key: string) => labels[key] ?? title(key);
 export function fieldText(key: string, value: unknown, data: Record<string, unknown>) {
   if (value === null || value === undefined) return "Not recorded";
   if (key.includes("paise") && /^-?\d+$/.test(String(value))) return reportMoney(String(value));
@@ -49,15 +62,21 @@ export function RecordTable({
   rows,
   preferred,
   initialPageSize = 25,
+  initialSort = "event_at",
+  initialDescending = true,
+  showDate = true,
 }: {
   rows: EvidenceRow[];
   preferred?: string[];
   initialPageSize?: number;
+  initialSort?: string;
+  initialDescending?: boolean;
+  showDate?: boolean;
 }) {
   const [page, setPage] = useState(0),
     [size, setSize] = useState(initialPageSize),
-    [sort, setSort] = useState("event_at"),
-    [descending, setDescending] = useState(true);
+    [sort, setSort] = useState(initialSort),
+    [descending, setDescending] = useState(initialDescending);
   const available = [...new Set(rows.flatMap((r) => Object.keys(r.data)))];
   const columns = (
     preferred ?? [
@@ -116,7 +135,7 @@ export function RecordTable({
           <table className="w-full min-w-[650px] text-left text-sm">
             <thead className="bg-muted/50">
               <tr>
-                {["event_at", ...columns].map((k) => (
+                {[...(showDate ? ["event_at"] : []), ...columns].map((k) => (
                   <th
                     key={k}
                     className="p-2"
@@ -128,9 +147,9 @@ export function RecordTable({
                         setDescending(sort === k ? !descending : false);
                         setPage(0);
                       }}
-                      aria-label={`Sort by ${title(k)}`}
+                      aria-label={`Sort by ${fieldLabel(k)}`}
                     >
-                      {k === "event_at" ? "Recorded date" : title(k)}{" "}
+                      {k === "event_at" ? "Recorded date" : fieldLabel(k)}{" "}
                       {sort === k ? (descending ? "↓" : "↑") : ""}
                     </button>
                   </th>
@@ -141,11 +160,13 @@ export function RecordTable({
             <tbody>
               {ordered.slice(current * size, (current + 1) * size).map((r) => (
                 <tr key={r.key} className="border-b">
-                  <td className="p-2">
-                    {r.event_at
-                      ? new Date(r.event_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
-                      : "Current state"}
-                  </td>
+                  {showDate && (
+                    <td className="p-2">
+                      {r.event_at
+                        ? new Date(r.event_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+                        : "Current state"}
+                    </td>
+                  )}
                   {columns.map((k) => (
                     <td key={k} className="max-w-60 break-words p-2">
                       {typeof r.data[k] === "object" && r.data[k] !== null
@@ -159,7 +180,7 @@ export function RecordTable({
                       <dl className="min-w-64 space-y-2 py-3">
                         {Object.entries(r.data).map(([key, value]) => (
                           <div key={key}>
-                            <dt className="font-medium">{title(key)}</dt>
+                            <dt className="font-medium">{fieldLabel(key)}</dt>
                             <dd className="whitespace-pre-wrap break-all text-xs">
                               {typeof value === "object" && value !== null
                                 ? JSON.stringify(value, null, 2)

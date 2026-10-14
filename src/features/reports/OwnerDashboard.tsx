@@ -21,6 +21,7 @@ import {
   Scissors,
   Factory,
 } from "lucide-react";
+import { DailyOperations, type DailyBusiness } from "./DailyOperations";
 import { shiftDay } from "./evidence-model";
 import "./owner-workspace.css";
 
@@ -49,7 +50,18 @@ export function OwnerDashboard() {
       return data as unknown as Overview;
     },
   });
-  const orders = useEvidence("orders");
+  const daily = useQuery({
+    queryKey: ["owner-daily-business", day],
+    enabled: isOwner,
+    staleTime: 30000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("owner_daily_business", { p_day: day });
+      if (error) throw error;
+      return data as unknown as DailyBusiness;
+    },
+  });
+  const lines = useEvidence("sales_lines", range);
+  const orders = useEvidence("orders", range);
   const stocks = useEvidence("stock");
   const jobs = useEvidence("production_jobs");
   const customers = useEvidence("customer_tailoring");
@@ -61,8 +73,6 @@ export function OwnerDashboard() {
   );
   const history = useEvidence("production_history", range, production === "completed");
   const controls = useEvidence("controls", {}, recent === "reviews");
-  const productNames = useEvidence("finished_products", {}, breakdown === "products");
-  const fabricNames = useEvidence("fabric_stock", {}, breakdown === "products");
   if (!isOwner) return <p>Owner access is required.</p>;
   const sales = (orders.data ?? []).filter(
     (r) => paid(r) && inRange(r.data["completed_at"], day, day),
@@ -81,7 +91,8 @@ export function OwnerDashboard() {
   const refresh = () =>
     [
       overview,
-      ...(breakdown === "products" ? [productNames, fabricNames] : []),
+      daily,
+      lines,
       orders,
       stocks,
       jobs,
@@ -91,7 +102,6 @@ export function OwnerDashboard() {
       ...(production === "completed" ? [history] : []),
       ...(recent === "reviews" ? [controls] : []),
     ].forEach((q) => void q.refetch());
-  const total = (overview.data?.paid_sales ?? []).reduce((s, r) => s + BigInt(r.total_paise), 0n);
   const report = (dataset: string, extra = "") =>
     `/reports?from=${day}&through=${day}${extra}#${dataset}`;
   const active = (customers.data ?? []).filter(
@@ -176,9 +186,9 @@ export function OwnerDashboard() {
         </div>
         <div className="text-right">
           <p className="mb-2 text-xs text-muted-foreground">
-            Overview last updated:{" "}
-            {overview.dataUpdatedAt
-              ? new Date(overview.dataUpdatedAt).toLocaleTimeString("en-IN")
+            Sales last updated:{" "}
+            {daily.dataUpdatedAt
+              ? new Date(daily.dataUpdatedAt).toLocaleTimeString("en-IN")
               : "Not loaded"}
           </p>
           <Button variant="outline" onClick={refresh}>
@@ -187,33 +197,31 @@ export function OwnerDashboard() {
           </Button>
         </div>
       </div>
-      {cardState(overview)}
-      {overview.data && !overview.error && (
+      {cardState(daily)}
+      {daily.data && !daily.error && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             [
               "Total Sales Collected",
-              total.toString(),
+              daily.data.revenue_paise,
               report("orders", "&payment=payment_confirmed"),
-              "Paid fabric + finished-product sales",
+              "Paid Counter + E-commerce sales",
             ],
             [
               "Fabric Sales",
-              overview.data.paid_sales.find((s) => s.kind === "direct_fabric_sale")?.total_paise ??
-                "0",
-              report("orders", "&sale=direct_fabric_sale&payment=payment_confirmed"),
+              daily.data.fabric_revenue_paise,
+              report("sales_lines", "&sale=direct_fabric_sale&payment=payment_confirmed"),
               "Payment-confirmed fabric bills",
             ],
             [
               "Finished Product Sales",
-              overview.data.paid_sales.find((s) => s.kind === "finished_product_sale")
-                ?.total_paise ?? "0",
-              report("orders", "&sale=finished_product_sale&payment=payment_confirmed"),
+              daily.data.product_revenue_paise,
+              report("sales_lines", "&sale=finished_product_sale&payment=payment_confirmed"),
               "Payment-confirmed product bills",
             ],
             [
               "Tailoring Bookings",
-              overview.data.customer_tailoring_bookings.booked_customer_price_paise,
+              daily.data.tailoring_booked_paise,
               report("orders", "&sale=customer_tailoring&status=completed"),
               "Booked value; separate from collected sales",
             ],
@@ -224,6 +232,7 @@ export function OwnerDashboard() {
           ))}
         </div>
       )}
+      {daily.data && !daily.error && <DailyOperations data={daily.data} day={day} />}
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="min-w-0 space-y-5">
           {" "}
@@ -237,68 +246,58 @@ export function OwnerDashboard() {
                 ["type", "Sales by sale type"],
               ])}
             >
-              {cardState(orders)}
-              {orders.data && !orders.error && (
-                <ColumnChart
-                  values={group(
-                    hourly,
-                    trend === "type" ? "kind" : "hour",
-                    trend === "bills" ? undefined : "final_customer_price_paise",
-                  ).sort((a, b) => (trend === "type" ? 0 : a.name.localeCompare(b.name)))}
-                  money={trend !== "bills"}
-                />
-              )}
+              {cardState(trend === "type" ? lines : orders)}
+              {(trend === "type" ? lines : orders).data &&
+                !(trend === "type" ? lines : orders).error && (
+                  <ColumnChart
+                    values={group(
+                      trend === "type" ? (lines.data ?? []) : hourly,
+                      trend === "type" ? "kind" : "hour",
+                      trend === "bills"
+                        ? undefined
+                        : trend === "type"
+                          ? "revenue_paise"
+                          : "final_customer_price_paise",
+                    ).sort((a, b) => (trend === "type" ? 0 : a.name.localeCompare(b.name)))}
+                    money={trend !== "bills"}
+                  />
+                )}
             </Panel>
             <Panel
               title="Sales breakdown"
-              description="Selected-day paid sales. Payment-method/category charts require recorded classification data. Top items use current catalogue names and bill-line counts, not mixed-unit quantities."
+              description="Selected-day collected revenue. Fabric and pieces keep separate quantities; bookings are excluded."
               actions={selector("Sales breakdown", breakdown, setBreakdown, [
                 ["kind", "Fabric vs finished products"],
-                ["products", "Top-selling items by bill-line count"],
+                ["channel", "Counter vs E-commerce"],
+                ["products", "Top-selling items by revenue"],
               ])}
             >
-              {cardState(orders)}
-              {orders.data &&
-                !orders.error &&
-                (breakdown === "kind" ? (
-                  <DonutChart values={group(sales, "kind", "final_customer_price_paise")} />
+              {cardState(lines)}
+              {lines.data &&
+                !lines.error &&
+                (breakdown === "products" ? (
+                  <Bars
+                    money
+                    values={group(
+                      lines.data.map((r) => ({
+                        ...r,
+                        data: {
+                          ...r.data,
+                          item: r.data["fabric"] ?? r.data["product"] ?? "Not recorded",
+                        },
+                      })),
+                      "item",
+                      "revenue_paise",
+                    ).slice(0, 10)}
+                  />
                 ) : (
-                  <div>
-                    {cardState(productNames)}
-                    {cardState(fabricNames)}
-                    {productNames.data &&
-                      fabricNames.data &&
-                      !productNames.error &&
-                      !fabricNames.error && (
-                        <Bars
-                          values={group(
-                            sales.flatMap((r) =>
-                              (Array.isArray(r.data["items"]) ? r.data["items"] : []).map(
-                                (item, index) => {
-                                  const data = item as Record<string, unknown>;
-                                  return {
-                                    key: r.key + ":" + index,
-                                    event_at: r.event_at,
-                                    data: {
-                                      item:
-                                        (data["finished_product_id"]
-                                          ? (productNames.data?.find(
-                                              (p) => p.data["id"] === data["finished_product_id"],
-                                            )?.data["product"] ?? data["finished_product_id"])
-                                          : (fabricNames.data?.find(
-                                              (p) => p.data["id"] === data["fabric_stock_id"],
-                                            )?.data["fabric"] ?? data["fabric_stock_id"])) ??
-                                        "Unclassified recorded item",
-                                    },
-                                  };
-                                },
-                              ),
-                            ),
-                            "item",
-                          )}
-                        />
-                      )}
-                  </div>
+                  <DonutChart
+                    values={group(
+                      lines.data,
+                      breakdown === "channel" ? "channel" : "kind",
+                      "revenue_paise",
+                    )}
+                  />
                 ))}
             </Panel>
             <Panel

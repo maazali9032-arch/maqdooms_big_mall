@@ -1836,3 +1836,26 @@ Approved 14 October 2026; supersedes Section 50's length-only stock activation r
   name/email/password; provider email-confirmation and signup policies apply.
 - Forward-only migration 20261014000000_role_workspaces.sql / Drizzle 0040.
   Preserve existing business, account and audit rows; no real-data fixtures live.
+
+# 53. APPROVED OWNER DAILY AND MONTHLY BUSINESS ANALYSIS
+
+Approved 14–15 October 2026; supplements Section 52.
+- Dashboard: today's India paid Counter + online sales, fabric/product totals,
+  separate tailoring bookings, stock registrations/receipts, posted transfers,
+  production issues/finished jobs/Workshop receipts, and customer jobs. Current
+  stock and ongoing workload remain current, independent of the historical day.
+- Reports defaults last completed calendar month versus its prior calendar month.
+  Custom ranges compare equal-length preceding periods. Visual daily/channel
+  analysis and fabric+vendor/vendor/product/credited Salesperson rankings use
+  actual metres, pieces, revenue, bills and recorded margin with full evidence.
+- Online self-service Salesperson optional; Counter requires credited Salesperson.
+  Future website server posts verified paid orders through service-role-only API;
+  one mixed checkout can span multiple Showroom floors and is one canonical bill.
+  Exact retry/reference controls, sale-time CP, atomic stock debit and audit.
+- No invented payments, historic costs, catalogue snapshots, customers or net profit.
+  Salary/P2P remains separate. Current stock is never historical date-filtered.
+- Forward 20261014000100_owner_business_analytics.sql / Drizzle 0041 applied with
+  all 84 pre-existing public-table row fingerprints preserved. Protected API contract
+  and acceptance proofs: docs/OWNER_BUSINESS_ANALYTICS.md and associated JSON files.
+- Website/gateway connection, reservations, refunds and shipping remain separate
+  future work; no external website deployment is included.

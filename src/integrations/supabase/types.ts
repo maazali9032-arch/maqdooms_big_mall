@@ -1179,6 +1179,31 @@ export type Database = {
       };
       showroom_stock: { Args: { p_kind?: string | null }; Returns: Json };
       ecommerce_listing_stock: { Args: Record<PropertyKey, never>; Returns: Json };
+      submit_paid_ecommerce_order: {
+        Args: {
+          p_request: string;
+          p_external_order: string;
+          p_payment_reference: string;
+          p_paid_at: string;
+          p_paid_total_paise: number;
+          p_recorded_by: string;
+          p_items: Json;
+          p_customer?: string;
+          p_salesperson?: string;
+        };
+        Returns: string;
+      };
+      owner_daily_business: { Args: { p_day: string }; Returns: Json };
+      owner_monthly_business: {
+        Args: {
+          p_from: string;
+          p_to: string;
+          p_previous_from: string;
+          p_previous_to: string;
+          p_location?: string;
+        };
+        Returns: Json;
+      };
       storefront_catalog: { Args: Record<string, never>; Returns: Json };
       link_showroom_listing: {
         Args: { p_listing: string; p_kind: string; p_stock: string; p_link: boolean };
