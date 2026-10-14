@@ -5944,3 +5944,82 @@ REMAINING:
 
 NEXT PHASE:
 - Publish this approved change to main with a normal commit/push.
+
+======================================================================
+PHASE: OWNER-AUTHORIZED ONE-OFF TEST STOCK RESET (SECTION 51)
+STATUS: COMPLETED AND VERIFIED LIVE 14 OCTOBER 2026
+
+IMPLEMENTED:
+- Human explicitly confirmed: all existing stock and linked transactions are test
+  data; remove them. Accounts, permissions, customers and configuration preserved.
+- Read-only dependency/count inspection, private public-data snapshot with SHA256
+  read-back verification, transaction rehearsal with intentional rollback, then
+  approved atomic live reset. No public business-data backup committed to Git.
+- Removed 71 Thaans, 7 receiving batches, 65 stock/barcode rows, 53 registration
+  variants, 3 registration batches/5 groups, CP/SP revisions, request metadata,
+  32 inventory/28 legacy movements, 1 hold, 6 listing links, 6 sales/6 lines,
+  4 tailoring jobs/7 lines and 3 online orders. Explicit dependent tables emptied.
+- Zeroed four material balances and two nonzero listing variant quantities;
+  material/listing definitions retained. Four unresolved legacy job assessments
+  resolved as removed test records, preserving evidence without invented classification.
+- Removed 21 old test-fixture metadata rows referencing removed inventory.
+- Retained all 24 legacy and 436 existing canonical audit entries. Four material
+  update events and one explicit reset event added: canonical count now 441.
+
+MODIFIED:
+- New scripts/reset-test-stock.mjs (read-only default, explicit apply/rehearsal modes)
+  and verify-test-stock-reset.mjs (read-only committed-result assertions).
+- docs/TEST_STOCK_RESET_VERIFICATION.json; Master Plan Section 51 and this history.
+- No application UI, workflow code or dependency changes.
+
+REUSED:
+- Existing secure administrative PostgreSQL connection, Owner identity and audit
+  table. Existing app RPCs used read-only to verify empty Workshop/registration views.
+
+DATABASE CHANGES:
+- One-off data reset; no schema migration or permanent DDL, no trigger disabling,
+  no CASCADE or sequence restart. Explicit TRUNCATE RESTRICT scope followed by
+  authorized quantity/reconciliation updates and a maintenance audit record.
+- All preserved public rows checked exactly, with explicitly reviewed quantity,
+  resolution and audit additions checked field-by-field. Auth accounts fingerprint
+  unchanged. Schema/functions/ACL/RLS/triggers/constraints/sequences and execution
+  ledger verified unchanged inside transaction.
+- Maintenance ID: 913cbd36-c5a6-4f59-9d4b-59a943564f44.
+- Committed 2026-10-14T10:20:46.681Z (15:50:46.681 IST).
+- Private snapshot: C:/Users/maazl/.codex/private-backups/maqdooms/
+  913cbd36-c5a6-4f59-9d4b-59a943564f44/public-data-before-reset.json.
+- Snapshot SHA256: 25af7f8b1c85d843d31d5adf66b6b7eac8ce524533a968d6989842d0cbe65ede.
+  Snapshot is public table rows/catalog metadata, not a replacement auth/system dump.
+
+SECURITY / PERMISSIONS:
+- All six staff accounts and roles/overrides retained. Four customers, six suppliers,
+  four locations, fabric/material/listing catalogs and settings unchanged except
+  explicitly cleared material/listing stock balances. Existing history is preserved.
+- Reset event identifies administrative execution by Codex at human request.
+- Operation is not exposed through frontend/normal staff permissions.
+
+TESTS:
+- Reset rehearsal verified backup, dependency restrictions, zero targets, preserved
+  accounts/data/schema and stock RPC, then intentionally rolled back.
+- Actual transaction repeated assertions before commit.
+- Separate read-only post-commit verification passed at 2026-10-14T10:23:12.013Z:
+  Thaans/batches/sales/jobs/online orders/movements/material stock/listing quantities
+  zero, Workshop rows and registration catalog empty, unresolved legacy zero.
+- Node syntax and whitespace checks pass. Intermittent DNS failure retried; no system
+  DNS or credential changes. Initial cross-schema dependency review correctly stopped
+  inspection until the narrow fixture metadata dependency was explicitly included.
+
+BUILD:
+- Not required: maintenance scripts/documentation only; application code unchanged.
+
+BUSINESS RULES VERIFIED:
+- Empty stock ready for fresh entry; original account/configuration/audit retained.
+- New identifiers continue their existing sequence, avoiding old barcode reuse.
+- No real transaction retention implied: human explicitly declared removed records test.
+
+REMAINING:
+- Refresh already-open application pages to discard cached pre-reset results.
+- Backups remain private outside Git. No new business entries or UI changes made.
+
+NEXT PHASE:
+- Owner can create the next real batch through existing Stock Entry.

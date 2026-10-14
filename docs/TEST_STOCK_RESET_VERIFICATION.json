@@ -1,0 +1,23 @@
+{
+  "verified_at": "2026-10-14T10:23:12.013Z",
+  "counts": {
+    "thaans": 0,
+    "batches": 0,
+    "sales": 0,
+    "tailoring_jobs": 0,
+    "online_orders": 0,
+    "inventory_movements": 0,
+    "staff_accounts": 6,
+    "customers": 4,
+    "suppliers": 6,
+    "locations": 4,
+    "legacy_audit": 24,
+    "audit_records": 441,
+    "unresolved_legacy": 0,
+    "material_stock": "0",
+    "listing_variant_stock": "0"
+  },
+  "workshop_rows": 0,
+  "stock_catalog_batch_count": 0,
+  "passed": true
+}

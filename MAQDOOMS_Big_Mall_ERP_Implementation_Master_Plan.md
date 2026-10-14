@@ -1786,3 +1786,21 @@ Approved 13 October 2026.
   Awaiting stock activation until an authorized save receives their recorded length.
 - New forward-only migration 20261013000200_thaan_optional_colour_reason.sql,
   mirrored as Drizzle 0039. Preserve all existing business rows and role boundaries.
+
+# 51. OWNER-AUTHORIZED ONE-OFF TEST STOCK RESET
+
+Approved 14 October 2026: the Owner explicitly confirmed all existing stock and
+linked sales, tailoring jobs and online orders were test data and requested removal.
+- Clear test stock identities, batches, costs/prices, balances, movements, holds,
+  stock/listing links and dependent test transaction/request records atomically.
+- Preserve login accounts, profiles, roles, permissions, customers, suppliers,
+  locations and catalog definitions. Zero legacy material/listing stock quantities.
+- Preserve immutable audit evidence and append an explicit administrative reset
+  event. Resolve four legacy job assessments as removed test records; do not
+  invent their missing historical domain/assignment.
+- Clear 21 old test-fixture provenance rows linked to removed inventory; preserve
+  migration execution history, all schema/security definitions and ID sequences.
+- Verify a private complete public-row snapshot before reset; rehearse with rollback,
+  check preservation inside the transaction and verify empty inventory after commit.
+- This is one authorized maintenance operation, not an application deletion feature
+  or standing permission to erase future data. No schema migration or UI change.
