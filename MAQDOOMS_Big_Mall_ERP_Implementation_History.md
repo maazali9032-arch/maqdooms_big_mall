@@ -6170,3 +6170,15 @@ LIMITS:
   where no sale-time snapshot existed. No reconstructed stock/date/cost history.
 - No hosted browser-login or payment gateway/printer acceptance run. Production
   build and live DB acceptance do not assert external hosting deployment status.
+
+# 54. OWNER MOBILE GLOBAL BARCODE INSPECTOR — 15 OCTOBER 2026
+
+Implemented Owner Dashboard phone-only floating barcode button, camera drawer and shared manual/keyboard entry. Camera decoding uses locally bundled ZXing, with denial fallback and cleanup on detection/close/unmount/backgrounding. No operational actions are available.
+
+Forward-only Owner RPC reads actual current location balances, receipts/transfers/sales/production/materials/returns/waste/adjustments, linked records, all recorded CP revisions/snapshots and audit evidence. Unknown/ambiguous codes and missing evidence are explicit. Exact number transport and full timestamp/key pagination. Active-Owner authorization is enforced in the database; all staff, anon and inactive Owner are denied.
+
+Migration 20261015000100_owner_barcode_inspector.sql / Drizzle 0043 applied atomically; SHA256 8cc7df224e281acfddd20cd276f17a427b7a58bd02c0f4470d4639b6e0418f2c. All 88 pre-existing public tables preserved, no operational fixtures live. 1,509 cumulative database assertions, 30 actual-component browser checks, and 69 read-only live checks (30 existing barcodes, both real posted transfers) passed. TypeScript and scoped ESLint pass (one existing Fast Refresh warning). A physical-phone/hosted-login camera acceptance run was not performed. See docs/OWNER_BARCODE_INSPECTOR.md and proof JSON/screenshots.
+
+Previous POS/Production/navigation work remains separate in-progress work; no pending 0042 cleanup rollout is bundled with this read-only inspector.
+
+Read-only legacy audit compatibility extension 20261015000200 / Drizzle 0044 adds saved parent document code references and recorded actor names without changing any earlier migration bytes. Isolated Vercel production build passed.

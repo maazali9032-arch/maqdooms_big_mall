@@ -1859,3 +1859,9 @@ Approved 14–15 October 2026; supplements Section 52.
   and acceptance proofs: docs/OWNER_BUSINESS_ANALYTICS.md and associated JSON files.
 - Website/gateway connection, reservations, refunds and shipping remain separate
   future work; no external website deployment is included.
+
+# 54. OWNER MOBILE GLOBAL BARCODE INSPECTOR
+
+Approved 15 October 2026. Owner Dashboard phone-only floating scanner; no staff, tablet/desktop or other-page visibility. Reuse typed/keyboard entry and add camera input. Strict read-only active-Owner backend projection over existing barcode/item, ledger, order, production, material, receipt, cost and audit evidence. Separate current balances from captured history; missing evidence is never reconstructed. Exact numbers and complete paginated events. Forward migration 20261015000100 / Drizzle 0043; preserves every public business/account/audit row. Contract and proofs: docs/OWNER_BARCODE_INSPECTOR.md.
+
+Legacy audit compatibility: forward 20261015000200 / Drizzle 0044 preserves recorded singular entity names, parent document codes and actor names.

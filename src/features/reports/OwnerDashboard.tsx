@@ -24,6 +24,7 @@ import {
 import { DailyOperations, type DailyBusiness } from "./DailyOperations";
 import { shiftDay } from "./evidence-model";
 import "./owner-workspace.css";
+import { OwnerBarcodeInspector } from "./OwnerBarcodeInspector";
 
 type Overview = {
   paid_sales: { kind: string; orders: string; total_paise: string }[];
@@ -149,6 +150,7 @@ export function OwnerDashboard() {
   });
   return (
     <div className="owner-workspace owner-dashboard space-y-5">
+      <OwnerBarcodeInspector />
       <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-card p-4">
         <label className="text-sm font-medium">
           Operational date (India)

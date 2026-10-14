@@ -1138,6 +1138,10 @@ export type Database = {
       };
     };
     Functions: {
+      owner_barcode_inspect: {
+        Args: { p_barcode: string; p_before?: string; p_before_key?: string; p_limit?: number };
+        Returns: Json;
+      };
       production_fabric_catalog: { Args: { p_barcode?: string | null }; Returns: Json };
       create_production_batch: {
         Args: {

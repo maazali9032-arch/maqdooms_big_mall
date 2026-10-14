@@ -1,6 +1,7 @@
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Barcode, FolderOpen, Layers, Printer, Search } from "lucide-react";
+import { Barcode, FolderOpen, Layers, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
@@ -209,30 +210,19 @@ export function WorkshopFabricStock({
         title="Search or scan Workshop stock"
         description="Search a batch, fabric or Thaan, or scan its existing barcode. Matching rows keep their batch and fabric context."
       >
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setSearch(text.trim());
-          }}
+        <BarcodeEntry
+          value={text}
+          onChange={setSearch}
+          onScan={setSearch}
+          label="Search or scan Workshop stock"
+          placeholder="Search batch, supplier, fabric or scan a barcode"
         >
-          <Input
-            aria-label="Search or scan Workshop stock"
-            value={text}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search batch, supplier, fabric or scan a barcode"
-            className="min-w-0 flex-1"
-          />
-          <Button type="submit">
-            <Search className="size-4" />
-            Search / Scan
-          </Button>
           {text && (
             <Button type="button" variant="outline" onClick={() => setSearch("")}>
               Clear
             </Button>
           )}
-        </form>
+        </BarcodeEntry>
       </Panel>
       {catalog.isPending ? (
         <p>Loading Workshop stock...</p>

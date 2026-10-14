@@ -295,6 +295,20 @@
       "when": 1792022400000,
       "tag": "0041_owner_business_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792022460000,
+      "tag": "0043_owner_barcode_inspector",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792022520000,
+      "tag": "0044_barcode_inspector_legacy_evidence",
+      "breakpoints": true
     }
   ]
 }

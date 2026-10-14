@@ -3,3 +3,9 @@ supabase/migrations/20261014000000_role_workspaces.sql -text
 drizzle/migrations/0040_role_workspaces.sql -text
 supabase/migrations/20261014000100_owner_business_analytics.sql -text
 drizzle/migrations/0041_owner_business_analytics.sql -text
+supabase/migrations/20261015000100_owner_barcode_inspector.sql -text whitespace=-blank-at-eol
+drizzle/migrations/0043_owner_barcode_inspector.sql -text whitespace=-blank-at-eol
+supabase/migrations/20261015000200_barcode_inspector_legacy_evidence.sql -text
+drizzle/migrations/0044_barcode_inspector_legacy_evidence.sql -text
+
+# The recorded 0043 SQL preserves generated indentation on a blank line.
