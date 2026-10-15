@@ -6243,3 +6243,7 @@ at 320/390/768/1440 px.
 Completed: forward 0055 and 0056 applied with schema/permission verification and
 every existing public-table row fingerprint preserved. No production, sales, inventory
 or account fixture was posted to the live database.
+
+Source `2fa9240` is deployed successfully. The published production assets contain
+the scan receipt, Showroom card and thermal-label setup. An authenticated hosted
+browser session and a physical TSC test-row print remain user acceptance steps.

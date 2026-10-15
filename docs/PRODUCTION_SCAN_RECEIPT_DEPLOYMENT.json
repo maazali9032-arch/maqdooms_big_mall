@@ -1,0 +1,13 @@
+{
+  "verified_at": "2026-10-15T19:09:00.000Z",
+  "source_commit": "2fa9240c7419179d31ed909716e4675a52458227",
+  "github_deployment_status": "success",
+  "host": "https://maqdooms-big-mall.vercel.app",
+  "published_assets_verified": {
+    "scan_production_receipt": true,
+    "showroom_available_card": true,
+    "thermal_label_setup": true
+  },
+  "authenticated_hosted_browser_test": false,
+  "physical_thermal_printer_test": false
+}
