@@ -1,13 +1,15 @@
-import JsBarcode from "jsbarcode";
+import { toast } from "sonner";
+export { fabricBarcodeBars } from "./barcode-encoding";
 
 /** Local Code 128 symbol; quiet zones and identity only, never financial values. */
-export function fabricBarcodeBars(code: string): string {
-  const target = {} as { encodings: { data: string }[] };
-  JsBarcode(target, code, { format: "CODE128", displayValue: false });
-  return target.encodings.map((encoding) => encoding.data).join("");
-}
 
 export function printFabricLabel(element: HTMLElement, title = "Fabric Barcode label") {
+  if (element.matches("[data-barcode-label]") || element.querySelector("[data-barcode-label]")) {
+    void import("./open-label-print-dialog")
+      .then(({ openLabelPrintDialog }) => openLabelPrintDialog(element, title))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Label setup could not open"));
+    return;
+  }
   const frame = document.createElement("iframe");
   frame.title = title;
   frame.setAttribute("aria-hidden", "true");

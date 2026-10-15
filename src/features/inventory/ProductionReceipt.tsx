@@ -6,11 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/shared/components/page";
-import { BarcodeGraphic, useProductionDocument } from "@/features/tailoring/ProductionDocument";
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
+import { useProductionDocument } from "@/features/tailoring/ProductionDocument";
+import { BarcodeSticker } from "./BarcodeSticker";
 import { printFabricLabel } from "./fabric-label";
-import { receiptCost, definiteDatabaseRejection } from "./consumable-input";
+import { definiteDatabaseRejection } from "./consumable-input";
+import { fabricMoneyInput as receiptCost } from "./fabric-entry-input";
+import { reportMoney } from "@/features/reports/report-value";
 import type { Database } from "@/integrations/supabase/types";
 type Functions = Database["public"]["Functions"];
+type ScanRequest = { p_request: string; p_code: string };
 type Piece = {
   id: string;
   job_id: string;
@@ -26,37 +31,21 @@ type Piece = {
   cp_paise: number | null;
   cp_visible: boolean;
 };
-export function ProductionReceipt() {
+export function ProductionReceipt({ onLoaded }: { onLoaded?: () => void }) {
   const { isOwner, can } = useSession();
   const receiveAllowed = isOwner || can("production.receive");
   const priceAllowed = isOwner || can("stock.price_finished");
-  const [code, setCode] = useState("");
-  const [scanned, setScanned] = useState("");
+  const [code, setCode] = useState(""),
+    [scanned, setScanned] = useState("");
   const [reason, setReason] = useState("");
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [allPrice, setAllPrice] = useState("");
-  const [receiptPending, setReceiptPending] = useState<
-    Functions["complete_production_batch"]["Args"] | null
-  >(null);
+  const [scanPending, setScanPending] = useState<ScanRequest | null>(null);
   const [pricePending, setPricePending] = useState<
     Functions["set_workshop_product_sp"]["Args"] | null
   >(null);
   const print = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
-  const queue = useQuery({
-    queryKey: ["workshop-receipt-queue"],
-    enabled: receiveAllowed,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("workshop_receipt_queue");
-      if (error) throw error;
-      return data as unknown as {
-        id: string;
-        code: string;
-        quantity: number;
-        finished_at: string | null;
-      }[];
-    },
-  });
   const job = useProductionDocument(scanned);
   const pieces = useQuery({
     queryKey: ["finished-product-inventory", "production", job.data?.id],
@@ -77,31 +66,39 @@ export function ProductionReceipt() {
       "owner-production",
       "production-costs",
       "location-ledger",
+      "finished-product-movements",
       "workshop-receipt-queue",
     ])
       void qc.invalidateQueries({ queryKey: [key] });
   };
-  const receive = useMutation({
-    mutationFn: async () => {
-      if (!receiptPending && (!job.data || job.data.status !== "completed" || !reason.trim()))
-        throw new Error("Load a completed Production ID and confirm receipt of every piece");
-      const args = receiptPending ?? {
-        p_request: crypto.randomUUID(),
-        p_job: job.data!.id,
-        p_expected_status: "completed",
-        p_reason: reason.trim(),
-      };
-      setReceiptPending(args);
-      const { error } = await supabase.rpc("complete_production_batch", args);
+  const scan = useMutation({
+    mutationFn: async (request: ScanRequest) => {
+      if (receiveAllowed) {
+        setScanPending(request);
+        const { data, error } = await supabase.rpc("receive_production_barcode", request);
+        if (error) throw error;
+        return data as string;
+      }
+      const { data, error } = await supabase.rpc("production_job_document", {
+        p_code: request.p_code,
+      });
       if (error) throw error;
+      if (!data) throw new Error("No production matches this ID");
+      return (data as unknown as { id: string }).id;
     },
-    onSuccess: () => {
-      setReceiptPending(null);
+    onSuccess: (id) => {
+      setScanPending(null);
+      setScanned(id);
+      setPrices({});
+      setAllPrice("");
+      setReason("");
       refresh();
-      toast.success("All pieces received into Workshop; barcodes and fabric CP generated");
+      onLoaded?.();
+      if (receiveAllowed)
+        toast.success("Complete batch is in Workshop. Set SP and print its piece labels.");
     },
     onError: (e) => {
-      if (definiteDatabaseRejection(e)) setReceiptPending(null);
+      if (definiteDatabaseRejection(e)) setScanPending(null);
       toast.error(e.message);
     },
   });
@@ -110,13 +107,13 @@ export function ProductionReceipt() {
       const edits = (pieces.data ?? []).filter(
         (p) => p.location_kind === "workshop" && p.status === "available" && prices[p.id]?.trim(),
       );
-      if (!pricePending && (!job.data || !edits.length || !reason.trim()))
-        throw new Error("Enter SP for Workshop pieces and a pricing confirmation");
+      if (!pricePending && (!job.data || !edits.length))
+        throw new Error("Enter SP for the Workshop pieces");
       const args = pricePending ?? {
         p_request: crypto.randomUUID(),
         p_job: job.data!.id,
         p_updates: edits.map((p) => ({ piece_id: p.id, sp_paise: receiptCost(prices[p.id]!) })),
-        p_reason: reason.trim(),
+        p_reason: reason.trim() || "Finished product SP entered at Workshop",
       };
       setPricePending(args);
       const { error } = await supabase.rpc("set_workshop_product_sp", args);
@@ -126,7 +123,7 @@ export function ProductionReceipt() {
       setPricePending(null);
       setPrices({});
       refresh();
-      toast.success("Workshop SP saved; labels show the saved price");
+      toast.success("SP saved. Labels use the saved prices.");
     },
     onError: (e) => {
       if (definiteDatabaseRejection(e)) setPricePending(null);
@@ -134,138 +131,78 @@ export function ProductionReceipt() {
     },
   });
   if (!receiveAllowed && !priceAllowed) return null;
-  const frozen = receive.isPending || savePrice.isPending || !!receiptPending || !!pricePending;
+  const frozen = scan.isPending || savePrice.isPending || !!scanPending || !!pricePending;
   return (
     <Panel
-      title="Receive finished production & set SP"
-      description="Scan its Production ID when every piece arrives at Workshop. Set SP and print labels before transferring pieces to Showroom."
+      title="Scan Production Barcode"
+      description={
+        receiveAllowed
+          ? "Scan only when every piece has arrived. This marks the complete batch finished and receives it into Workshop. Scanning again opens the same pieces."
+          : "Scan an already received Production ID to set Workshop selling prices."
+      }
     >
-      <div className="space-y-3">
-        {receiveAllowed && (
-          <div className="space-y-2 rounded-lg border p-3">
-            <h3 className="text-sm font-semibold">Finished production awaiting Workshop receipt</h3>
-            {queue.error ? (
-              <p role="alert">
-                Could not load arrivals.{" "}
-                <Button variant="outline" onClick={() => void queue.refetch()}>
-                  Retry
-                </Button>
-              </p>
-            ) : queue.isPending ? (
-              <p className="text-sm">Loading arrivals…</p>
-            ) : (queue.data ?? []).length ? (
-              queue.data!.map((j) => (
-                <div
-                  key={j.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-t py-2 text-sm"
-                >
-                  <div>
-                    <p className="break-all font-mono text-xs">{j.code}</p>
-                    <p>
-                      {j.quantity} pieces ·{" "}
-                      {j.finished_at
-                        ? new Date(j.finished_at).toLocaleString()
-                        : "Finish time not recorded"}
-                    </p>
-                  </div>
-                  <Button
-                    disabled={frozen}
-                    variant="outline"
-                    onClick={() => {
-                      setCode(j.code);
-                      setScanned(j.code);
-                      setPrices({});
-                    }}
-                  >
-                    Load receipt
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No finished production awaiting receipt.
-              </p>
-            )}
+      <div className="space-y-4">
+        <BarcodeEntry
+          value={code}
+          onChange={setCode}
+          label="Workshop Production ID"
+          placeholder="Scan or type Production ID"
+          disabled={frozen}
+          onScan={(value) => scan.mutate({ p_request: crypto.randomUUID(), p_code: value })}
+        />
+        {scanPending && !scan.isPending && (
+          <div role="alert" className="space-y-2 text-sm">
+            <p>
+              The receipt result is uncertain. Retry the same scan before starting another batch.
+            </p>
+            <Button onClick={() => scan.mutate(scanPending)}>Retry same production scan</Button>
           </div>
         )}
-        <form
-          className="flex flex-wrap gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setPrices({});
-            setScanned(code.trim());
-          }}
-        >
-          <Input
-            aria-label="Workshop Production ID"
-            placeholder="Scan or type Production ID"
-            disabled={frozen}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <Button disabled={frozen || !code.trim()}>Load production</Button>
-        </form>
-        {job.error && <p role="alert">{job.error.message}</p>}
+        {job.error && (
+          <p role="alert">
+            {job.error.message}{" "}
+            <Button variant="outline" onClick={() => void job.refetch()}>
+              Retry details
+            </Button>
+          </p>
+        )}
         {scanned && job.isPending && <p>Loading production…</p>}
         {job.data && (
           <>
-            <p className="font-semibold">
-              {job.data.code} · {job.data.product} · {job.data.design} · Size{" "}
-              {job.data.size ?? "Not recorded"} · {job.data.quantity} pieces
-            </p>
-            <div className="divide-y rounded border">
-              {job.data.fabrics.map((f, i) => (
-                <div key={i} className="flex flex-wrap justify-between gap-2 p-2">
-                  <span>
-                    {f.name} · <span className="break-all font-mono text-xs">{f.barcode}</span>
-                  </span>
-                  <span>
-                    {(f.quantity_mm / 1000).toFixed(3)} m · {f.source} · {f.issue_type}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {job.data.cp_total_paise != null && (
+            <div className="rounded-lg border p-3 text-sm">
+              <h3 className="font-semibold">
+                {job.data.product} · {job.data.quantity} pieces
+              </h3>
+              <p className="break-all font-mono text-xs">{job.data.code}</p>
               <p>
-                Total issued fabric CP: ₹{(job.data.cp_total_paise / 100).toFixed(2)} · CP per
-                piece: ₹{(job.data.cp_total_paise / job.data.quantity / 100).toFixed(2)}
+                {job.data.received_at ? "Received into Workshop" : "Not received into Workshop"}
+              </p>
+              {job.data.cp_total_paise != null && (
+                <p>Total issued fabric CP: {reportMoney(String(job.data.cp_total_paise))}</p>
+              )}
+            </div>
+            {pieces.error && (
+              <p role="alert">
+                Could not load pieces.{" "}
+                <Button variant="outline" onClick={() => void pieces.refetch()}>
+                  Retry pieces
+                </Button>
               </p>
             )}
-            <p>
-              Cost basis: all recorded fabric issues, including additional fabric. Actual
-              consumption is not recorded.
-            </p>
-            <Input
-              aria-label="Workshop receipt or price confirmation"
-              disabled={frozen}
-              placeholder="Receipt / pricing confirmation"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-            {!job.data.received_at && receiveAllowed && (
-              <Button
-                disabled={receive.isPending || (!receiptPending && job.data.status !== "completed")}
-                onClick={() => receive.mutate()}
-              >
-                {receiptPending
-                  ? "Retry same whole receipt"
-                  : `Receive all ${job.data.quantity} pieces into Workshop`}
-              </Button>
-            )}
-            {!job.data.received_at && job.data.status !== "completed" && (
-              <p>Production must be marked finished before Workshop receipt.</p>
-            )}
-            {pieces.error && <p role="alert">{pieces.error.message}</p>}
+            {pieces.isPending && <p>Loading pieces…</p>}
             {!!pieces.data?.length && (
               <>
                 {priceAllowed && (
-                  <fieldset disabled={frozen} className="flex flex-wrap gap-2">
-                    <Input
-                      aria-label="SP for all Workshop pieces"
-                      placeholder="SP per piece (₹)"
-                      value={allPrice}
-                      onChange={(e) => setAllPrice(e.target.value)}
-                    />
+                  <fieldset disabled={frozen} className="flex flex-wrap items-end gap-2">
+                    <label className="min-w-0 text-sm">
+                      SP per piece ₹
+                      <Input
+                        aria-label="SP for all Workshop pieces"
+                        inputMode="decimal"
+                        value={allPrice}
+                        onChange={(e) => setAllPrice(e.target.value)}
+                      />
+                    </label>
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -289,76 +226,73 @@ export function ProductionReceipt() {
                     </Button>
                   </fieldset>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr>
-                        <th>Piece / barcode</th>
-                        <th>CP per piece</th>
-                        <th>Saved SP</th>
-                        {priceAllowed && <th>New SP (₹)</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pieces.data.map((p) => (
-                        <tr key={p.id}>
-                          <td className="py-2">
-                            Piece {p.piece_number}
-                            <br />
-                            <span className="break-all font-mono text-xs">{p.barcode}</span>
-                          </td>
-                          <td>
-                            {p.cp_visible && p.cp_paise != null
-                              ? `₹${(p.cp_paise / 100).toFixed(2)}`
-                              : "Restricted"}
-                          </td>
-                          <td>
-                            {p.sp_paise != null ? `₹${(p.sp_paise / 100).toFixed(2)}` : "Not set"}
-                          </td>
-                          {priceAllowed && (
-                            <td>
-                              <Input
-                                aria-label={`SP for piece ${p.piece_number}`}
-                                disabled={
-                                  frozen ||
-                                  p.location_kind !== "workshop" ||
-                                  p.status !== "available"
-                                }
-                                value={prices[p.id] ?? ""}
-                                onChange={(e) => setPrices({ ...prices, [p.id]: e.target.value })}
-                              />
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {pieces.data.map((p) => (
+                    <div key={p.id} className="min-w-0 space-y-2 rounded-xl border p-3 text-sm">
+                      <strong>
+                        Piece {p.piece_number} · {p.product}
+                      </strong>
+                      <p>
+                        {p.design_code || p.design} · Size {p.size ?? "Not recorded"}
+                      </p>
+                      <p className="break-all font-mono text-xs">{p.barcode}</p>
+                      {p.cp_visible && p.cp_paise != null && (
+                        <p>CP: {reportMoney(String(p.cp_paise))}</p>
+                      )}
+                      <p>
+                        Saved SP: {p.sp_paise == null ? "Not set" : reportMoney(String(p.sp_paise))}
+                      </p>
+                      {priceAllowed && (
+                        <label className="block">
+                          New SP ₹
+                          <Input
+                            aria-label={`SP for piece ${p.piece_number}`}
+                            inputMode="decimal"
+                            disabled={
+                              frozen || p.location_kind !== "workshop" || p.status !== "available"
+                            }
+                            value={prices[p.id] ?? ""}
+                            onChange={(e) => setPrices({ ...prices, [p.id]: e.target.value })}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  ))}
                 </div>
                 {priceAllowed && (
-                  <Button disabled={savePrice.isPending} onClick={() => savePrice.mutate()}>
-                    {pricePending ? "Retry same SP request" : "Save Workshop SP"}
-                  </Button>
+                  <div className="space-y-2">
+                    <Input
+                      aria-label="Pricing note optional"
+                      placeholder="Pricing note (optional)"
+                      disabled={frozen}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
+                    <Button
+                      disabled={savePrice.isPending || !!scanPending}
+                      onClick={() => savePrice.mutate()}
+                    >
+                      {pricePending ? "Retry same SP request" : "Save Workshop SP"}
+                    </Button>
+                  </div>
                 )}
-                <div ref={print} className="grid gap-3 sm:grid-cols-2">
+                <div ref={print} className="hidden">
                   {pieces.data
                     .filter((p) => p.sp_paise != null)
                     .map((p) => (
-                      <article key={p.id} className="break-inside-avoid rounded border p-3">
-                        <p className="font-semibold">{p.product}</p>
-                        <p>
-                          {p.design_code ? `${p.design_code} · ` : ""}
-                          {p.design} · Size {p.size ?? "Not recorded"}
-                        </p>
-                        <p>SP: ₹{(p.sp_paise! / 100).toFixed(2)}</p>
-                        <BarcodeGraphic code={p.barcode} />
-                        <p className="break-all font-mono text-xs">{p.barcode}</p>
-                      </article>
+                      <BarcodeSticker
+                        key={p.id}
+                        barcode={p.barcode}
+                        name={p.product}
+                        description={`${p.design_code || p.design || ""} · Size ${p.size ?? "Not recorded"}`}
+                        price={reportMoney(String(p.sp_paise))}
+                      />
                     ))}
                 </div>
-                {can("stock.print_barcode") && (
+                {(isOwner || can("stock.print_barcode")) && (
                   <Button
                     variant="outline"
-                    disabled={!pieces.data.some((p) => p.sp_paise != null) || frozen}
+                    disabled={frozen || !pieces.data.some((p) => p.sp_paise != null)}
                     onClick={() =>
                       print.current && printFabricLabel(print.current, "Finished product labels")
                     }

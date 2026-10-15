@@ -1,0 +1,10 @@
+{
+  "verified_at": "2026-10-15T19:05:07.000Z",
+  "applied": [
+    "20261015001300_production_scan_receipt.sql",
+    "20261015001400_showroom_fabric_available.sql"
+  ],
+  "schema_and_permissions_verified": true,
+  "existing_public_rows_preserved": true,
+  "operational_fixtures_posted_live": false
+}

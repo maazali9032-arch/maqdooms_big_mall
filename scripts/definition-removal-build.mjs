@@ -9,8 +9,8 @@ import assert from "node:assert/strict";
 const root = process.cwd();
 const floorsOnly = process.argv.includes('--showroom-floors');
 const counterScan = process.argv.includes('--counter-unified-scan');
-const proofName = process.argv.includes('--stitching-pricing') ? 'COUNTER_STITCHING' : process.argv.includes('--counter-details') ? 'COUNTER_BARCODE_DETAILS' : counterScan ? 'COUNTER_UNIFIED_SCAN' : floorsOnly ? 'SHOWROOM_FLOORS_ONLY' : 'DEFINITION_REMOVAL';
-const reuse = process.argv[2];
+const proofName = process.argv.includes('--production-scan-receipt') ? 'PRODUCTION_SCAN_RECEIPT' : process.argv.includes('--stitching-pricing') ? 'COUNTER_STITCHING' : process.argv.includes('--counter-details') ? 'COUNTER_BARCODE_DETAILS' : counterScan ? 'COUNTER_UNIFIED_SCAN' : floorsOnly ? 'SHOWROOM_FLOORS_ONLY' : 'DEFINITION_REMOVAL';
+const reuse = process.argv.slice(2).find((argument) => !argument.startsWith("--"));
 const target = reuse
   ? path.resolve(reuse)
   : path.join(os.tmpdir(), "maqdooms-tanstack-security-" + randomUUID());

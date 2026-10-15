@@ -356,7 +356,14 @@ export function WorkshopFabricStock({
           </DialogHeader>
           {label && (
             <>
-              <div ref={printRef} className="bg-white p-4 text-black">
+              <div
+                ref={printRef}
+                data-barcode-label=""
+                data-code={label.barcode}
+                data-name={`${label.type_name} / ${label.name}`}
+                data-description={`${label.batch_code} / ${label.supplier}`}
+                className="bg-white p-4 text-black"
+              >
                 <p>
                   {label.batch_code} / {label.supplier}
                 </p>

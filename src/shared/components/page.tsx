@@ -15,8 +15,9 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { pageName } from "@/app/access/page-names";
 
 const ROUTE_CONTEXT: Record<string, string[]> = {
   dashboard: ["Overview"],
@@ -76,12 +77,17 @@ export function PageHeader({
   description?: string;
   actions?: ReactNode;
 }) {
+  const location = useRouterState({ select: (state) => state.location });
+  const name = pageName(location.pathname, location.hash, title);
+  useEffect(() => {
+    document.title = name + " — Maqdoom's Big Mall ERP";
+  }, [name]);
   return (
     <div className="flex flex-col gap-4 pb-1 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <BreadcrumbTrail title={title} />
+        <BreadcrumbTrail title={name} />
         <h1 className="text-[1.75rem] font-semibold leading-none tracking-[-0.025em] text-foreground sm:text-[2rem]">
-          {title}
+          {name}
         </h1>
         {description ? (
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">

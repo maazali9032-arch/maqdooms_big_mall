@@ -390,7 +390,14 @@ function LegacyFabricStock({
       {selected ? (
         <Panel title={`${selected.fabric_name} — ${selected.batch_code}`}>
           <div className="space-y-4">
-            <div ref={labelRef} className="rounded border bg-white p-4 text-black">
+            <div
+              ref={labelRef}
+              data-barcode-label=""
+              data-code={selected.barcode}
+              data-name={selected.fabric_name}
+              data-description={`Fabric ${selected.fabric_code} · ${selected.batch_code}`}
+              className="rounded border bg-white p-4 text-black"
+            >
               <p className="font-semibold">{selected.fabric_name}</p>
               <p>
                 Fabric ID: {selected.fabric_code} · Batch: {selected.batch_code}

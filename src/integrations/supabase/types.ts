@@ -1240,6 +1240,10 @@ export type Database = {
         Args: { p_request: string; p_job: string; p_expected_status: string; p_reason: string };
         Returns: string;
       };
+      receive_production_barcode: {
+        Args: { p_request: string; p_code: string };
+        Returns: string;
+      };
       showroom_stock: { Args: { p_kind?: string | null }; Returns: Json };
       ecommerce_listing_stock: { Args: Record<PropertyKey, never>; Returns: Json };
       submit_paid_ecommerce_order: {
@@ -1283,6 +1287,7 @@ export type Database = {
       };
       update_account_name: { Args: { p_name: string }; Returns: undefined };
       workshop_fabric_inventory: { Args: Record<string, never>; Returns: Json };
+      showroom_fabric_available_total: { Args: Record<string, never>; Returns: number };
       edit_workshop_thaan: {
         Args: {
           p_request: string;

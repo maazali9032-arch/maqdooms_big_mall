@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-15T19:03:59.745Z",
+  "isolated_directory": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-tanstack-security-786acf4c-d420-4c74-b37c-8ec73ed8c696",
+  "install_exit": 0,
+  "build_exit": 0,
+  "core_versions": [
+    {
+      "path": "node_modules/@tanstack/start-server-core",
+      "version": "1.169.39"
+    }
+  ],
+  "log": "C:\\Users\\maazl\\AppData\\Local\\Temp\\maqdooms-production-scan-receipt-build.log",
+  "deployed": false,
+  "preset": "vercel",
+  "fresh_install_reused": false,
+  "vercel_output_present": true
+}

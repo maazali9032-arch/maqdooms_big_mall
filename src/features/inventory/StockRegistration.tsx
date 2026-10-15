@@ -93,7 +93,21 @@ function BarcodeLabel({
 }) {
   const bars = fabricBarcodeBars(variant.code);
   return (
-    <article className="break-inside-avoid rounded border bg-white p-3 text-black">
+    <article
+      data-barcode-label=""
+      data-code={variant.code}
+      data-name={fabric.name}
+      data-description={`${batch.code} / ${batch.provider_name}`}
+      data-detail={[
+        variant.colour,
+        (variant.saved_length_mm ?? variant.original_mm) != null
+          ? metres(variant.saved_length_mm ?? variant.original_mm)
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      className="break-inside-avoid rounded border bg-white p-3 text-black"
+    >
       <p>
         {batch.code} / {batch.provider_name}
       </p>

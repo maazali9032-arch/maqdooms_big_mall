@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-10-15T18:54:39.460Z",
+  "passed": true,
+  "checks": 6,
+  "profile": {
+    "width": 40,
+    "height": 30,
+    "columns": 2,
+    "gap": 3,
+    "dpi": 203
+  }
+}

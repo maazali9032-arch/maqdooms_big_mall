@@ -13,8 +13,9 @@ import postgres from "postgres";
 
 process.loadEnvFile(".env");
 const apply = process.argv.includes("--apply");
-const stitching = process.argv.includes('--stitching-pricing');
-const counterDetails = process.argv.includes('--counter-details') || stitching;
+const productionReceipt = process.argv.includes("--production-scan-receipt");
+const stitching = process.argv.includes("--stitching-pricing") || productionReceipt;
+const counterDetails = process.argv.includes("--counter-details") || stitching;
 const floorsOnly = process.argv.includes("--showroom-floors") || counterDetails;
 const runtime = process.argv[2];
 assert(runtime && !runtime.startsWith("--"), "Supply disposable PGlite runtime");
@@ -39,7 +40,18 @@ const preserve = (before, after, pricing = false) => {
     assert.deepEqual(after[table], value, "Existing rows changed: " + table);
   }
 };
-const reportPath = path.join(os.tmpdir(), stitching ? "maqdooms-counter-stitching-rollout-results.json" : counterDetails ? "maqdooms-counter-details-rollout-results.json" : floorsOnly ? "maqdooms-showroom-floors-only-rollout-results.json" : "maqdooms-definition-removal-rollout-results.json");
+const reportPath = path.join(
+  os.tmpdir(),
+  productionReceipt
+    ? "maqdooms-production-scan-receipt-rollout-results.json"
+    : stitching
+      ? "maqdooms-counter-stitching-rollout-results.json"
+      : counterDetails
+        ? "maqdooms-counter-details-rollout-results.json"
+        : floorsOnly
+          ? "maqdooms-showroom-floors-only-rollout-results.json"
+          : "maqdooms-definition-removal-rollout-results.json",
+);
 const queries = {
   columns: `select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position`,
   constraints: `select c.relname as table_name,p.conname,p.contype,p.convalidated,pg_get_constraintdef(p.oid) as definition from pg_constraint p join pg_class c on c.oid=p.conrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and p.contype<>'n' order by 1,2`,
@@ -166,9 +178,10 @@ const execute = async (file, expected) => {
         " in share row exclusive mode",
     );
     baseline = await fingerprint(tx);
-    if(file.includes('_showroom_floors_only')) {
-      const [root]=await tx`select l.id from public.locations l where l.kind='showroom' and (exists(select 1 from public.inventory_items i where public.inventory_balance(i.id,l.id)<>0) or exists(select 1 from public.finished_products p where p.current_location_id=l.id and p.status='available'))`;
-      assert(!root,'General Showroom must be empty before removing it from work locations');
+    if (file.includes("_showroom_floors_only")) {
+      const [root] =
+        await tx`select l.id from public.locations l where l.kind='showroom' and (exists(select 1 from public.inventory_items i where public.inventory_balance(i.id,l.id)<>0) or exists(select 1 from public.finished_products p where p.current_location_id=l.id and p.status='available'))`;
+      assert(!root, "General Showroom must be empty before removing it from work locations");
     }
     const metadata = {};
     if (pricing)
@@ -220,9 +233,11 @@ try {
     .sort();
   const expected = {};
   for (const f of files) {
-    if (f.includes('_showroom_floors_only')) continue;
-    if (f.includes('_counter_contact_digits')) continue;
-    if (f.includes('_counter_stitching_pricing')) continue;
+    if (f.includes("_showroom_floors_only")) continue;
+    if (f.includes("_counter_contact_digits")) continue;
+    if (f.includes("_counter_stitching_pricing")) continue;
+    if (f.includes("_production_scan_receipt")) continue;
+    if (f.includes("_showroom_fabric_available")) continue;
     if (
       f.includes("_stock_registration") ||
       f.includes("_stock_transfer_counter_pricing") ||
@@ -236,7 +251,13 @@ try {
       f.includes("_thaan_optional_colour_reason") ||
       f.includes("_role_workspaces") ||
       f.includes("_barcode_inspector_legacy_evidence") ||
-      f.includes("_definition_removal") || f.includes("_finished_sale_compatibility") || f.includes("_workspace_cleanup") || f.includes("_counter_workspace") || f.includes("_mixed_production") || f.includes("_owner_definitions") || f.includes("_workflow_integrations") ||
+      f.includes("_definition_removal") ||
+      f.includes("_finished_sale_compatibility") ||
+      f.includes("_workspace_cleanup") ||
+      f.includes("_counter_workspace") ||
+      f.includes("_mixed_production") ||
+      f.includes("_owner_definitions") ||
+      f.includes("_workflow_integrations") ||
       f.includes("_owner_barcode_inspector") ||
       f.includes("_owner_business_analytics")
     )
@@ -504,48 +525,70 @@ try {
       await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename=${evidenceFile}`
     )[0]?.n,
   );
-  const workflowStages=[];
+  const workflowStages = [];
   let latestWorkflowExpected;
-  for(const suffix of ['_workspace_cleanup.sql','_counter_workspace.sql','_mixed_production.sql','_owner_definitions.sql','_workflow_integrations.sql','_finished_sale_compatibility.sql','_definition_removal.sql',...(floorsOnly?['_showroom_floors_only.sql']:[]),...(counterDetails?['_counter_contact_digits.sql']:[]),...(stitching?['_counter_stitching_pricing.sql']:[])]){
-    const file=files.find(f=>f.endsWith(suffix));
-    await reference.exec(await fs.readFile(path.join('supabase/migrations',file),'utf8'));
-    const expected=await catalog(async q=>(await reference.query(q)).rows);
-    workflowStages.push({file,expected});
-    const recorded=Number((await sql.unsafe('select count(*)::int n from supabase_migrations.erp_execution_history where filename=$1',[file]))[0].n);
-    if(recorded)latestWorkflowExpected=expected;
+  for (const suffix of [
+    "_workspace_cleanup.sql",
+    "_counter_workspace.sql",
+    "_mixed_production.sql",
+    "_owner_definitions.sql",
+    "_workflow_integrations.sql",
+    "_finished_sale_compatibility.sql",
+    "_definition_removal.sql",
+    ...(floorsOnly ? ["_showroom_floors_only.sql"] : []),
+    ...(counterDetails ? ["_counter_contact_digits.sql"] : []),
+    ...(stitching ? ["_counter_stitching_pricing.sql"] : []),
+    ...(productionReceipt
+      ? ["_production_scan_receipt.sql", "_showroom_fabric_available.sql"]
+      : []),
+  ]) {
+    const file = files.find((f) => f.endsWith(suffix));
+    await reference.exec(await fs.readFile(path.join("supabase/migrations", file), "utf8"));
+    const expected = await catalog(async (q) => (await reference.query(q)).rows);
+    workflowStages.push({ file, expected });
+    const recorded = Number(
+      (
+        await sql.unsafe(
+          "select count(*)::int n from supabase_migrations.erp_execution_history where filename=$1",
+          [file],
+        )
+      )[0].n,
+    );
+    if (recorded) latestWorkflowExpected = expected;
   }
   compare(
-    latestWorkflowExpected ?? (evidenceRecorded
-      ? evidenceExpected
-      : inspectorRecorded
-        ? inspectorExpected
-        : analyticsRecorded
-          ? analyticsExpected
-          : roleRecorded
-            ? roleExpected
-            : thaanOptionalRecorded
-              ? thaanOptionalExpected
-              : scopeRecorded
-                ? scopeExpected
-                : delegatedRecorded
-                  ? delegatedExpected
-                  : hierarchyRecorded
-                    ? hierarchyExpected
-                    : optionalRecorded
-                      ? optionalExpected
-                      : labelsRecorded
-                        ? labelsExpected
-                        : productionRecorded
-                          ? productionExpected
-                          : salespersonRecorded
-                            ? salespersonExpected
-                            : pricingRecorded
-                              ? pricingExpected
-                              : registrationRecorded
-                                ? registrationExpected
-                                : currentPhase === 8 && !guardRecorded
-                                  ? phase8Base
-                                  : expected[currentPhase]),
+    latestWorkflowExpected ??
+      (evidenceRecorded
+        ? evidenceExpected
+        : inspectorRecorded
+          ? inspectorExpected
+          : analyticsRecorded
+            ? analyticsExpected
+            : roleRecorded
+              ? roleExpected
+              : thaanOptionalRecorded
+                ? thaanOptionalExpected
+                : scopeRecorded
+                  ? scopeExpected
+                  : delegatedRecorded
+                    ? delegatedExpected
+                    : hierarchyRecorded
+                      ? hierarchyExpected
+                      : optionalRecorded
+                        ? optionalExpected
+                        : labelsRecorded
+                          ? labelsExpected
+                          : productionRecorded
+                            ? productionExpected
+                            : salespersonRecorded
+                              ? salespersonExpected
+                              : pricingRecorded
+                                ? pricingExpected
+                                : registrationRecorded
+                                  ? registrationExpected
+                                  : currentPhase === 8 && !guardRecorded
+                                    ? phase8Base
+                                    : expected[currentPhase]),
     await catalog((q) => sql.unsafe(q)),
     currentPhase === 1,
   );
@@ -595,7 +638,7 @@ try {
     await execute(analyticsFile, analyticsExpected);
     await execute(inspectorFile, inspectorExpected);
     await execute(evidenceFile, evidenceExpected);
-    for(const stage of workflowStages) await execute(stage.file,stage.expected);
+    for (const stage of workflowStages) await execute(stage.file, stage.expected);
     if (report.applied.length) preserve(report.before, report.after, Boolean(pricingFile));
     else report.after = await fingerprint();
     console.log(

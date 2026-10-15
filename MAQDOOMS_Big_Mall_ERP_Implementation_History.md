@@ -6226,3 +6226,20 @@ Owner clarified that the tailoring input is a stitching-only charge: 5 m × ₹1
 Forward 0054 computes and records exact fabric/stitching amounts on the server while preserving all historical bills, exact retries, stock locking, CP capture, payments and permissions. Additional fabric keeps the original customer total and updates the original job cost/margin. No missing historical breakdown is invented. New requests from the old pricing screen require refresh. See docs/COUNTER_STITCHING.md and verification proof files.
 
 Completed: 0054 applied with every row in all 97 pre-existing public tables preserved. All 34 read-only live checks passed. Source d651499cef17355defcf12e56f411a3602f878df is deployed and its published POS/receipt assets verified. Validation passed 2,280 cumulative database assertions, 27 focused pricing/print browser checks and 73 existing workflow/scanner/detail browser checks, TypeScript, scoped lint and isolated Vercel build. Migration SHA256: a05edbfbca39ff12b838181601bc54191ff566e857240ebd39ee5e2d3206bad7. No operational test fixtures were posted live.
+
+# 61. SCAN-FIRST FINISHED PRODUCTION RECEIPT AND THERMAL LABELS — 15 OCTOBER 2026
+
+Finished Products starts with the operational step: scan the Production ID after the complete batch arrives at Workshop. The protected receipt flow finishes an open/in-progress batch where needed, retains a previously completed status, receives every piece together and reopens the same result on repeat scans. It does not deduct the already-issued fabric again. New finished pieces use short `80` numeric barcode identities while every legacy barcode remains valid.
+
+Completed pieces retain product, design/custom design and size, split captured fabric CP deterministically, and are priced/printed before transfer. The barcode allocator stays private to the receipt transaction. Backend authorization, scanner identity, retry idempotency and rollback on absent captured-cost evidence are all verified.
+
+Label printing uses an explicit small-thermal-media setup instead of a generic browser page. It starts with an adjustable two-column 40 × 30 mm, 203 dpi profile for the TSC TE244 and requires a test row because the supplied photos do not identify the roll dimensions. See `docs/PRODUCTION_SCAN_RECEIPT.md` and its verification files for workflow and label setup evidence.
+
+Fabric Stock now has a separate Showroom available card alongside Workshop available.
+It reads an authorized current balance across active physical floors only, excluding
+the retired general Showroom parent and Workshop, and its four-card layout is checked
+at 320/390/768/1440 px.
+
+Completed: forward 0055 and 0056 applied with schema/permission verification and
+every existing public-table row fingerprint preserved. No production, sales, inventory
+or account fixture was posted to the live database.

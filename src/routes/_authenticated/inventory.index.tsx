@@ -4,12 +4,14 @@ import { useWorkflowRoute } from "@/shared/components/use-workflow-route";
 import { PageHeader, StatCard } from "@/shared/components/page";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FabricStock } from "@/features/inventory/FabricStock";
-import { FinishedProductInventory } from "@/features/inventory/FinishedProductInventory";
+import { FinishedProductWorkspace } from "@/features/inventory/FinishedProductWorkspace";
 import { Consumables } from "@/features/inventory/Consumables";
 import { LocationDefinitions } from "@/features/inventory/LocationDefinitions";
 import { StockActivity } from "@/features/inventory/StockActivity";
 import { FabricArchive } from "@/features/inventory/FabricArchive";
 import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { formatMetres } from "@/shared/utils/units";
 export const Route = createFileRoute("/_authenticated/inventory/")({
@@ -23,10 +25,10 @@ function InventoryPage() {
     return (
       <>
         <PageHeader
-          title="Finished products"
+          title="Finished Products"
           description="Receive completed production at Workshop, set SP, print labels and transfer pieces to Showroom."
         />
-        <FinishedProductInventory />
+        <FinishedProductWorkspace />
       </>
     );
   if (nav.activeId === "consumables")
@@ -51,7 +53,6 @@ function InventoryPage() {
   return <StockInventory active={nav.activeId} onChange={nav.onChange} />;
 }
 function StockInventory({ active, onChange }: { active: string; onChange: (id: string) => void }) {
-  const query = useWorkshopInventory();
   const [search, setSearch] = useState(""),
     [incomplete, setIncomplete] = useState(false);
   const chosen = ["fabric-stock", "movements", "archived"].includes(active)
@@ -61,28 +62,9 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
     <>
       <PageHeader
         title="Fabric Stock"
-        description="Workshop stock grouped by batch, fabric type and individual Thaan."
+        description="Fabric stock grouped by batch, fabric type and individual Thaan."
       />
-      {chosen === "fabric-stock" && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard
-            label="Active Thaans"
-            value={query.data ? query.data.filter((r) => r.status === "active").length : "—"}
-          />
-          <StatCard
-            label="Workshop available"
-            value={
-              query.data
-                ? formatMetres(query.data.reduce((s, r) => s + (r.workshop_mm ?? 0), 0))
-                : "—"
-            }
-          />
-          <StatCard
-            label="Incomplete"
-            value={query.data ? query.data.filter((r) => r.incomplete).length : "—"}
-          />
-        </div>
-      )}
+      {chosen === "fabric-stock" && <FabricStockSummary />}
       <Tabs value={chosen} onValueChange={onChange}>
         <TabsList
           className="mt-4 grid h-auto w-full grid-cols-3 gap-1 p-1.5"
@@ -114,5 +96,40 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+export function FabricStockSummary() {
+  const query = useWorkshopInventory();
+  const showroom = useQuery({
+    queryKey: ["showroom-fabric-available-total"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("showroom_fabric_available_total", {});
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+  });
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label="Active Thaans"
+        value={query.data ? query.data.filter((r) => r.status === "active").length : "—"}
+      />
+      <StatCard
+        label="Workshop available"
+        value={
+          query.data
+            ? formatMetres(query.data.reduce((sum, row) => sum + (row.workshop_mm ?? 0), 0))
+            : "—"
+        }
+      />
+      <StatCard
+        label="Showroom available"
+        value={showroom.data === undefined ? "—" : formatMetres(showroom.data)}
+      />
+      <StatCard
+        label="Incomplete"
+        value={query.data ? query.data.filter((r) => r.incomplete).length : "—"}
+      />
+    </div>
   );
 }

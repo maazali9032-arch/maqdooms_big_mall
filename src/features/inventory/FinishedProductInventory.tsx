@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { formatDateTime } from "@/shared/utils/format";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
-import { ProductionReceipt } from "./ProductionReceipt";
 
 type Piece = {
   size?: string | null;
@@ -64,7 +63,6 @@ type Request = {
 export function FinishedProductInventory() {
   const { isOwner, roles, can } = useSession();
   const allowed = isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
-  const workshopAllowed = isOwner || can("production.receive") || can("stock.price_finished");
   const formId = useId();
   const label = useRef<HTMLDivElement>(null);
   const [barcode, setBarcode] = useState("");
@@ -188,7 +186,7 @@ export function FinishedProductInventory() {
     },
     onError: (e) => toast.error(e.message),
   });
-  if (!allowed) return workshopAllowed ? <ProductionReceipt /> : null;
+  if (!allowed) return null;
   const loaded = inventory.data?.pages.flat() ?? [];
   const rows = [
     ...loaded.filter((p) => !scannedPieces.some((s) => s.id === p.id)),
@@ -213,7 +211,6 @@ export function FinishedProductInventory() {
   );
   return (
     <div className="space-y-4">
-      <ProductionReceipt />
       <Panel
         title="Finished Product inventory & transfers"
         description="Each Product Barcode represents one physical piece. Transfer Workshop stock directly to a Showroom floor; Owner returns go directly back to Workshop."
@@ -250,7 +247,17 @@ export function FinishedProductInventory() {
           )}
           {scanned && can("stock.print_barcode") && (
             <div>
-              <div ref={label} className="max-w-sm rounded border p-3">
+              <div
+                ref={label}
+                data-barcode-label=""
+                data-code={scanned.barcode}
+                data-name={scanned.product}
+                data-description={`${scanned.design_code ?? scanned.design} · Size ${scanned.size ?? "Not recorded"}`}
+                data-price={
+                  scanned.sp_paise != null ? `₹${(scanned.sp_paise / 100).toFixed(2)}` : ""
+                }
+                className="max-w-sm rounded border p-3"
+              >
                 <p>
                   {scanned.product} / {scanned.design_code ?? scanned.design} · Piece{" "}
                   {scanned.piece_number}

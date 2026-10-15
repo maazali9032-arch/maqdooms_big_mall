@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { allowedModules, canAccessPath, type ModuleKey } from "./modules";
+import { pageName } from "./page-names";
 
 export type NavItem = {
   to: string;
@@ -24,6 +25,14 @@ export type NavItem = {
   permission?: string;
 };
 export type NavSection = { label: string; items: NavItem[] };
+const namedSections = (sections: NavSection[]) =>
+  sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      label: pageName(item.to, item.hash, item.label),
+    })),
+  }));
 
 /** Reuse existing workflow routes without expanding any role's page access. */
 export function sidebarSections(roles: string[], permissions: string[]): NavSection[] {
@@ -86,7 +95,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
     }
     if (!roles.includes("stock_entry") && permissions.includes("production.receive"))
       add("/tailoring", "receipt", "Workshop receipt", "tailoring", Boxes, "production.receive");
-    return [
+    return namedSections([
       ...(items.length ? [{ label: "Work", items }] : []),
       {
         label: "Account",
@@ -94,7 +103,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
           { to: "/settings", label: "Account", icon: Settings, module: "settings" as ModuleKey },
         ],
       },
-    ];
+    ]);
   }
   const allowed = allowedModules(roles);
   const sections: NavSection[] = [
@@ -237,7 +246,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       ],
     },
   ];
-  return sections
+  return namedSections(sections)
     .map((section) => ({
       ...section,
       items: section.items.filter(

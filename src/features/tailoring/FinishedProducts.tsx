@@ -419,7 +419,14 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
 function ProductLabel({ piece }: { piece: Piece }) {
   const bars = productBarcodeBars(piece.barcode);
   return (
-    <div className="break-inside-avoid rounded border bg-white p-3 text-black">
+    <div
+      data-barcode-label=""
+      data-code={piece.barcode}
+      data-name={piece.product}
+      data-description={`${piece.design} · Size ${piece.size ?? "Not recorded"}`}
+      data-price={piece.sp_paise != null ? `₹${(piece.sp_paise / 100).toFixed(2)}` : ""}
+      className="break-inside-avoid rounded border bg-white p-3 text-black"
+    >
       <p>
         {piece.product} · {piece.design} · Piece {piece.piece_number}
       </p>

@@ -35,3 +35,7 @@ drizzle/migrations/0053_counter_contact_digits.sql -text
 
 supabase/migrations/20261015001200_counter_stitching_pricing.sql -text
 drizzle/migrations/0054_counter_stitching_pricing.sql -text
+supabase/migrations/20261015001300_production_scan_receipt.sql -text
+drizzle/migrations/0055_production_scan_receipt.sql -text
+supabase/migrations/20261015001400_showroom_fabric_available.sql -text
+drizzle/migrations/0056_showroom_fabric_available.sql -text

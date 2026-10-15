@@ -1,6 +1,6 @@
 process.on("uncaughtException", (e) => {
   console.error(
-      e.stack ?? e.message,
+    e.stack ?? e.message,
     e.position,
     e.query?.slice(Math.max(0, Number(e.position) - 100), Number(e.position) + 120),
   );
@@ -13,10 +13,12 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { verifyDelegation } from "./delegated-thaan-cases.mjs";
-import {definitionRemovalCases} from './definition-removal-cases.mjs';
-import {showroomFloorsOnlyCases} from './showroom-floors-only-cases.mjs';
-import {counterContactCases} from './counter-contact-cases.mjs';
-import {counterStitchingCases} from './counter-stitching-cases.mjs';
+import { definitionRemovalCases } from "./definition-removal-cases.mjs";
+import { showroomFloorsOnlyCases } from "./showroom-floors-only-cases.mjs";
+import { counterContactCases } from "./counter-contact-cases.mjs";
+import { counterStitchingCases } from "./counter-stitching-cases.mjs";
+import { productionScanReceiptCases } from "./production-scan-receipt-cases.mjs";
+import { showroomFabricTotalCases } from "./showroom-fabric-total-cases.mjs";
 import { mixedProductionCases } from "./mixed-production-cases.mjs";
 import { workflowIntegrationCases } from "./workflow-integration-cases.mjs";
 import { counterWorkspaceCases } from "./counter-workspace-cases.mjs";
@@ -27,9 +29,10 @@ import { roleWorkspaceCases } from "./role-workspace-cases.mjs";
 import { optionalCases } from "./thaan-optional-details-cases.mjs";
 import { verifyModuleScope } from "./module-role-scope-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
-const stitching=process.argv.includes('--stitching-pricing');
-const counterDetails=process.argv.includes('--counter-details')||stitching;
-const floorsOnly=process.argv.includes('--showroom-floors')||counterDetails;
+const productionReceipt = process.argv.includes("--production-scan-receipt");
+const stitching = process.argv.includes("--stitching-pricing") || productionReceipt;
+const counterDetails = process.argv.includes("--counter-details") || stitching;
+const floorsOnly = process.argv.includes("--showroom-floors") || counterDetails;
 let checks = 0;
 const check = (value, label) => {
   assert(value, label);
@@ -49,8 +52,8 @@ for (const [directory, demo] of [
     }
   };
   const one = async (sql, args = []) => {
-    const rows=await q(sql,args);
-    if(!rows.length)throw new Error('No test result rows: '+sql);
+    const rows = await q(sql, args);
+    if (!rows.length) throw new Error("No test result rows: " + sql);
     return Object.values(rows[0])[0];
   };
   const denied = async (sql, args = []) => {
@@ -84,11 +87,19 @@ for (const [directory, demo] of [
       .filter((file) => file.endsWith(".sql") && !file.includes("_live_"))
       .sort()) {
       if (!demo && file.includes("demo_seed")) continue;
-      if (file.includes('_showroom_floors_only')) continue;
-      if (file.includes('_counter_contact_digits')) continue;
-      if (file.includes('_counter_stitching_pricing')) continue;
+      if (file.includes("_showroom_floors_only")) continue;
+      if (file.includes("_counter_contact_digits")) continue;
+      if (file.includes("_counter_stitching_pricing")) continue;
+      if (file.includes("_production_scan_receipt")) continue;
+      if (file.includes("_showroom_fabric_available")) continue;
       if (
-        file.includes("_definition_removal") || file.includes("_counter_workspace") || file.includes("_mixed_production") || file.includes("_owner_definitions") || file.includes("_workflow_integrations") || file.includes("_finished_sale_compatibility") || file.includes("_workspace_cleanup") ||
+        file.includes("_definition_removal") ||
+        file.includes("_counter_workspace") ||
+        file.includes("_mixed_production") ||
+        file.includes("_owner_definitions") ||
+        file.includes("_workflow_integrations") ||
+        file.includes("_finished_sale_compatibility") ||
+        file.includes("_workspace_cleanup") ||
         file.includes("_owner_barcode_inspector") ||
         file.includes("_barcode_inspector_legacy_evidence")
       )
@@ -831,30 +842,180 @@ for (const [directory, demo] of [
     );
     await barcodeInspectorCases({ db, q, one, denied, login, users, check });
     await login(null);
-    const cleanupFile=(await fs.readdir(directory)).find(f=>f.endsWith('_workspace_cleanup.sql'));
-    const beforeCleanup=await snapshot();
-    await db.exec(await fs.readFile(resolve(directory,cleanupFile),'utf8'));
-    check(beforeCleanup===await snapshot(),'Workflow cleanup preserves existing rows');
-    await workspaceCleanupCases({q,one,denied,login,users,check});
+    const cleanupFile = (await fs.readdir(directory)).find((f) =>
+      f.endsWith("_workspace_cleanup.sql"),
+    );
+    const beforeCleanup = await snapshot();
+    await db.exec(await fs.readFile(resolve(directory, cleanupFile), "utf8"));
+    check(beforeCleanup === (await snapshot()), "Workflow cleanup preserves existing rows");
+    await workspaceCleanupCases({ q, one, denied, login, users, check });
     await login(null);
-    const counterFile=(await fs.readdir(directory)).find(f=>f.endsWith('_counter_workspace.sql'));
-    if(counterFile){ const beforeCounter=await snapshot(); await db.exec(await fs.readFile(resolve(directory,counterFile),'utf8')); check(beforeCounter===await snapshot(),'Combined bill migration preserves all existing rows'); await counterWorkspaceCases({db,q,one,denied,login,users,check}); }
+    const counterFile = (await fs.readdir(directory)).find((f) =>
+      f.endsWith("_counter_workspace.sql"),
+    );
+    if (counterFile) {
+      const beforeCounter = await snapshot();
+      await db.exec(await fs.readFile(resolve(directory, counterFile), "utf8"));
+      check(
+        beforeCounter === (await snapshot()),
+        "Combined bill migration preserves all existing rows",
+      );
+      await counterWorkspaceCases({ db, q, one, denied, login, users, check });
+    }
     await login(null);
-    const mixedFile=(await fs.readdir(directory)).find(f=>f.endsWith('_mixed_production.sql'));
-    if(mixedFile){ const beforeMixed=await snapshot(); await db.exec(await fs.readFile(resolve(directory,mixedFile),'utf8')); check(beforeMixed===await snapshot(),'Mixed specification migration preserves existing rows'); await mixedProductionCases({db,q,one,denied,login,users,check}); }
+    const mixedFile = (await fs.readdir(directory)).find((f) =>
+      f.endsWith("_mixed_production.sql"),
+    );
+    if (mixedFile) {
+      const beforeMixed = await snapshot();
+      await db.exec(await fs.readFile(resolve(directory, mixedFile), "utf8"));
+      check(
+        beforeMixed === (await snapshot()),
+        "Mixed specification migration preserves existing rows",
+      );
+      await mixedProductionCases({ db, q, one, denied, login, users, check });
+    }
     await login(null);
-    for(const suffix of ['_owner_definitions.sql','_workflow_integrations.sql','_finished_sale_compatibility.sql']){const file=(await fs.readdir(directory)).find(f=>f.endsWith(suffix));const before=await snapshot();await db.exec(await fs.readFile(resolve(directory,file),'utf8'));check(before===await snapshot(),'Definition/integration migration preserves all old rows');}
+    for (const suffix of [
+      "_owner_definitions.sql",
+      "_workflow_integrations.sql",
+      "_finished_sale_compatibility.sql",
+    ]) {
+      const file = (await fs.readdir(directory)).find((f) => f.endsWith(suffix));
+      const before = await snapshot();
+      await db.exec(await fs.readFile(resolve(directory, file), "utf8"));
+      check(
+        before === (await snapshot()),
+        "Definition/integration migration preserves all old rows",
+      );
+    }
     await login(null);
-    const compatPiece=(await q("select p.id,j.id job,loc.id floor,price.id price from finished_products p join production_jobs j on j.id=p.production_job_id join locations loc on loc.id=p.current_location_id join finished_product_prices price on price.finished_product_id=p.id where exists(select 1 from production_piece_specs where production_job_id=j.id) and p.status='available' order by p.id limit 1"))[0];
+    const compatPiece = (
+      await q(
+        "select p.id,j.id job,loc.id floor,price.id price from finished_products p join production_jobs j on j.id=p.production_job_id join locations loc on loc.id=p.current_location_id join finished_product_prices price on price.finished_product_id=p.id where exists(select 1 from production_piece_specs where production_job_id=j.id) and p.status='available' order by p.id limit 1",
+      )
+    )[0];
     await login(users.counter);
-    try{await one('select complete_finished_product_sale($1,$2,$3::jsonb,null,true,null,$4)',[randomUUID(),await one("select id from locations where kind='workshop'"),JSON.stringify([{piece_id:compatPiece.id,sp_version_id:compatPiece.price}]),users.salesperson]);throw Error('Workshop unexpectedly saleable');}catch(e){check(e.message.includes('Showroom'),'Older finished-sale API explicitly rejects Workshop source');}
-    const compatBill=await one('select complete_finished_product_sale($1,$2,$3::jsonb,null,true,null,$4)',[randomUUID(),compatPiece.floor,JSON.stringify([{piece_id:compatPiece.id,sp_version_id:compatPiece.price}]),users.salesperson]);
-    await login(null);check((await one('select item_snapshot from finished_product_sale_snapshots where order_item_id in(select id from order_items where order_id=$1)',[compatBill])).size,'Older finished-sale API captures actual piece size');
-    await workflowIntegrationCases({q,one,denied,login,users,check});
-    await login(null);const removalFile=(await fs.readdir(directory)).find(f=>f.endsWith('_definition_removal.sql'));const beforeRemoval=await snapshot();await db.exec(await fs.readFile(resolve(directory,removalFile),'utf8'));check(beforeRemoval===await snapshot(),'Delete-controls migration preserves every pre-existing row');await definitionRemovalCases({q,one,denied,login,users,check});
-    if(floorsOnly){const file=(await fs.readdir(directory)).find(f=>f.endsWith('_showroom_floors_only.sql'));await showroomFloorsOnlyCases({db,q,one,denied,login,users,check,migration:await fs.readFile(resolve(directory,file),'utf8')});}
-    if(counterDetails){const file=(await fs.readdir(directory)).find(f=>f.endsWith('_counter_contact_digits.sql'));await counterContactCases({db,q,one,denied,login,users,check,migration:await fs.readFile(resolve(directory,file),'utf8')});}
-    if(stitching){const file=(await fs.readdir(directory)).find(f=>f.endsWith('_counter_stitching_pricing.sql'));await counterStitchingCases({db,q,one,denied,login,users,check,migration:await fs.readFile(resolve(directory,file),'utf8')});}
+    try {
+      await one("select complete_finished_product_sale($1,$2,$3::jsonb,null,true,null,$4)", [
+        randomUUID(),
+        await one("select id from locations where kind='workshop'"),
+        JSON.stringify([{ piece_id: compatPiece.id, sp_version_id: compatPiece.price }]),
+        users.salesperson,
+      ]);
+      throw Error("Workshop unexpectedly saleable");
+    } catch (e) {
+      check(
+        e.message.includes("Showroom"),
+        "Older finished-sale API explicitly rejects Workshop source",
+      );
+    }
+    const compatBill = await one(
+      "select complete_finished_product_sale($1,$2,$3::jsonb,null,true,null,$4)",
+      [
+        randomUUID(),
+        compatPiece.floor,
+        JSON.stringify([{ piece_id: compatPiece.id, sp_version_id: compatPiece.price }]),
+        users.salesperson,
+      ],
+    );
+    await login(null);
+    check(
+      (
+        await one(
+          "select item_snapshot from finished_product_sale_snapshots where order_item_id in(select id from order_items where order_id=$1)",
+          [compatBill],
+        )
+      ).size,
+      "Older finished-sale API captures actual piece size",
+    );
+    await workflowIntegrationCases({ q, one, denied, login, users, check });
+    await login(null);
+    const removalFile = (await fs.readdir(directory)).find((f) =>
+      f.endsWith("_definition_removal.sql"),
+    );
+    const beforeRemoval = await snapshot();
+    await db.exec(await fs.readFile(resolve(directory, removalFile), "utf8"));
+    check(
+      beforeRemoval === (await snapshot()),
+      "Delete-controls migration preserves every pre-existing row",
+    );
+    await definitionRemovalCases({ q, one, denied, login, users, check });
+    if (floorsOnly) {
+      const file = (await fs.readdir(directory)).find((f) =>
+        f.endsWith("_showroom_floors_only.sql"),
+      );
+      await showroomFloorsOnlyCases({
+        db,
+        q,
+        one,
+        denied,
+        login,
+        users,
+        check,
+        migration: await fs.readFile(resolve(directory, file), "utf8"),
+      });
+    }
+    if (counterDetails) {
+      const file = (await fs.readdir(directory)).find((f) =>
+        f.endsWith("_counter_contact_digits.sql"),
+      );
+      await counterContactCases({
+        db,
+        q,
+        one,
+        denied,
+        login,
+        users,
+        check,
+        migration: await fs.readFile(resolve(directory, file), "utf8"),
+      });
+    }
+    if (stitching) {
+      const file = (await fs.readdir(directory)).find((f) =>
+        f.endsWith("_counter_stitching_pricing.sql"),
+      );
+      await counterStitchingCases({
+        db,
+        q,
+        one,
+        denied,
+        login,
+        users,
+        check,
+        migration: await fs.readFile(resolve(directory, file), "utf8"),
+      });
+    }
+    if (productionReceipt) {
+      const file = (await fs.readdir(directory)).find((f) =>
+        f.endsWith("_production_scan_receipt.sql"),
+      );
+      await productionScanReceiptCases({
+        db,
+        q,
+        one,
+        denied,
+        login,
+        users,
+        check,
+        migration: await fs.readFile(resolve(directory, file), "utf8"),
+      });
+    }
+    if (productionReceipt) {
+      const file = (await fs.readdir(directory)).find((f) =>
+        f.endsWith("_showroom_fabric_available.sql"),
+      );
+      await showroomFabricTotalCases({
+        db,
+        q,
+        one,
+        denied,
+        login,
+        users,
+        check,
+        migration: await fs.readFile(resolve(directory, file), "utf8"),
+      });
+    }
     console.log(
       directory + " " + (demo ? "demo" : "clean") + ": Labels-first Stock Entry verified",
     );
@@ -863,7 +1024,15 @@ for (const [directory, demo] of [
   }
 }
 await fs.writeFile(
-  stitching ? "docs/COUNTER_STITCHING_DATABASE_VERIFICATION.json" : counterDetails ? "docs/COUNTER_BARCODE_DETAILS_DATABASE_VERIFICATION.json" : floorsOnly ? "docs/SHOWROOM_FLOORS_ONLY_DATABASE_VERIFICATION.json" : "docs/DEFINITION_REMOVAL_DATABASE_VERIFICATION.json",
+  productionReceipt
+    ? "docs/PRODUCTION_SCAN_RECEIPT_DATABASE_VERIFICATION.json"
+    : stitching
+      ? "docs/COUNTER_STITCHING_DATABASE_VERIFICATION.json"
+      : counterDetails
+        ? "docs/COUNTER_BARCODE_DETAILS_DATABASE_VERIFICATION.json"
+        : floorsOnly
+          ? "docs/SHOWROOM_FLOORS_ONLY_DATABASE_VERIFICATION.json"
+          : "docs/DEFINITION_REMOVAL_DATABASE_VERIFICATION.json",
   JSON.stringify({ verified_at: new Date().toISOString(), checks, passed: true }, null, 2),
 );
 console.log(`PASS: ${checks} cumulative optional-detail Stock Entry checks`);

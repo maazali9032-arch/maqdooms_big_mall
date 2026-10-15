@@ -434,7 +434,13 @@ export function FabricTransfer() {
             </p>
             <div ref={labels} className="hidden">
               {selected.map((r) => (
-                <article key={r.thaan}>
+                <article
+                  key={r.thaan}
+                  data-barcode-label=""
+                  data-code={r.stock.barcode}
+                  data-name={r.stock.fabric_name}
+                  data-description={r.stock.batch_code}
+                >
                   <Symbol code={r.stock.barcode} />
                   <p>{r.stock.barcode}</p>
                   <p>
