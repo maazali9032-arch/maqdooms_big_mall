@@ -52,7 +52,7 @@ try {
       "Finished Products",
       "Account",
     ],
-    counter: ["Counter / POS", "Customer Tailoring", "Owner Production", "Account"],
+    counter: ["Counter / POS", "Account"],
     ecommerce_manager: ["Showroom Fabric", "Showroom Finished Products", "Account"],
     tailor: ["Customer Tailoring", "Production Tailoring", "Account"],
     salesperson: ["My Work", "Account"],

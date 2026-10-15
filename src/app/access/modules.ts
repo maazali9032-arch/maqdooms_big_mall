@@ -41,7 +41,7 @@ const ALL = Object.keys(MODULE_PATHS) as ModuleKey[];
 export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
   stock_entry: ["stock_entry", "stock_transfer", "inventory", "settings"],
-  counter: ["pos", "tailoring", "settings"],
+  counter: ["pos", "settings"],
   salesperson: ["salesperson_work", "settings"],
   ecommerce_manager: ["ecommerce", "settings"],
   tailor: ["tailoring", "settings"],

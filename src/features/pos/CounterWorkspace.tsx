@@ -23,6 +23,7 @@ import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
+import { resolveCounterBarcode, type CounterWork } from "./counter-barcode";
 import {
   reserveTotals,
   counterPayload,
@@ -58,14 +59,26 @@ export function CounterWorkspace() {
     <CounterContent
       canSell={isOwner || can("pos.sell")}
       canTailor={isOwner || (can("pos.issue_to_tailoring") && can("pos.enter_tailoring_total"))}
+      canIssue={isOwner || can("pos.issue_to_tailoring")}
     />
   );
 }
-function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: boolean }) {
+function CounterContent({
+  canSell,
+  canTailor,
+  canIssue,
+}: {
+  canSell: boolean;
+  canTailor: boolean;
+  canIssue: boolean;
+}) {
   const qc = useQueryClient();
   const billCommitted = useRef(false);
-  const [source, setSource] = useState<SourceLocation | null>(null),
-    [mode, setMode] = useState("bill");
+  const [source, setSource] = useState<SourceLocation | null>(null);
+  const [work, setWork] = useState<CounterWork | null>(null);
+  const [extraScanned, setExtraScanned] = useState<ScanRecord | null>(null);
+  const [extraLocked, setExtraLocked] = useState(false);
+  const contextVersion = useRef(0);
   const [barcode, setBarcode] = useState(""),
     [rows, setRows] = useState<CounterRow[]>([]),
     [groups, setGroups] = useState<TailoringGroup[]>([]);
@@ -77,8 +90,7 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
     [reserves, setReserves] = useState<ScanRecord | null>(null),
     [ambiguous, setAmbiguous] = useState<ScanRecord | null>(null);
   const [pending, setPending] = useState<BillRequest | null>(null),
-    [receipt, setReceipt] = useState<CounterReceipt | null>(null),
-    [find, setFind] = useState("");
+    [receipt, setReceipt] = useState<CounterReceipt | null>(null);
   const definitions = useQuery({
     queryKey: ["production-catalog"],
     enabled: canTailor,
@@ -92,16 +104,27 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
     },
   });
   const scan = useMutation({
-    mutationFn: async (code: string) => {
-      const { data, error } = await supabase.rpc("counter_scan_barcode", {
-        p_barcode: code,
-        p_source: source!.id,
-      });
-      if (error) throw error;
-      if (!data) throw new Error("No stock matches this barcode");
-      return data as unknown as ScanRecord;
-    },
-    onSuccess: (record) => {
+    mutationFn: (code: string) => resolveCounterBarcode(code, source!.id),
+    onSuccess: (result) => {
+      if (result.kind === "document") {
+        if (rows.length) {
+          toast.error("Complete or clear the current bill before opening an existing ID");
+          return;
+        }
+        contextVersion.current++;
+        setWork(result.work);
+        setReceipt(result.receipt);
+        setExtraScanned(null);
+        setBarcode("");
+        return;
+      }
+      const record = result.item;
+      if (work && record.kind !== "fabric") {
+        toast.error(
+          "This ID is loaded for extra fabric. Start a new bill to sell a finished piece.",
+        );
+        return;
+      }
       if (record.kind === "product" && !record.available) {
         toast.error("This finished piece is not available on your selected floor");
         return;
@@ -114,6 +137,20 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
         toast.error("No fabric is available on this floor");
         return;
       }
+      if (work) {
+        if (cuts.length !== 1) {
+          toast.error("Scan the physical Thaan’s unique barcode on this floor");
+          return;
+        }
+        setExtraScanned({ ...record, cuts });
+        setBarcode("");
+        return;
+      }
+      if (!canSell) {
+        toast.error("Selling permission required");
+        return;
+      }
+      setReceipt(null);
       if (cuts.length > 1) {
         setAmbiguous({ ...record, cuts });
         return;
@@ -161,16 +198,6 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
       toast.error(e.message);
     },
   });
-  const lookup = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.rpc("counter_bill", { p_code: find.trim() });
-      if (error) throw error;
-      if (!data) throw new Error("No combined bill matches this ID");
-      return data as unknown as CounterReceipt;
-    },
-    onSuccess: setReceipt,
-    onError: (e) => toast.error(e.message),
-  });
   const settle = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc("mark_counter_bill_paid", {
@@ -189,7 +216,21 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
     },
     onError: (e) => toast.error(e.message),
   });
-  const frozen = bill.isPending || !!pending;
+  const frozen = bill.isPending || !!pending || extraLocked || settle.isPending;
+  async function refreshWork() {
+    if (!work || !source) return;
+    const version = contextVersion.current;
+    try {
+      const result = await resolveCounterBarcode(work.code, source.id);
+      if (version !== contextVersion.current) return;
+      if (result.kind === "document") {
+        setWork(result.work);
+        setReceipt(result.receipt);
+      }
+    } catch {
+      toast.warning("Fabric was issued. Scan the ID again to refresh its recorded details.");
+    }
+  }
   function addGroup() {
     try {
       const selected = rows.filter((r) => r.selected && !r.group && r.scan.kind === "fabric");
@@ -245,66 +286,80 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
         <strong>{source.name}</strong>
         <Button
           variant="outline"
-          disabled={frozen || !!rows.length}
+          disabled={frozen || scan.isPending || !!rows.length}
           onClick={() => {
+            contextVersion.current++;
             setSource(null);
+            setWork(null);
+            setExtraScanned(null);
             setReceipt(null);
+            setBarcode("");
           }}
         >
           Change floor
         </Button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {[
-          ["bill", "New bill"],
-          ["extra", "Extra fabric for existing ID"],
-          ["find", "Find bill"],
-        ].map(([id, label]) => (
-          <Button
-            key={id}
-            variant={mode === id ? "default" : "outline"}
-            disabled={frozen || (!!rows.length && mode !== id)}
-            onClick={() => {
-              setMode(id!);
-              setReceipt(null);
-            }}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
-      {mode === "extra" ? (
-        <AdditionalCounterFabric source={source} />
-      ) : mode === "find" ? (
-        <Panel title="Find customer bill">
-          <BarcodeEntry
-            label="Find bill ID"
-            value={find}
-            onChange={setFind}
-            onScan={() => lookup.mutate()}
-            action="Find bill"
-            disabled={lookup.isPending}
-          />
-          {receipt && !receipt.paid && (
-            <Button className="mt-3" disabled={settle.isPending} onClick={() => settle.mutate()}>
-              Record full payment {reportMoney(receipt.total_paise)}
+      <Panel
+        title="Scan item, customer bill or Production ID"
+        description={
+          work
+            ? `Extra fabric for ${work.code} · ${source.name}`
+            : "Item barcode: add a sale. Existing bill or Production ID: load its recorded work."
+        }
+        actions={
+          (work || receipt) && (
+            <Button
+              variant="outline"
+              disabled={frozen || scan.isPending}
+              onClick={() => {
+                contextVersion.current++;
+                setWork(null);
+                setReceipt(null);
+                setExtraScanned(null);
+                setBarcode("");
+              }}
+            >
+              New bill
             </Button>
-          )}
-        </Panel>
-      ) : (
+          )
+        }
+      >
+        <BarcodeEntry
+          value={barcode}
+          onChange={(value) => {
+            setBarcode(value);
+            setExtraScanned(null);
+          }}
+          onScan={(code) => scan.mutate(code)}
+          label="Counter barcode"
+          placeholder={
+            work
+              ? "Scan a Thaan to issue, or another bill / Production ID"
+              : "Scan or type an item, customer bill or Production ID"
+          }
+          disabled={frozen || scan.isPending}
+        />
+      </Panel>
+      {work && (
+        <AdditionalCounterFabric
+          key={`${source.id}:${work.kind}:${work.code}`}
+          source={source}
+          work={work}
+          scanned={extraScanned}
+          onScannedChange={setExtraScanned}
+          onLocked={setExtraLocked}
+          onIssued={() => void refreshWork()}
+          disabled={scan.isPending || settle.isPending}
+          canIssue={canIssue}
+        />
+      )}
+      {!work && !receipt && (
         <>
           <Panel
-            title="Scan items for this bill"
+            title="Current bill"
             description="Fabric prices are per metre. Finished pieces use their saved fixed SP. Select fabric rows for a tailoring job priced as one total."
           >
-            <fieldset disabled={frozen} className="space-y-4">
-              <BarcodeEntry
-                value={barcode}
-                onChange={setBarcode}
-                onScan={(code) => scan.mutate(code)}
-                label="Counter item barcode"
-                disabled={scan.isPending || !canSell || frozen}
-              />
+            <fieldset disabled={frozen || scan.isPending} className="space-y-4">
               <div className="space-y-2">
                 {rows.map((r) => (
                   <div
@@ -557,7 +612,24 @@ function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: b
           </Panel>
         </>
       )}
-      {receipt && <CounterBillReceipt receipt={receipt} />}
+      {receipt && !receipt.paid && (
+        <Button disabled={frozen || scan.isPending || !canSell} onClick={() => settle.mutate()}>
+          Record full payment {reportMoney(receipt.total_paise)}
+        </Button>
+      )}
+      {receipt &&
+        (work ? (
+          <details className="rounded-xl border bg-card p-3">
+            <summary className="cursor-pointer font-semibold">
+              Original customer bill · {receipt.code}
+            </summary>
+            <div className="mt-3">
+              <CounterBillReceipt receipt={receipt} />
+            </div>
+          </details>
+        ) : (
+          <CounterBillReceipt receipt={receipt} />
+        ))}
       <Dialog
         open={!!reserves || !!ambiguous}
         onOpenChange={(open) => {

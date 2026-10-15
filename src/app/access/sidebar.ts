@@ -69,8 +69,6 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
     }
     if (roles.includes("counter")) {
       add("/pos", undefined, "Counter / POS", "pos", ShoppingCart);
-      add("/tailoring", "customer", "Customer Tailoring", "tailoring", Scissors);
-      add("/tailoring", "ongoing", "Owner Production", "tailoring", Scissors, "production.view");
     }
     if (roles.includes("ecommerce_manager")) {
       add("/ecommerce", "fabric", "Showroom Fabric", "ecommerce");
