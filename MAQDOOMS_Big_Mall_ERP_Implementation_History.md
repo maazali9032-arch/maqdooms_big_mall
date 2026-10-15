@@ -6182,3 +6182,17 @@ Migration 20261015000100_owner_barcode_inspector.sql / Drizzle 0043 applied atom
 Previous POS/Production/navigation work remains separate in-progress work; no pending 0042 cleanup rollout is bundled with this read-only inspector.
 
 Read-only legacy audit compatibility extension 20261015000200 / Drizzle 0044 adds saved parent document code references and recorded actor names without changing any earlier migration bytes. Isolated Vercel production build passed.
+
+# 55. COMPLETED BILLING, MIXED PRODUCTION AND SHARED DEFINITIONS — 15 OCTOBER 2026
+
+Completes the previously pending section-54 workflow work. Inventory now has stock/scan, actual-ledger movements and archive views; duplicate legacy/receiving/configuration links are removed. Transfer notes are optional. Counter selects a Showroom floor first, scans fabric and fixed-SP products into one bill, groups tailoring cuts under one whole-job price, reuses optional customer contacts, requires credited Salesperson and supports paid/unpaid tailoring bills with immutable full-payment collection. Extra fabric adds issue-time CP to the original job and margin without changing its customer amount, as explicitly approved.
+
+Production supports one ID with shared product/design/size defaults and per-piece overrides, one factory and multiple tailors, immediate scanned fabric deduction, whole Workshop receipt, equal issued-CP allocation with exact remainder, saved SP and Showroom transfer. Owner Administration provides shared Factory → Tailor, Products/Designs and Locations/Floors definitions. Operational work no longer repeats setup pages. Salesperson work shows each attributed combined bill once with linked tailoring progress. Owner Reports and the read-only mobile inspector include the new recorded payment, material-cost and specification evidence.
+
+Forward versions 0045–0050 preserve existing business/account/audit rows; applied bytes of 0040/0041/0043/0044 remain unchanged. Verification: 1,836 cumulative database assertions; 27 workflow browser checks plus 31 Owner-dashboard/report and 30 inspector regression checks. TypeScript and scoped lint pass (one pre-existing Fast Refresh warning). See docs/WORKFLOW_WORKSPACES.md and associated proof files for build, rollout, live read-only verification and device acceptance limits. Detailed consumption, partial receipt, salary/P2P and the separate future public website integration remain outside this scope.
+
+Rollout and acceptance completed: forward 0045–0050 applied, all rows in 88 pre-existing public tables preserved; 86 read-only live checks passed over 30 existing barcodes, both posted transfers and all 96 current public tables. No live operational fixtures were posted. Isolated Vercel production build passed; source push is recorded in Git history. Due-today/overdue dashboard alerts now use actual recorded delivery dates. Historical jobs without due dates remain excluded.
+
+Forward 0050 retains the existing Showroom-only authorization on the older finished-sale endpoint and captures actual per-piece design/size. It supersedes that compatibility function without editing previously applied migration bytes.
+
+Live role probes compare all business/audit and account identity/access fields. The normal concurrent profile last_login timestamp is excluded from acceptance fingerprints; atomic migration preservation includes every existing column.

@@ -1,0 +1,32 @@
+{
+  "started_at": "2026-10-15T05:28:35.590Z",
+  "finished_at": "2026-10-15T05:29:21.956Z",
+  "applied": [
+    "20261015000300_workspace_cleanup.sql",
+    "20261015000400_counter_workspace.sql",
+    "20261015000500_mixed_production.sql",
+    "20261015000600_owner_definitions.sql",
+    "20261015000700_workflow_integrations.sql"
+  ],
+  "verified": [
+    "20261015000300_workspace_cleanup.sql",
+    "20261015000400_counter_workspace.sql",
+    "20261015000500_mixed_production.sql",
+    "20261015000600_owner_definitions.sql",
+    "20261015000700_workflow_integrations.sql"
+  ],
+  "error": null,
+  "preexisting_tables_preserved": 88,
+  "all_preexisting_rows_preserved": true,
+  "compatibility_followup": {
+    "applied": [
+      "20261015000800_finished_sale_compatibility.sql"
+    ],
+    "verified": [
+      "20261015000800_finished_sale_compatibility.sql"
+    ],
+    "finished_at": "2026-10-15T05:33:28.137Z",
+    "preexisting_tables_preserved": 96,
+    "all_preexisting_rows_preserved": true
+  }
+}

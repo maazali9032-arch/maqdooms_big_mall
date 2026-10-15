@@ -112,9 +112,11 @@ export function paid(r: EvidenceRow) {
   return (
     r.data["status"] === "completed" &&
     Boolean(r.data["payment_confirmed_at"]) &&
-    ["direct_fabric_sale", "finished_product_sale", "ecommerce_sale"].includes(
+    (["direct_fabric_sale", "finished_product_sale", "ecommerce_sale", "counter_bill"].includes(
       String(r.data["kind"]),
-    )
+    ) ||
+      (r.data["kind"] === "customer_tailoring" &&
+        r.data["payment_basis"] === "immutable_counter_receipt"))
   );
 }
 export function orderDate(r: EvidenceRow) {

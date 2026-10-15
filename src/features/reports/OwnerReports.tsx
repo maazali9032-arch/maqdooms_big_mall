@@ -448,7 +448,7 @@ export function OwnerReports({ initialDataset }: { initialDataset?: string }) {
                     {snapshot
                       ? "Current recorded state — date range does not apply; this is not a historical stock snapshot."
                       : dataset === "orders"
-                        ? "Paid fabric/product sales use completion date. Tailoring bookings and other orders use creation date. These amounts stay separate."
+                        ? "Paid bills use their recorded collection date. Tailoring bookings use creation date and stay separate from collections."
                         : "Dates filter recorded event/creation time. Current status and any recorded cost evidence are displayed; they are not reconstructed historical values."}
                   </p>
                   <p className="text-xs text-muted-foreground">

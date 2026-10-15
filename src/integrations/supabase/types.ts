@@ -1138,6 +1138,54 @@ export type Database = {
       };
     };
     Functions: {
+      ongoing_production_work: { Args: Record<PropertyKey, never>; Returns: Json };
+      owner_factory_users: { Args: Record<PropertyKey, never>; Returns: Json };
+      owner_assign_factory_user: {
+        Args: { p_request: string; p_user: string; p_factory: string; p_expected?: string | null };
+        Returns: string;
+      };
+      workshop_receipt_queue: { Args: Record<PropertyKey, never>; Returns: Json };
+      create_mixed_production: {
+        Args: {
+          p_request: string;
+          p_source: string;
+          p_items: Json;
+          p_specs: Json;
+          p_assignments: Json;
+          p_notes?: string | null;
+        };
+        Returns: string;
+      };
+      tailoring_work_catalog: { Args: Record<PropertyKey, never>; Returns: Json };
+      complete_counter_bill: {
+        Args: {
+          p_request: string;
+          p_source: string;
+          p_items: Json;
+          p_tailoring: Json;
+          p_paid: boolean;
+          p_salesperson: string;
+          p_customer?: string | null;
+          p_name?: string | null;
+          p_contact?: string | null;
+        };
+        Returns: string;
+      };
+      counter_scan_barcode: { Args: { p_barcode: string; p_source: string }; Returns: Json };
+      counter_bill: { Args: { p_code: string }; Returns: Json };
+      customer_tailoring_work: { Args: { p_code?: string | null }; Returns: Json };
+      mark_counter_bill_paid: { Args: { p_request: string; p_bill: string }; Returns: string };
+      issue_additional_customer_fabric: {
+        Args: {
+          p_request: string;
+          p_job: string;
+          p_source: string;
+          p_barcode: string;
+          p_quantity: number;
+        };
+        Returns: string;
+      };
+
       owner_barcode_inspect: {
         Args: { p_barcode: string; p_before?: string; p_before_key?: string; p_limit?: number };
         Returns: Json;
@@ -1197,6 +1245,11 @@ export type Database = {
         };
         Returns: string;
       };
+      stock_activity: {
+        Args: { p_limit?: number; p_after?: string; p_after_id?: string; p_search?: string };
+        Returns: Json;
+      };
+      fabric_inventory_archive: { Args: Record<PropertyKey, never>; Returns: Json };
       owner_daily_business: { Args: { p_day: string }; Returns: Json };
       owner_monthly_business: {
         Args: {

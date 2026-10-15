@@ -116,11 +116,8 @@ export function FinishedProductInventory() {
   const transfer = useMutation({
     mutationFn: async () => {
       if (!allowed) throw new Error("Authorized finished-product transfer staff required");
-      if (
-        !pending &&
-        (!selected.length || selected.length > 200 || !source || !destination || !reason.trim())
-      )
-        throw new Error("Select 1–200 pieces, source, destination and a reason");
+      if (!pending && (!selected.length || selected.length > 200 || !source || !destination))
+        throw new Error("Select 1–200 pieces, source and destination");
       const request = pending ?? {
         p_request: crypto.randomUUID(),
         p_source: source,

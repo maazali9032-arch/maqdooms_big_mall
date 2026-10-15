@@ -165,8 +165,7 @@ export function FabricTransfer() {
     let work = pending;
     try {
       if (!work.length) {
-        if (!sourceId || !reason.trim() || !selected.length)
-          throw new Error("Select rows and enter a transfer reason/reference.");
+        if (!sourceId || !selected.length) throw new Error("Select transfer rows.");
         const groups = new Map<string, Plan>();
         for (const row of selected) {
           const item = authority(row),
@@ -414,18 +413,15 @@ export function FabricTransfer() {
               </table>
             </div>
             <Input
-              aria-label="Fabric Transfer reason or reference"
+              aria-label="Fabric Transfer note (optional) or reference"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Transfer reason / reference"
+              placeholder="Note / reference (optional)"
               disabled={frozen}
             />
             <Button
               disabled={
-                busy ||
-                loading ||
-                Boolean(loadError) ||
-                (!pending.length && (!selected.length || !reason.trim()))
+                busy || loading || Boolean(loadError) || (!pending.length && !selected.length)
               }
               onClick={() => void post()}
             >

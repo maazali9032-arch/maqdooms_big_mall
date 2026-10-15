@@ -1,0 +1,588 @@
+import { FabricReserveTree } from "./FabricReserveTree";
+import { useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/app/providers/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Panel } from "@/shared/components/page";
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
+import { SourcePicker, type SourceLocation } from "@/shared/components/source-picker";
+import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
+import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
+import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
+import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
+import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
+import {
+  reserveTotals,
+  counterPayload,
+  previewTotal,
+  availableAt,
+  type CounterRow,
+  type ScanRecord,
+  type TailoringGroup,
+} from "./counter-workspace-model";
+type BillRequest = {
+  p_request: string;
+  p_source: string;
+  p_items: ReturnType<typeof counterPayload>["items"];
+  p_tailoring: ReturnType<typeof counterPayload>["tailoring"];
+  p_paid: boolean;
+  p_salesperson: string;
+  p_name: string;
+  p_contact: string;
+};
+const blankGroup = () => ({
+  garment: "",
+  delivery: "",
+  factory: "",
+  assignment: "",
+  total: "",
+  design: "",
+  customDesign: "",
+});
+export function CounterWorkspace() {
+  const { isOwner, roles, can } = useSession();
+  if (!isOwner && !roles.includes("counter")) return <p>Counter access required.</p>;
+  return (
+    <CounterContent
+      canSell={isOwner || can("pos.sell")}
+      canTailor={isOwner || (can("pos.issue_to_tailoring") && can("pos.enter_tailoring_total"))}
+    />
+  );
+}
+function CounterContent({ canSell, canTailor }: { canSell: boolean; canTailor: boolean }) {
+  const qc = useQueryClient();
+  const billCommitted = useRef(false);
+  const [source, setSource] = useState<SourceLocation | null>(null),
+    [mode, setMode] = useState("bill");
+  const [barcode, setBarcode] = useState(""),
+    [rows, setRows] = useState<CounterRow[]>([]),
+    [groups, setGroups] = useState<TailoringGroup[]>([]);
+  const [salesperson, setSalesperson] = useState(""),
+    [name, setName] = useState(""),
+    [contact, setContact] = useState(""),
+    [paid, setPaid] = useState(true);
+  const [form, setForm] = useState(blankGroup),
+    [reserves, setReserves] = useState<ScanRecord | null>(null),
+    [ambiguous, setAmbiguous] = useState<ScanRecord | null>(null);
+  const [pending, setPending] = useState<BillRequest | null>(null),
+    [receipt, setReceipt] = useState<CounterReceipt | null>(null),
+    [find, setFind] = useState("");
+  const definitions = useQuery({
+    queryKey: ["production-catalog"],
+    enabled: canTailor,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("tailoring_work_catalog");
+      if (error) throw error;
+      return data as unknown as {
+        products: { id: string; name: string }[];
+        designs: { id: string; name: string; code: string }[];
+      };
+    },
+  });
+  const scan = useMutation({
+    mutationFn: async (code: string) => {
+      const { data, error } = await supabase.rpc("counter_scan_barcode", {
+        p_barcode: code,
+        p_source: source!.id,
+      });
+      if (error) throw error;
+      if (!data) throw new Error("No stock matches this barcode");
+      return data as unknown as ScanRecord;
+    },
+    onSuccess: (record) => {
+      if (record.kind === "product" && !record.available) {
+        toast.error("This finished piece is not available on your selected floor");
+        return;
+      }
+      const cuts = (record.cuts ?? []).filter(
+        (c) => Number(c.locations.find((l) => l.id === source!.id)?.quantity_mm ?? 0) > 0,
+      );
+      if (record.kind === "fabric" && !cuts.length) {
+        setReserves(record);
+        toast.error("No fabric is available on this floor");
+        return;
+      }
+      if (cuts.length > 1) {
+        setAmbiguous({ ...record, cuts });
+        return;
+      }
+      addRow(record, cuts[0]);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  function addRow(record: ScanRecord, cut?: CounterRow["cut"]) {
+    const key = record.kind === "product" ? record.id! : cut!.inventory_item_id;
+    if (rows.some((r) => r.key === key)) {
+      toast.info("This barcode is already listed");
+      setBarcode("");
+      return;
+    }
+    setRows([...rows, { key, scan: record, cut, metres: "", price: "", selected: false }]);
+    setBarcode("");
+    setAmbiguous(null);
+  }
+  const bill = useMutation({
+    mutationFn: async (args: BillRequest) => {
+      setPending(args);
+      const { data, error } = await supabase.rpc("complete_counter_bill", args);
+      if (error) throw error;
+      billCommitted.current = true;
+      const result = await supabase.rpc("counter_bill", { p_code: data });
+      if (result.error) throw result.error;
+      return result.data as unknown as CounterReceipt;
+    },
+    onSuccess: (doc) => {
+      setReceipt(doc);
+      billCommitted.current = false;
+      setPending(null);
+      setRows([]);
+      setGroups([]);
+      setForm(blankGroup());
+      setName("");
+      setContact("");
+      setPaid(true);
+      void qc.invalidateQueries();
+      toast.success("Bill saved; stock updated");
+    },
+    onError: (e) => {
+      if (!billCommitted.current && definiteDatabaseRejection(e)) setPending(null);
+      toast.error(e.message);
+    },
+  });
+  const lookup = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("counter_bill", { p_code: find.trim() });
+      if (error) throw error;
+      if (!data) throw new Error("No combined bill matches this ID");
+      return data as unknown as CounterReceipt;
+    },
+    onSuccess: setReceipt,
+    onError: (e) => toast.error(e.message),
+  });
+  const settle = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("mark_counter_bill_paid", {
+        p_request: crypto.randomUUID(),
+        p_bill: receipt!.id,
+      });
+      if (error) throw error;
+      const result = await supabase.rpc("counter_bill", { p_code: receipt!.id });
+      if (result.error) throw result.error;
+      return result.data as unknown as CounterReceipt;
+    },
+    onSuccess: (doc) => {
+      setReceipt(doc);
+      void qc.invalidateQueries();
+      toast.success("Full payment recorded");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const frozen = bill.isPending || !!pending;
+  function addGroup() {
+    try {
+      const selected = rows.filter((r) => r.selected && !r.group && r.scan.kind === "fabric");
+      if (!selected.length) throw new Error("Select one or more fabric rows");
+      if (!form.garment.trim() || !form.delivery || !form.assignment || !form.total.trim())
+        throw new Error("Enter garment, date, factory, tailor and entire tailoring total");
+      const group = { ...form, id: crypto.randomUUID(), keys: selected.map((r) => r.key) };
+      counterPayload(
+        selected.map((r) => ({ ...r, group: group.id })),
+        [group],
+        source!.id,
+      );
+      setGroups([...groups, group]);
+      setRows(
+        rows.map((r) =>
+          group.keys.includes(r.key) ? { ...r, group: group.id, selected: false } : r,
+        ),
+      );
+      setForm(blankGroup());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Check tailoring details");
+    }
+  }
+  function submit() {
+    if (pending) {
+      bill.mutate(pending);
+      return;
+    }
+    try {
+      if (!salesperson) throw new Error("Select the credited Salesperson");
+      const payload = counterPayload(rows, groups, source!.id);
+      bill.mutate({
+        p_request: crypto.randomUUID(),
+        p_source: source!.id,
+        p_items: payload.items,
+        p_tailoring: payload.tailoring,
+        p_paid: groups.length ? paid : true,
+        p_salesperson: salesperson,
+        p_name: name,
+        p_contact: contact,
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Check the bill");
+    }
+  }
+  if (!source) return <SourcePicker onChoose={setSource} />;
+  const total = previewTotal(rows, groups);
+  const updateRow = (key: string, change: Partial<CounterRow>) =>
+    setRows(rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3">
+        <strong>{source.name}</strong>
+        <Button
+          variant="outline"
+          disabled={frozen || !!rows.length}
+          onClick={() => {
+            setSource(null);
+            setReceipt(null);
+          }}
+        >
+          Change floor
+        </Button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[
+          ["bill", "New bill"],
+          ["extra", "Extra fabric for existing ID"],
+          ["find", "Find bill"],
+        ].map(([id, label]) => (
+          <Button
+            key={id}
+            variant={mode === id ? "default" : "outline"}
+            disabled={frozen || (!!rows.length && mode !== id)}
+            onClick={() => {
+              setMode(id!);
+              setReceipt(null);
+            }}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      {mode === "extra" ? (
+        <AdditionalCounterFabric source={source} />
+      ) : mode === "find" ? (
+        <Panel title="Find customer bill">
+          <BarcodeEntry
+            label="Find bill ID"
+            value={find}
+            onChange={setFind}
+            onScan={() => lookup.mutate()}
+            action="Find bill"
+            disabled={lookup.isPending}
+          />
+          {receipt && !receipt.paid && (
+            <Button className="mt-3" disabled={settle.isPending} onClick={() => settle.mutate()}>
+              Record full payment {reportMoney(receipt.total_paise)}
+            </Button>
+          )}
+        </Panel>
+      ) : (
+        <>
+          <Panel
+            title="Scan items for this bill"
+            description="Fabric prices are per metre. Finished pieces use their saved fixed SP. Select fabric rows for a tailoring job priced as one total."
+          >
+            <fieldset disabled={frozen} className="space-y-4">
+              <BarcodeEntry
+                value={barcode}
+                onChange={setBarcode}
+                onScan={(code) => scan.mutate(code)}
+                label="Counter item barcode"
+                disabled={scan.isPending || !canSell || frozen}
+              />
+              <div className="space-y-2">
+                {rows.map((r) => (
+                  <div
+                    key={r.key}
+                    className="grid grid-cols-2 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_130px_180px_auto]"
+                  >
+                    <div className="col-span-2 min-w-0 md:col-span-1">
+                      <div className="flex items-start gap-2">
+                        {r.scan.kind === "fabric" && !r.group && canTailor && (
+                          <input
+                            aria-label={`Select ${r.scan.barcode} for tailoring`}
+                            type="checkbox"
+                            className="mt-1 size-4"
+                            checked={r.selected}
+                            onChange={(e) => updateRow(r.key, { selected: e.target.checked })}
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <strong className="text-sm">{r.scan.name}</strong>
+                          <p className="break-all font-mono text-xs text-muted-foreground">
+                            {r.scan.barcode}
+                          </p>
+                          {r.scan.kind === "product" ? (
+                            <p className="text-xs">
+                              Size {r.scan.size ?? "Not recorded"} · {r.scan.design}
+                            </p>
+                          ) : (
+                            <>
+                              <p className="text-xs">
+                                Available: {reportQuantity(String(availableAt(r, source.id)), "mm")}
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-auto max-w-full justify-start px-0 text-left whitespace-normal"
+                                onClick={() => setReserves(r.scan)}
+                              >
+                                {reserveTotals(r.scan)}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {r.scan.kind === "fabric" ? (
+                      <label className="text-xs">
+                        Cut metres
+                        <Input
+                          aria-label={`Cut metres ${r.scan.barcode}`}
+                          inputMode="decimal"
+                          value={r.metres}
+                          onChange={(e) => updateRow(r.key, { metres: e.target.value })}
+                        />
+                      </label>
+                    ) : (
+                      <p className="self-center text-sm">1 piece</p>
+                    )}
+                    {r.group ? (
+                      <p className="self-center text-xs">Included in tailoring total</p>
+                    ) : r.scan.kind === "fabric" ? (
+                      <label className="text-xs">
+                        Fabric price ₹ / metre
+                        <Input
+                          aria-label={`Fabric price per metre ${r.scan.barcode}`}
+                          inputMode="decimal"
+                          value={r.price}
+                          onChange={(e) => updateRow(r.key, { price: e.target.value })}
+                        />
+                      </label>
+                    ) : (
+                      <p className="self-center text-sm">
+                        {reportMoney(String(r.scan.sp_paise))} · fixed SP
+                      </p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="col-span-2 justify-self-end md:col-span-1"
+                      disabled={!!r.group}
+                      aria-label={`Remove ${r.scan.barcode}`}
+                      onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              {canTailor && rows.some((r) => r.selected && !r.group) && (
+                <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+                  <h3 className="font-semibold">Tailoring for selected fabric</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-sm">
+                      Garment / order
+                      <Input
+                        list="counter-garments"
+                        aria-label="Tailoring garment"
+                        value={form.garment}
+                        onChange={(e) => setForm({ ...form, garment: e.target.value })}
+                        placeholder="Sherwani, suit, kurta or custom order"
+                      />
+                      <datalist id="counter-garments">
+                        {definitions.data?.products.map((p) => (
+                          <option key={p.id} value={p.name} />
+                        ))}
+                      </datalist>
+                    </label>
+                    <label className="text-sm">
+                      Delivery date
+                      <Input
+                        type="date"
+                        aria-label="Tailoring delivery date"
+                        value={form.delivery}
+                        onChange={(e) => setForm({ ...form, delivery: e.target.value })}
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Entire tailoring total ₹
+                      <Input
+                        aria-label="Entire tailoring total"
+                        inputMode="decimal"
+                        value={form.total}
+                        onChange={(e) => setForm({ ...form, total: e.target.value })}
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Design (optional)
+                      <select
+                        aria-label="Customer design"
+                        className="min-h-11 w-full rounded border bg-background p-2"
+                        value={form.design}
+                        onChange={(e) => setForm({ ...form, design: e.target.value })}
+                      >
+                        <option value="">No design specified</option>
+                        {definitions.data?.designs.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.code} · {d.name}
+                          </option>
+                        ))}
+                        <option value="custom">Custom</option>
+                      </select>
+                    </label>
+                    {form.design === "custom" && (
+                      <Input
+                        aria-label="Custom customer design"
+                        value={form.customDesign}
+                        onChange={(e) => setForm({ ...form, customDesign: e.target.value })}
+                        placeholder="Describe custom design"
+                      />
+                    )}
+                  </div>
+                  <FactoryTailorPicker
+                    factory={form.factory}
+                    onFactory={(factory) => setForm({ ...form, factory, assignment: "" })}
+                    selected={form.assignment ? [form.assignment] : []}
+                    onSelected={(selected) =>
+                      setForm((current) => ({ ...current, assignment: selected[0] ?? "" }))
+                    }
+                  />
+                  <Button onClick={addGroup}>Add tailoring job</Button>
+                </div>
+              )}
+              {groups.map((g) => (
+                <div
+                  key={g.id}
+                  className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"
+                >
+                  <div>
+                    <strong>{g.garment}</strong>
+                    <p>
+                      {g.keys.length} fabrics · Delivery {g.delivery} · Whole job{" "}
+                      {reportMoney(String(fabricMoneyInput(g.total)))}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setGroups(groups.filter((x) => x.id !== g.id));
+                      setRows(
+                        rows.map((r) =>
+                          r.group === g.id
+                            ? { ...r, group: undefined, selected: true }
+                            : { ...r, selected: false },
+                        ),
+                      );
+                      setForm({ ...blankGroup(), ...g });
+                    }}
+                  >
+                    Edit job
+                  </Button>
+                </div>
+              ))}
+              {!!rows.length && (
+                <div className="space-y-3 rounded-xl border p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                      aria-label="Customer name optional"
+                      placeholder="Customer name (optional)"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Customer contact optional"
+                      inputMode="tel"
+                      placeholder="Contact (optional; saved contacts are reused)"
+                      value={contact}
+                      onChange={(e) => setContact(e.target.value)}
+                    />
+                  </div>
+                  <SalespersonPicker
+                    id="combined-salesperson"
+                    value={salesperson}
+                    onChange={setSalesperson}
+                    disabled={frozen}
+                  />
+                  {!!groups.length && (
+                    <label className="block text-sm">
+                      Payment status
+                      <select
+                        aria-label="Bill payment status"
+                        className="ml-3 min-h-11 rounded border bg-background p-2"
+                        value={paid ? "paid" : "unpaid"}
+                        onChange={(e) => setPaid(e.target.value === "paid")}
+                      >
+                        <option value="paid">Paid in full</option>
+                        <option value="unpaid">Unpaid</option>
+                      </select>
+                    </label>
+                  )}
+                  <p className="font-semibold">
+                    Bill total{" "}
+                    {total === null ? "Enter quantities and prices" : reportMoney(String(total))}
+                  </p>
+                  <Button disabled={!canSell || bill.isPending} onClick={submit}>
+                    {pending
+                      ? "Retry unchanged bill"
+                      : groups.length
+                        ? "Complete bill"
+                        : "Complete paid bill"}
+                  </Button>
+                </div>
+              )}
+            </fieldset>
+            {pending && !bill.isPending && (
+              <div className="mt-3 space-y-2">
+                <p role="alert">
+                  The result is uncertain. Retry the same bill before changing its contents.
+                </p>
+                <Button onClick={submit}>Retry unchanged bill</Button>
+              </div>
+            )}
+          </Panel>
+        </>
+      )}
+      {receipt && <CounterBillReceipt receipt={receipt} />}
+      <Dialog
+        open={!!reserves || !!ambiguous}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReserves(null);
+            setAmbiguous(null);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {ambiguous ? "Choose the physical Thaan" : "Fabric locations & variants"}
+            </DialogTitle>
+            <DialogDescription>
+              Recorded stock across Showroom floors and Workshop. Costs are protected.
+            </DialogDescription>
+          </DialogHeader>
+          {ambiguous ? (
+            <FabricReserveTree scan={ambiguous} onChoose={(c) => addRow(ambiguous, c)} />
+          ) : (
+            reserves && <FabricReserveTree scan={reserves} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

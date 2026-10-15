@@ -1,0 +1,30 @@
+{
+  "applied": true,
+  "recorded_at": "2026-10-15T05:34:49.274Z",
+  "migrations": [
+    {
+      "file": "20261015000300_workspace_cleanup.sql",
+      "sha256": "5fbf04356f20cd760a79ff0cd90f3e38335d1526e2dc37ae4f247caadbd38198"
+    },
+    {
+      "file": "20261015000400_counter_workspace.sql",
+      "sha256": "430d907ed04d1f5b51774d753af9a4c28ffe91d62987b985b2ced849381745d9"
+    },
+    {
+      "file": "20261015000500_mixed_production.sql",
+      "sha256": "c176de8357e85e7193747e94bb6ad0ce7e2593f2aea883d5c11aca06e5a7085b"
+    },
+    {
+      "file": "20261015000600_owner_definitions.sql",
+      "sha256": "1fc9d913137140b1ab56d53821c796dc9090356d83d9432d9ca2beabd905da95"
+    },
+    {
+      "file": "20261015000700_workflow_integrations.sql",
+      "sha256": "82138161923b702c61861c90e8a5ea91e15d843f76cea685d3bb6dca6639d0d8"
+    },
+    {
+      "file": "20261015000800_finished_sale_compatibility.sql",
+      "sha256": "31dd35fd743975f356bfc91fc14c91281892d0ba07f6353674fa392346cb9953"
+    }
+  ]
+}

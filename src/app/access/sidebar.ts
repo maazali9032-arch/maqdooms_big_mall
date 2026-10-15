@@ -69,8 +69,8 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
     }
     if (roles.includes("counter")) {
       add("/pos", undefined, "Counter / POS", "pos", ShoppingCart);
-      add("/pos", "customer", "Customer Tailoring", "pos", Scissors);
-      add("/tailoring", "production", "Owner Production", "tailoring", Scissors, "production.view");
+      add("/tailoring", "customer", "Customer Tailoring", "tailoring", Scissors);
+      add("/tailoring", "ongoing", "Owner Production", "tailoring", Scissors, "production.view");
     }
     if (roles.includes("ecommerce_manager")) {
       add("/ecommerce", "fabric", "Showroom Fabric", "ecommerce");
@@ -98,7 +98,6 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       },
     ];
   }
-  const counter = owner || roles.includes("counter");
   const allowed = allowedModules(roles);
   const sections: NavSection[] = [
     {
@@ -154,25 +153,11 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       items: [
         { to: "/pos", label: "Counter / POS", icon: ShoppingCart, module: "pos" },
         {
-          to: counter ? "/pos" : "/tailoring",
+          to: "/tailoring",
           hash: "customer",
           label: "Customer Tailoring",
           icon: Scissors,
-          module: counter ? "pos" : "tailoring",
-        },
-        { to: "/customers", label: "Customers", icon: Users, module: "customers" },
-        {
-          to: owner ? "/reports" : "/pos",
-          hash: owner ? "orders" : "history",
-          label: "Sales History",
-          icon: ClipboardList,
-          module: owner ? "reports" : "pos",
-        },
-        {
-          to: "/my-work",
-          label: owner ? "Salesperson Performance" : "My Work",
-          icon: UserRound,
-          module: "salesperson_work",
+          module: "tailoring",
         },
       ],
     },
@@ -181,33 +166,17 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       items: [
         {
           to: "/tailoring",
-          hash: "production",
-          label: "Owner Production",
+          hash: "fabric",
+          label: "New Production",
           icon: Scissors,
           module: "tailoring",
         },
         {
-          to: counter ? "/pos" : "/tailoring",
-          hash: "issues",
-          label: "Material Issues",
-          icon: Boxes,
-          module: counter ? "pos" : "tailoring",
-        },
-        {
           to: "/tailoring",
-          hash: "products",
-          label: "Workshop Returns",
-          icon: Boxes,
+          hash: "ongoing",
+          label: "Ongoing Production",
+          icon: Scissors,
           module: "tailoring",
-          ownerOnly: true,
-        },
-        {
-          to: "/tailoring",
-          hash: "cost",
-          label: "Production Costing & SP",
-          icon: BarChart3,
-          module: "tailoring",
-          ownerOnly: true,
         },
       ],
     },
@@ -223,6 +192,19 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       items: [
         { to: "/reports", label: "Reports & Analytics", icon: BarChart3, module: "reports" },
         { to: "/audit", label: "Audit Trail", icon: ClipboardList, module: "audit" },
+        {
+          to: "/reports",
+          hash: "orders",
+          label: "Sales History",
+          icon: ClipboardList,
+          module: "reports",
+        },
+        {
+          to: "/my-work",
+          label: "Salesperson Performance",
+          icon: UserRound,
+          module: "salesperson_work",
+        },
       ],
     },
     {

@@ -43,6 +43,20 @@ export function ProductionReceipt() {
   >(null);
   const print = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+  const queue = useQuery({
+    queryKey: ["workshop-receipt-queue"],
+    enabled: receiveAllowed,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("workshop_receipt_queue");
+      if (error) throw error;
+      return data as unknown as {
+        id: string;
+        code: string;
+        quantity: number;
+        finished_at: string | null;
+      }[];
+    },
+  });
   const job = useProductionDocument(scanned);
   const pieces = useQuery({
     queryKey: ["finished-product-inventory", "production", job.data?.id],
@@ -63,6 +77,7 @@ export function ProductionReceipt() {
       "owner-production",
       "production-costs",
       "location-ledger",
+      "workshop-receipt-queue",
     ])
       void qc.invalidateQueries({ queryKey: [key] });
   };
@@ -126,6 +141,53 @@ export function ProductionReceipt() {
       description="Scan its Production ID when every piece arrives at Workshop. Set SP and print labels before transferring pieces to Showroom."
     >
       <div className="space-y-3">
+        {receiveAllowed && (
+          <div className="space-y-2 rounded-lg border p-3">
+            <h3 className="text-sm font-semibold">Finished production awaiting Workshop receipt</h3>
+            {queue.error ? (
+              <p role="alert">
+                Could not load arrivals.{" "}
+                <Button variant="outline" onClick={() => void queue.refetch()}>
+                  Retry
+                </Button>
+              </p>
+            ) : queue.isPending ? (
+              <p className="text-sm">Loading arrivals…</p>
+            ) : (queue.data ?? []).length ? (
+              queue.data!.map((j) => (
+                <div
+                  key={j.id}
+                  className="flex flex-wrap items-center justify-between gap-2 border-t py-2 text-sm"
+                >
+                  <div>
+                    <p className="break-all font-mono text-xs">{j.code}</p>
+                    <p>
+                      {j.quantity} pieces ·{" "}
+                      {j.finished_at
+                        ? new Date(j.finished_at).toLocaleString()
+                        : "Finish time not recorded"}
+                    </p>
+                  </div>
+                  <Button
+                    disabled={frozen}
+                    variant="outline"
+                    onClick={() => {
+                      setCode(j.code);
+                      setScanned(j.code);
+                      setPrices({});
+                    }}
+                  >
+                    Load receipt
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No finished production awaiting receipt.
+              </p>
+            )}
+          </div>
+        )}
         <form
           className="flex flex-wrap gap-2"
           onSubmit={(e) => {

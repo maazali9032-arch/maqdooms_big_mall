@@ -18,6 +18,7 @@ export type ProductionRecord = {
   received_at: string | null;
   cp_total_paise?: number | null;
   cost_known?: boolean;
+  pieces?: { piece_number: number; product: string; design: string; size: string }[];
   fabrics: {
     barcode: string;
     name: string;
@@ -84,6 +85,18 @@ export function ProductionDocument({ code }: { code: string }) {
         </p>
         {job.issued_at && <p>Issued: {new Date(job.issued_at).toLocaleString()}</p>}
         {job.finished_at && <p>Finished: {new Date(job.finished_at).toLocaleString()}</p>}
+        {!!job.pieces?.length && (
+          <details open className="my-3 rounded border p-3">
+            <summary className="font-semibold">Finished piece specifications</summary>
+            <div className="ml-2 border-l pl-3">
+              {job.pieces.map((p) => (
+                <p key={p.piece_number} className="py-1 text-sm">
+                  {p.piece_number}. {p.product} · {p.design} · Size {p.size}
+                </p>
+              ))}
+            </div>
+          </details>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>

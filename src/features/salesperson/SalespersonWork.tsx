@@ -28,6 +28,17 @@ type Work = {
   section_name: string | null;
   tailor_name: string | null;
   fabrics: { barcode: string; fabric: string; batch: string; quantity_mm: string }[];
+  paid?: boolean | null;
+  tailoring_jobs?:
+    | {
+        code: string;
+        garment: string;
+        status: string;
+        delivery_date: string | null;
+        factory: string;
+        tailor: string;
+      }[]
+    | null;
 };
 type Cursor = { after: string; id: string } | undefined;
 export function SalespersonWork() {
@@ -100,6 +111,25 @@ export function SalespersonWork() {
               Salesperson: {row.salesperson_name} · {row.salesperson_user_id}
             </p>
             <p className="break-all text-xs">POS operator: {row.created_by}</p>
+            {row.kind === "counter_bill" && (
+              <p>
+                {row.paid ? "Paid" : "Unpaid"} · Combined bill; linked tailoring totals are included
+                once.
+              </p>
+            )}
+            {!!row.tailoring_jobs?.length && (
+              <details className="rounded border p-3" open>
+                <summary>Linked tailoring work</summary>
+                <div className="ml-2 border-l pl-3">
+                  {row.tailoring_jobs.map((j) => (
+                    <p className="py-1" key={j.code}>
+                      {j.code} · {j.garment} · {j.status} · Due {j.delivery_date || "Not recorded"}{" "}
+                      · {j.factory} → {j.tailor}
+                    </p>
+                  ))}
+                </div>
+              </details>
+            )}
             {row.fabrics.map((f, index) => (
               <p key={`${f.barcode}-${index}`} className="break-all">
                 {f.fabric} / {f.batch} · {f.barcode} · {reportQuantity(f.quantity_mm, "mm")}

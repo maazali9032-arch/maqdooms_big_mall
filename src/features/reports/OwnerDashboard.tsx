@@ -108,6 +108,12 @@ export function OwnerDashboard() {
   const active = (customers.data ?? []).filter(
     (r) => !["completed", "delivered", "cancelled"].includes(String(r.data["status"])),
   );
+  const dueToday = active.filter((r) => r.data["delivery_date"] === indiaDay());
+  const overdue = active.filter(
+    (r) => typeof r.data["delivery_date"] === "string" && r.data["delivery_date"] < indiaDay(),
+  );
+  const customerWork =
+    tailoring === "today" ? dueToday : tailoring === "overdue" ? overdue : active;
   const selector = (
     label: string,
     value: string,
@@ -405,16 +411,18 @@ export function OwnerDashboard() {
               description="Current workload across all creation dates; Customer Tailoring and Owner Production stay separate."
               actions={selector("Tailoring workload", tailoring, setTailoring, [
                 ["customer", "Customer tailoring jobs"],
+                ["today", "Customer jobs due today"],
+                ["overdue", "Overdue customer jobs"],
                 ["production", "Owner production jobs"],
               ])}
             >
-              {cardState(tailoring === "customer" ? customers : jobs)}
-              {(tailoring === "customer" ? customers : jobs).data &&
-                !(tailoring === "customer" ? customers : jobs).error && (
+              {cardState(tailoring !== "production" ? customers : jobs)}
+              {(tailoring !== "production" ? customers : jobs).data &&
+                !(tailoring !== "production" ? customers : jobs).error && (
                   <Bars
                     values={group(
-                      tailoring === "customer"
-                        ? active
+                      tailoring !== "production"
+                        ? customerWork
                         : (jobs.data ?? []).filter(
                             (r) =>
                               !["completed", "received", "cancelled"].includes(
@@ -427,7 +435,7 @@ export function OwnerDashboard() {
                 )}
               <a
                 className="mt-3 inline-block text-sm text-primary"
-                href={tailoring === "customer" ? "/tailoring#customer" : "/tailoring#production"}
+                href={tailoring !== "production" ? "/tailoring#customer" : "/tailoring#ongoing"}
               >
                 Open relevant jobs →
               </a>
@@ -506,10 +514,23 @@ export function OwnerDashboard() {
             ) : (
               <p>Loading alerts…</p>
             )}
+            {customers.data && !customers.error && (
+              <div className="mt-3 space-y-1">
+                <a href="/tailoring#customer" className="owner-alert-row">
+                  <span>Customer jobs due today</span>
+                  <strong>{dueToday.length}</strong>
+                </a>
+                <a href="/tailoring#customer" className="owner-alert-row">
+                  <span>Overdue customer jobs</span>
+                  <strong>{overdue.length}</strong>
+                </a>
+              </div>
+            )}
             <p className="mt-3 text-xs text-muted-foreground">
-              Low-stock thresholds, tailoring due dates and material-shortage requirements are not
-              exposed by the existing reports. Those alerts are unavailable. Transfers post
-              immediately; there is no pending-receipt queue.
+              Due-date alerts use recorded delivery dates; jobs without a date are excluded.
+              Low-stock thresholds and material-shortage alerts remain unavailable without recorded
+              rules. Fabric transfers post immediately. Completed production awaiting Workshop
+              receipt appears in reviews.
             </p>
           </Panel>
           <Panel title="Quick actions">

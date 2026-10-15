@@ -9,3 +9,17 @@ supabase/migrations/20261015000200_barcode_inspector_legacy_evidence.sql -text
 drizzle/migrations/0044_barcode_inspector_legacy_evidence.sql -text
 
 # The recorded 0043 SQL preserves generated indentation on a blank line.
+supabase/migrations/20261015000300_workspace_cleanup.sql -text
+drizzle/migrations/0045_workspace_cleanup.sql -text
+
+drizzle/migrations/0046_counter_workspace.sql -text
+supabase/migrations/20261015000400_counter_workspace.sql -text
+drizzle/migrations/0047_mixed_production.sql -text
+supabase/migrations/20261015000500_mixed_production.sql -text
+drizzle/migrations/0048_owner_definitions.sql -text
+supabase/migrations/20261015000600_owner_definitions.sql -text
+drizzle/migrations/0049_workflow_integrations.sql -text
+supabase/migrations/20261015000700_workflow_integrations.sql -text
+
+supabase/migrations/20261015000800_finished_sale_compatibility.sql -text
+drizzle/migrations/0050_finished_sale_compatibility.sql -text
