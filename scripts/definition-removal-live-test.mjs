@@ -111,7 +111,10 @@ try {
     check((await sql`select count(*)::int n from pg_trigger where tgname='inventory_movement_showroom_floor_guard' and tgenabled='O'`)[0].n===1,'General Showroom ledger guard is enabled');
     check(!(await sql`select exists(select 1 from inventory_items i where inventory_balance(i.id,${root.id})<>0) yes`)[0].yes,'General Showroom contains no inventory');
   }
-  check(f3&&f3.fabric_thaans===2&&Number(f3.fabric_mm)===20000,'F3 has exactly the two authorized 10-metre Thaans');
+  if(floorsOnly){
+    const [actual]=await sql`select (select count(*)::int from inventory_items i where i.thaan_id is not null and inventory_balance(i.id,l.id)>0) thaans,(select coalesce(sum(inventory_balance(i.id,l.id)),0) from inventory_items i where i.thaan_id is not null) mm from locations l where l.name='Showroom F3'`;
+    check(f3&&f3.fabric_thaans===actual.thaans&&Number(f3.fabric_mm)===Number(actual.mm),'F3 summary matches current recorded stock; later business activity is preserved');
+  }else check(f3&&f3.fabric_thaans===2&&Number(f3.fabric_mm)===20000,'F3 has exactly the two authorized 10-metre Thaans');
   check(activity.some(r=>r.kind==='TRANSFER'&&r.source==='Showroom — floor not assigned'&&r.destination==='Showroom F3'),'History distinguishes root Showroom from the newly assigned floor');
   for(const u of users){if((await sql`select exists(select 1 from user_roles where user_id=${u.id} and role_key='owner') yes`)[0].yes)continue;let rejected=false;try{await read(u.id,'select owner_delete_definition($1,$2,$3,$4,true)',['00000000-0000-0000-0000-000000000051','floor',root.id,root.name]);}catch(e){rejected=e.code==='42501';}check(rejected,'Staff Delete denied before any operational write: '+u.role_key);}
   const workshop=(await sql`select id from locations where kind='workshop' limit 1`)[0].id;

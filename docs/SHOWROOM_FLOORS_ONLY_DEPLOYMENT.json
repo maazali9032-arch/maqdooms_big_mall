@@ -1,0 +1,19 @@
+{
+  "verifiedAt": "2026-10-15T08:35:18.8674068Z",
+  "sourceCommit": "ad546c339b05bba4448ed6482f4d3f09555e7248",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "deployment": {
+    "completedAt": "2026-10-15T08:33:32Z",
+    "url": "https://vercel.com/maaz-9032/maqdooms-big-mall/7vZc2yPeB5xTCrvgfeqipVuwm9CR",
+    "state": "success"
+  },
+  "mainAsset": "/assets/index-B3w_vtVV.js",
+  "inventoryAsset": "/assets/inventory.index-DxglsKfX.js",
+  "sha256": "fbb61081c384a4da3ef4c90fe940f78b70fffd0ffcf7a42917de75484d0b667d",
+  "markersVerified": [
+    "Showroom floors",
+    "Owner returns go directly back to Workshop"
+  ],
+  "scope": "Hosted deployment and bundle verification; browser interactions are covered separately by the UI verification.",
+  "passed": true
+}

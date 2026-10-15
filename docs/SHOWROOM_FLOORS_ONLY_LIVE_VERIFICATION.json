@@ -1,0 +1,10 @@
+{
+  "verified_at": "2026-10-15T08:36:28.126Z",
+  "passed": true,
+  "checks": 98,
+  "read_only_transactions": true,
+  "barcodes_checked": 30,
+  "barcodes_with_posted_transfers": 2,
+  "public_tables_preserved": 97,
+  "concurrent_presence_column_excluded": "profiles.last_login"
+}
