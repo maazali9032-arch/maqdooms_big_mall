@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 const root = process.cwd();
 const floorsOnly = process.argv.includes('--showroom-floors');
 const counterScan = process.argv.includes('--counter-unified-scan');
-const proofName = counterScan ? 'COUNTER_UNIFIED_SCAN' : floorsOnly ? 'SHOWROOM_FLOORS_ONLY' : 'DEFINITION_REMOVAL';
+const proofName = process.argv.includes('--counter-details') ? 'COUNTER_BARCODE_DETAILS' : counterScan ? 'COUNTER_UNIFIED_SCAN' : floorsOnly ? 'SHOWROOM_FLOORS_ONLY' : 'DEFINITION_REMOVAL';
 const reuse = process.argv[2];
 const target = reuse
   ? path.resolve(reuse)

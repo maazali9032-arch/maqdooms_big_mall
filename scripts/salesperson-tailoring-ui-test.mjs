@@ -52,7 +52,7 @@ try {
   await page.getByLabel("Fabric Barcode", { exact: true }).fill("RDS-12345678c");
   await page.getByRole("button", { name: "Scan", exact: true }).click();
   await page.getByLabel("Stock location", { exact: true }).selectOption("floor2");
-  await page.getByLabel("Salesperson ID", { exact: true }).selectOption("sales-one");
+  await page.getByLabel("Salesperson", { exact: true }).selectOption("sales-one");
   await page.getByPlaceholder("Cut metres", { exact: true }).fill("3");
   check(
     (await page.getByLabel("Selling price per metre (₹)").inputValue()) === "",
@@ -63,7 +63,7 @@ try {
     .click();
   await page.getByRole("heading", { name: "Customer Tailoring", exact: true }).waitFor();
   check(
-    (await page.getByLabel("Salesperson ID", { exact: true }).inputValue()) === "sales-one",
+    (await page.getByLabel("Salesperson", { exact: true }).inputValue()) === "sales-one",
     "Salesperson carried into stitching",
   );
   check(

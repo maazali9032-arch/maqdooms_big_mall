@@ -365,6 +365,13 @@
       "when": 1792023000000,
       "tag": "0052_showroom_floors_only",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792023060000,
+      "tag": "0053_counter_contact_digits",
+      "breakpoints": true
     }
   ]
 }

@@ -1895,3 +1895,7 @@ Completed: 0052 applied with all rows in 97 existing public tables preserved. Al
 # 58. SINGLE COUNTER BARCODE WORKSPACE — 15 OCTOBER 2026
 
 Counter uses POS and Account only. After selecting a physical Showroom floor, one existing barcode field routes items to a new sale, customer bill/job IDs to their recorded tailoring work, and Production IDs to their existing document. Subsequent fabric is issued through the existing permission-checked RPCs against the chosen job and current floor, keeping customer totals unchanged. Multiple customer jobs require selection; unknown/ambiguous identifiers, closed jobs and pending retail/issue states are protected. Owner/Tailor/Production and combined-role workspaces remain available. See docs/COUNTER_UNIFIED_SCAN.md.
+
+# 59. PHYSICAL BARCODE BALANCES, SALESPERSON NAMES AND NUMERIC CONTACT — 15 OCTOBER 2026
+
+POS compact reserves show only the selected Thaan balances, while the existing expanded tree retains every variant. Salesperson names replace visible UUID suffixes while attribution IDs remain unchanged. Optional contact input accepts digits and preserves leading zeros. Forward 0053 prospectively validates new Counter bill contacts without editing existing customer/bill history or breaking exact historical retries. See docs/COUNTER_BARCODE_DETAILS.md and validation proof files.

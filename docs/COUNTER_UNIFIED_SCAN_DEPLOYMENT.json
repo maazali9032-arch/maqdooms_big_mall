@@ -1,0 +1,18 @@
+{
+  "verifiedAt": "2026-10-15T09:34:30.6965684Z",
+  "sourceCommit": "570a996094d0e47012eb46985923e5ccf05be62b",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "deployment": {
+    "state": "success",
+    "url": "https://vercel.com/maaz-9032/maqdooms-big-mall/AUADge1ZsBJmQiaxmb8AQ5Hws6Bd"
+  },
+  "mainAsset": "/assets/index-DP25rKZF.js",
+  "posAsset": "/assets/pos-BFUNbnYa.js",
+  "markersVerified": [
+    "Scan item, customer bill or Production ID",
+    "Counter barcode",
+    "Retry unchanged issue"
+  ],
+  "scope": "Hosted deployment and bundle verification; interaction tests recorded separately.",
+  "passed": true
+}

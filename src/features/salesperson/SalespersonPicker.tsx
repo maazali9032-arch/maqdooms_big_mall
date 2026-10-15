@@ -18,7 +18,7 @@ export function SalespersonPicker({
   const { can } = useSession();
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Salesperson ID</Label>
+      <Label htmlFor={id}>Salesperson</Label>
       <select
         id={id}
         className="w-full rounded border bg-background p-2"
@@ -31,7 +31,7 @@ export function SalespersonPicker({
         <option value="">Select credited Salesperson</option>
         {options.data?.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.name} · {p.id}
+            {p.name?.trim() || "Name not recorded"}
           </option>
         ))}
       </select>

@@ -397,7 +397,7 @@ function CounterContent({
                                 className="h-auto max-w-full justify-start px-0 text-left whitespace-normal"
                                 onClick={() => setReserves(r.scan)}
                               >
-                                {reserveTotals(r.scan)}
+                                {reserveTotals(r.scan, r.cut)}
                               </Button>
                             </>
                           )}
@@ -561,10 +561,12 @@ function CounterContent({
                     />
                     <Input
                       aria-label="Customer contact optional"
-                      inputMode="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoComplete="tel"
                       placeholder="Contact (optional; saved contacts are reused)"
                       value={contact}
-                      onChange={(e) => setContact(e.target.value)}
+                      onChange={(e) => setContact(e.target.value.replace(/[^0-9]/g, ""))}
                     />
                   </div>
                   <SalespersonPicker

@@ -114,14 +114,14 @@ export function previewTotal(rows: CounterRow[], groups: TailoringGroup[]) {
   }
 }
 
-export function reserveTotals(scan: ScanRecord) {
+export function reserveTotals(scan: ScanRecord, selectedCut?: ReserveCut) {
   const totals = { showroom: 0, workshop: 0 };
-  for (const v of scan.variants ?? [{ cuts: scan.cuts ?? [] }])
-    for (const c of v.cuts)
-      for (const l of c.locations) {
-        if (l.kind === "workshop") totals.workshop += Number(l.quantity_mm);
-        else if (l.kind === "showroom" || l.kind === "showroom_sublocation")
-          totals.showroom += Number(l.quantity_mm);
-      }
+  // The row describes this physical Thaan; variants are available in the drawer.
+  for (const c of selectedCut ? [selectedCut] : (scan.cuts ?? []))
+    for (const l of c.locations) {
+      if (l.kind === "workshop") totals.workshop += Number(l.quantity_mm);
+      else if (l.kind === "showroom" || l.kind === "showroom_sublocation")
+        totals.showroom += Number(l.quantity_mm);
+    }
   return `Showroom ${reportQuantity(String(totals.showroom), "mm")} · Workshop ${reportQuantity(String(totals.workshop), "mm")} · ${scan.variants?.length ?? 1} variants`;
 }

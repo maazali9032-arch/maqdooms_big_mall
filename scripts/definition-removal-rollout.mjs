@@ -13,7 +13,8 @@ import postgres from "postgres";
 
 process.loadEnvFile(".env");
 const apply = process.argv.includes("--apply");
-const floorsOnly = process.argv.includes("--showroom-floors");
+const counterDetails = process.argv.includes('--counter-details');
+const floorsOnly = process.argv.includes("--showroom-floors") || counterDetails;
 const runtime = process.argv[2];
 assert(runtime && !runtime.startsWith("--"), "Supply disposable PGlite runtime");
 const { PGlite } = await import(pathToFileURL(path.resolve(runtime)).href);
@@ -37,7 +38,7 @@ const preserve = (before, after, pricing = false) => {
     assert.deepEqual(after[table], value, "Existing rows changed: " + table);
   }
 };
-const reportPath = path.join(os.tmpdir(), floorsOnly ? "maqdooms-showroom-floors-only-rollout-results.json" : "maqdooms-definition-removal-rollout-results.json");
+const reportPath = path.join(os.tmpdir(), counterDetails ? "maqdooms-counter-details-rollout-results.json" : floorsOnly ? "maqdooms-showroom-floors-only-rollout-results.json" : "maqdooms-definition-removal-rollout-results.json");
 const queries = {
   columns: `select table_name,column_name,data_type,is_nullable,column_default from information_schema.columns where table_schema='public' order by table_name,ordinal_position`,
   constraints: `select c.relname as table_name,p.conname,p.contype,p.convalidated,pg_get_constraintdef(p.oid) as definition from pg_constraint p join pg_class c on c.oid=p.conrelid join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and p.contype<>'n' order by 1,2`,
@@ -219,6 +220,7 @@ try {
   const expected = {};
   for (const f of files) {
     if (f.includes('_showroom_floors_only')) continue;
+    if (f.includes('_counter_contact_digits')) continue;
     if (
       f.includes("_stock_registration") ||
       f.includes("_stock_transfer_counter_pricing") ||
@@ -502,7 +504,7 @@ try {
   );
   const workflowStages=[];
   let latestWorkflowExpected;
-  for(const suffix of ['_workspace_cleanup.sql','_counter_workspace.sql','_mixed_production.sql','_owner_definitions.sql','_workflow_integrations.sql','_finished_sale_compatibility.sql','_definition_removal.sql',...(floorsOnly?['_showroom_floors_only.sql']:[])]){
+  for(const suffix of ['_workspace_cleanup.sql','_counter_workspace.sql','_mixed_production.sql','_owner_definitions.sql','_workflow_integrations.sql','_finished_sale_compatibility.sql','_definition_removal.sql',...(floorsOnly?['_showroom_floors_only.sql']:[]),...(counterDetails?['_counter_contact_digits.sql']:[])]){
     const file=files.find(f=>f.endsWith(suffix));
     await reference.exec(await fs.readFile(path.join('supabase/migrations',file),'utf8'));
     const expected=await catalog(async q=>(await reference.query(q)).rows);
