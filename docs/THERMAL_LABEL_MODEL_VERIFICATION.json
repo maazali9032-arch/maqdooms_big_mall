@@ -1,12 +1,18 @@
 {
-  "verified_at": "2026-10-15T18:54:39.460Z",
+  "verified_at": "2026-10-15T19:22:15.389Z",
   "passed": true,
-  "checks": 6,
+  "checks": 7,
   "profile": {
+    "mode": "roll",
     "width": 40,
     "height": 30,
     "columns": 2,
+    "rows": 1,
     "gap": 3,
+    "rowGap": 0,
+    "pageWidth": 0,
+    "pageHeight": 0,
+    "margin": 0,
     "dpi": 203
   }
 }

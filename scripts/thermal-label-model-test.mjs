@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import { createServer } from "vite";
 
 const vite = await createServer({ configFile: false, server: { middlewareMode: true } });
-const { STARTING_LABEL_PROFILE, labelPrintCSS, labelRows, symbolSize, validProfile } =
+const { STARTING_LABEL_PROFILE, labelPages, labelPrintCSS, labelRows, symbolSize, validProfile } =
   await vite.ssrLoadModule("/src/features/inventory/label-print-model.ts");
 
 let checks = 0;
@@ -23,14 +23,30 @@ check(
   "Starting TE244 label profile fits the printer media width",
 );
 check(
-  !validProfile({ ...STARTING_LABEL_PROFILE, width: 60, columns: 2, gap: 3 }),
-  "A row wider than the TE244 media limit is rejected",
+  validProfile({ ...STARTING_LABEL_PROFILE, width: 60, columns: 2, gap: 3 }),
+  "Wider thermal media can use an independently configured two-up layout",
 );
 check(
   labelRows(labels, 2)
     .map((row) => row.length)
     .join(",") === "2,2,1",
   "Five labels print as two-column rows",
+);
+check(
+  labelPages(labels, {
+    mode: "sheet",
+    width: 60,
+    height: 30,
+    columns: 3,
+    rows: 2,
+    gap: 3,
+    rowGap: 2,
+    pageWidth: 210,
+    pageHeight: 297,
+    margin: 9,
+    dpi: 300,
+  }).length === 1,
+  "An arbitrary sheet layout groups labels into one configured print page",
 );
 const short = symbolSize(labels[0].code, STARTING_LABEL_PROFILE);
 check(

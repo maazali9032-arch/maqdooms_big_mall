@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   STARTING_LABEL_PROFILE,
-  labelRows,
+  labelPages,
+  normalizeProfile,
   symbolSize,
   labelPrintCSS,
   validProfile,
@@ -21,8 +22,8 @@ import {
 const PROFILE_KEY = "maqdooms.thermal-label-profile.v1";
 function profileFromStorage() {
   try {
-    const p = JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null") as LabelProfile;
-    if (p && validProfile(p)) return p;
+    const p = normalizeProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null"));
+    if (validProfile(p)) return p;
   } catch {
     /* Use adjustable starting profile. */
   }
@@ -31,9 +32,9 @@ function profileFromStorage() {
 function ThermalLabels({ labels, profile }: { labels: Sticker[]; profile: LabelProfile }) {
   return (
     <>
-      {labelRows(labels, profile.columns).map((row, index) => (
-        <div className="label-row" key={index}>
-          {row.map((l, i) => {
+      {labelPages(labels, profile).map((page, index) => (
+        <div className="label-page" key={index}>
+          {page.map((l, i) => {
             const symbol = symbolSize(l.code, profile);
             return (
               <article className="sticker" key={i}>
@@ -79,7 +80,40 @@ export function LabelPrintDialog({
   const symbols = valid ? labels.map((l) => symbolSize(l.code, profile)) : [];
   const tooLong = symbols.some((s) => s.dots < 1),
     dense = symbols.some((s) => s.dots === 1);
-  const rows = valid ? labelRows(labels, profile.columns).length : 0;
+  const pages = valid ? labelPages(labels, profile).length : 0;
+  const applyPreset = (preset: "thermal-1" | "thermal-2" | "a4-2x7" | "a4-3x8") => {
+    const presets: Record<typeof preset, LabelProfile> = {
+      "thermal-1": { ...STARTING_LABEL_PROFILE, columns: 1, gap: 0 },
+      "thermal-2": STARTING_LABEL_PROFILE,
+      "a4-2x7": {
+        mode: "sheet",
+        width: 90,
+        height: 38,
+        columns: 2,
+        rows: 7,
+        gap: 5,
+        rowGap: 2,
+        pageWidth: 210,
+        pageHeight: 297,
+        margin: 10,
+        dpi: 300,
+      },
+      "a4-3x8": {
+        mode: "sheet",
+        width: 60,
+        height: 30,
+        columns: 3,
+        rows: 8,
+        gap: 3,
+        rowGap: 2,
+        pageWidth: 210,
+        pageHeight: 297,
+        margin: 9,
+        dpi: 300,
+      },
+    };
+    setProfile(presets[preset]);
+  };
   return (
     <Dialog
       open
@@ -91,23 +125,52 @@ export function LabelPrintDialog({
         <DialogHeader>
           <DialogTitle>Barcode Label Setup</DialogTitle>
           <DialogDescription>
-            Starting size is inferred from your photos. Adjust to the loaded roll and test one row
-            before printing a batch.
+            Choose a roll or sheet layout, enter its measurements and print one test page before a
+            batch.
           </DialogDescription>
         </DialogHeader>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => applyPreset("thermal-1")}>
+            1-up thermal
+          </Button>
+          <Button type="button" variant="outline" onClick={() => applyPreset("thermal-2")}>
+            2-up thermal
+          </Button>
+          <Button type="button" variant="outline" onClick={() => applyPreset("a4-2x7")}>
+            A4 2 × 7 sheet
+          </Button>
+          <Button type="button" variant="outline" onClick={() => applyPreset("a4-3x8")}>
+            A4 3 × 8 sheet
+          </Button>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <label className="text-sm">
+            Media type
+            <select
+              aria-label="Label media type"
+              className="min-h-11 w-full rounded border p-2"
+              value={profile.mode}
+              onChange={(e) =>
+                setProfile({ ...profile, mode: e.target.value as LabelProfile["mode"] })
+              }
+            >
+              <option value="roll">Continuous / thermal roll</option>
+              <option value="sheet">Label sheet (A4, Letter, etc.)</option>
+            </select>
+          </label>
           {(
             [
               ["width", "Sticker width (mm)"],
               ["height", "Sticker height (mm)"],
               ["gap", "Gap between columns (mm)"],
+              ["rowGap", "Gap between rows (mm)"],
             ] as const
           ).map(([field, label]) => (
             <label key={field} className="text-sm">
               {label}
               <Input
                 type="number"
-                min={field === "gap" ? 0 : 20}
+                min={field === "gap" || field === "rowGap" ? 0 : field === "width" ? 12 : 10}
                 step="0.1"
                 aria-label={label}
                 value={Number.isFinite(profile[field]) ? profile[field] : ""}
@@ -120,44 +183,89 @@ export function LabelPrintDialog({
               />
             </label>
           ))}
-          <label className="text-sm">
-            Columns
-            <select
-              aria-label="Labels across roll"
-              className="min-h-11 w-full rounded border p-2"
-              value={profile.columns}
-              onChange={(e) => setProfile({ ...profile, columns: Number(e.target.value) })}
-            >
-              {[1, 2, 3].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
+          {(
+            [
+              ["columns", "Labels across"],
+              ["rows", "Labels down per page"],
+            ] as const
+          ).map(([field, label]) => (
+            <label className="text-sm" key={field}>
+              {label}
+              <Input
+                type="number"
+                min={1}
+                max={field === "columns" ? 12 : 30}
+                step={1}
+                aria-label={label}
+                value={profile[field]}
+                onChange={(e) =>
+                  setProfile({
+                    ...profile,
+                    [field]: e.target.value === "" ? NaN : Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+          ))}
+          {profile.mode === "sheet" && (
+            <>
+              {(
+                [
+                  ["pageWidth", "Paper width (mm)"],
+                  ["pageHeight", "Paper height (mm)"],
+                  ["margin", "Paper margin (mm)"],
+                ] as const
+              ).map(([field, label]) => (
+                <label className="text-sm" key={field}>
+                  {label}
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    aria-label={label}
+                    value={Number.isFinite(profile[field]) ? profile[field] : ""}
+                    onChange={(e) =>
+                      setProfile({
+                        ...profile,
+                        [field]: e.target.value === "" ? NaN : Number(e.target.value),
+                      })
+                    }
+                  />
+                </label>
               ))}
-            </select>
-          </label>
+            </>
+          )}
           <label className="text-sm">
             Printer resolution
-            <select
+            <Input
+              type="number"
+              min={100}
+              max={1200}
+              step={1}
               aria-label="Printer resolution"
-              className="min-h-11 w-full rounded border p-2"
               value={profile.dpi}
-              onChange={(e) => setProfile({ ...profile, dpi: Number(e.target.value) })}
-            >
-              <option value={203}>203 dpi</option>
-              <option value={300}>300 dpi</option>
-            </select>
+              onChange={(e) =>
+                setProfile({
+                  ...profile,
+                  dpi: e.target.value === "" ? NaN : Number(e.target.value),
+                })
+              }
+            />
           </label>
         </div>
         <p className="text-sm">
-          {labels.length} unique item labels · {rows} print rows. One browser page is one row of
-          stickers; the last row may have an empty position.
+          {labels.length} unique item labels · {pages} print page{pages === 1 ? "" : "s"}.{" "}
+          {profile.mode === "roll"
+            ? "Each browser page is one row of stickers."
+            : "Each browser page fills the selected sheet layout."}
         </p>
         <p className="text-sm">
-          Select TSC TE244 in Print. Match the driver’s paper width and label height to this setup,
-          use 100% scale, no margins and no headers/footers. Set/calibrate the gap between rows in
-          the printer driver.
+          This works with any printer that appears in the browser’s Print window. Select that
+          printer, match its driver media size to these measurements, use 100% scale and disable
+          browser headers, footers and extra margins. Thermal printers also need their gap
+          calibrated in the driver.
         </p>
-        {!valid && <p role="alert">Enter valid sizes; total row width must not exceed 108 mm.</p>}
+        {!valid && <p role="alert">Enter dimensions that fit the selected roll or sheet.</p>}
         {tooLong && (
           <p role="alert">
             An existing barcode cannot fit at this resolution. Increase sticker width or use a
@@ -173,7 +281,7 @@ export function LabelPrintDialog({
         {valid && !tooLong && (
           <iframe
             ref={preview}
-            title="Thermal label preview"
+            title="Barcode label preview"
             className="h-64 w-full rounded border bg-white"
             srcDoc="<!doctype html><html><head></head><body></body></html>"
             onLoad={() => {
@@ -186,7 +294,13 @@ export function LabelPrintDialog({
               const content = doc.createElement("div");
               doc.body.replaceChildren(content);
               createRoot(content).render(
-                <ThermalLabels labels={labels.slice(0, profile.columns)} profile={profile} />,
+                <ThermalLabels
+                  labels={labels.slice(
+                    0,
+                    profile.mode === "roll" ? profile.columns : profile.columns * profile.rows,
+                  )}
+                  profile={profile}
+                />,
               );
             }}
             key={JSON.stringify(profile)}
@@ -205,7 +319,7 @@ export function LabelPrintDialog({
                 try {
                   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
                   const frame = document.createElement("iframe");
-                  frame.title = test ? "Thermal test row" : title;
+                  frame.title = test ? "Barcode label test page" : title;
                   frame.setAttribute("aria-hidden", "true");
                   Object.assign(frame.style, {
                     position: "fixed",
@@ -229,7 +343,16 @@ export function LabelPrintDialog({
                   const root = createRoot(content);
                   root.render(
                     <ThermalLabels
-                      labels={test ? labels.slice(0, profile.columns) : labels}
+                      labels={
+                        test
+                          ? labels.slice(
+                              0,
+                              profile.mode === "roll"
+                                ? profile.columns
+                                : profile.columns * profile.rows,
+                            )
+                          : labels
+                      }
                       profile={profile}
                     />,
                   );
@@ -266,7 +389,7 @@ export function LabelPrintDialog({
                 }
               }}
             >
-              {test ? "Print test row" : "Print all labels"}
+              {test ? "Print test page" : "Print all labels"}
             </Button>
           ))}
         </div>
