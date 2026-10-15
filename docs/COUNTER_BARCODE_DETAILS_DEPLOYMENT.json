@@ -1,0 +1,18 @@
+{
+  "verifiedAt": "2026-10-15T09:44:40.3544381Z",
+  "sourceCommit": "df0aaf2ae65f53dde31eb344d21dcac2f974677d",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "deployment": {
+    "state": "success",
+    "url": "https://vercel.com/maaz-9032/maqdooms-big-mall/AYYvFw611Bf4CfsN8UWUSRwGqZBE"
+  },
+  "mainAsset": "/assets/index-DjjDh3zX.js",
+  "posAsset": "/assets/pos-lcMwUjvZ.js",
+  "markersVerified": [
+    "[0-9]*",
+    "Name not recorded",
+    "Scan item, customer bill or Production ID"
+  ],
+  "scope": "Hosted deployment and bundle verification; interaction and ledger checks recorded separately.",
+  "passed": true
+}

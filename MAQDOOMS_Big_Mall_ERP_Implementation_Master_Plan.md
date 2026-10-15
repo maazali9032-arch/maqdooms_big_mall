@@ -1899,3 +1899,5 @@ Counter uses POS and Account only. After selecting a physical Showroom floor, on
 # 59. PHYSICAL BARCODE BALANCES, SALESPERSON NAMES AND NUMERIC CONTACT — 15 OCTOBER 2026
 
 POS compact reserves show only the selected Thaan balances, while the existing expanded tree retains every variant. Salesperson names replace visible UUID suffixes while attribution IDs remain unchanged. Optional contact input accepts digits and preserves leading zeros. Forward 0053 prospectively validates new Counter bill contacts without editing existing customer/bill history or breaking exact historical retries. See docs/COUNTER_BARCODE_DETAILS.md and validation proof files.
+
+Completed: 0053 applied with every row in all 97 existing public tables preserved. All 23 read-only live checks passed; sampled physical Thaan totals match the current location ledger. Source df0aaf2ae65f53dde31eb344d21dcac2f974677d is deployed and its published POS bundle verified. Migration SHA256: 43ed5e5bb92a823ed0357f9975f3b79df78a5a7702e8ae9aae0c98875dfaec25. No live stock or customer fixtures were posted.

@@ -24,3 +24,5 @@ optional/numeric contacts, leading zeros, saved-contact reuse, rejected input,
 full rollback and permissions.
 
 Validation passed: 2,148 cumulative database assertions across clean/populated Supabase and Drizzle replay; 18 focused detail browser checks; 28 unified-scanner and 27 combined-workflow regression checks; TypeScript, scoped ESLint and isolated Vercel production build. Live schema dry-run matches the canonical existing schema.
+
+Completed: 0053 applied with every row in all 97 existing public tables preserved. All 23 read-only live checks passed; sampled physical Thaan totals match the current location ledger. Source df0aaf2ae65f53dde31eb344d21dcac2f974677d is deployed and its published POS bundle verified. Migration SHA256: 43ed5e5bb92a823ed0357f9975f3b79df78a5a7702e8ae9aae0c98875dfaec25. No live stock or customer fixtures were posted.

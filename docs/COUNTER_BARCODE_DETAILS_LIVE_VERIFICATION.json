@@ -1,0 +1,9 @@
+{
+  "verified_at": "2026-10-15T09:43:52.068Z",
+  "passed": true,
+  "checks": 23,
+  "read_only_transactions": true,
+  "existing_bills_checked": 1,
+  "existing_productions_checked": 0,
+  "live_writes": false
+}
