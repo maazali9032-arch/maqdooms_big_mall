@@ -39,3 +39,10 @@ Physical-printer output has not been tested; the print document source is checke
 
 TypeScript, scoped ESLint and the isolated Vercel production build pass. The
 live-schema dry-run matches the canonical current database before rollout.
+
+Completed: forward 0054 applied atomically, preserving every row in all 97
+pre-existing public tables. All 34 read-only live acceptance checks passed.
+Source d651499cef17355defcf12e56f411a3602f878df is deployed; the published POS
+and receipt assets contain the new pricing fields and pending-job protection.
+Migration SHA256: a05edbfbca39ff12b838181601bc54191ff566e857240ebd39ee5e2d3206bad7.
+No live stock, sale, customer or tailoring fixtures were created.

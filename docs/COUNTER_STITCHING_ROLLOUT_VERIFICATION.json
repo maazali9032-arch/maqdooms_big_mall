@@ -1,0 +1,809 @@
+{
+  "started_at": "2026-10-15T10:24:00.956Z",
+  "applied": [
+    "20261015001200_counter_stitching_pricing.sql"
+  ],
+  "verified": [
+    "20261015001200_counter_stitching_pricing.sql"
+  ],
+  "connection": {
+    "database": "postgres",
+    "db_user": "postgres",
+    "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit"
+  },
+  "before": {
+    "audit_log": {
+      "count": 41,
+      "digest": "0b185a8bf9ae0ef7cc8097c9f8906f5a"
+    },
+    "barcodes": {
+      "count": 30,
+      "digest": "b2bc618afac16232910d458f8ca4993d"
+    },
+    "consumable_receipt_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "consumable_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "counter_bill_payments": {
+      "count": 1,
+      "digest": "e90a78b860f54ff5d14da7f9c4767755"
+    },
+    "counter_bill_print_records": {
+      "count": 1,
+      "digest": "9fcf19e1db5a750c9f499480fe288a7c"
+    },
+    "counter_bills": {
+      "count": 1,
+      "digest": "9eae667bd69bae0e5db8ec38ccf97bb5"
+    },
+    "counter_tailoring_details": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "counter_tailoring_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_issue_fabric_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_jobs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_quotes": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customers": {
+      "count": 5,
+      "digest": "197e612032d7bb9e1c1bdd870cdeb1a2"
+    },
+    "design_charge_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "designs": {
+      "count": 2,
+      "digest": "3e3b000e2e202da95c58b2be4c3613aa"
+    },
+    "domain_reconciliation": {
+      "count": 26,
+      "digest": "46558c1729ec56c1f515c69400779785"
+    },
+    "ecommerce_paid_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "ecommerce_sale_sources": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "erp_audit_records": {
+      "count": 946,
+      "digest": "b874c658050b6574e1bb23f8266db55a"
+    },
+    "fabric_entry_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fabric_stock": {
+      "count": 30,
+      "digest": "6fcf52dc098b5165c879092fc2f90b03"
+    },
+    "fabric_stock_costs": {
+      "count": 30,
+      "digest": "414fba29b18662c8ac53b9b1aee9bbb6"
+    },
+    "fabric_stock_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fabrics": {
+      "count": 90,
+      "digest": "687858fa6be9e30af84023d6d2a12cb0"
+    },
+    "factory_user_requests": {
+      "count": 1,
+      "digest": "5619d606c50842ad8d1abb3e90bf5e93"
+    },
+    "finished_product_cost_allocations": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_materials": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_price_reviews": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_receipt_pieces": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_sale_snapshots": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_transfer_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_products": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "holds": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "inventory_items": {
+      "count": 30,
+      "digest": "9ae8567d7d199cc074799406a89bbc8e"
+    },
+    "inventory_movements": {
+      "count": 37,
+      "digest": "979040e35a10961cc4170c925a55c9bc"
+    },
+    "job_material_requirements": {
+      "count": 1,
+      "digest": "10a4364688bdca6afb7d23d612b62c48"
+    },
+    "listing_finished_product_links": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "listing_thaan_links": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "listing_variants": {
+      "count": 3,
+      "digest": "a07cc2f216f3546263b139863f34f5bb"
+    },
+    "listings": {
+      "count": 4,
+      "digest": "71a3daaa97d414280ceab16c956adab1"
+    },
+    "locations": {
+      "count": 7,
+      "digest": "326d1b807a9ad7d422a0b8f5df70990c"
+    },
+    "material_issue_lines": {
+      "count": 1,
+      "digest": "2bd926b79a56d682d9420aa09b1f2d6a"
+    },
+    "material_issues": {
+      "count": 1,
+      "digest": "ce7d81d8e737c9b2bd6fd9c61dbe7e27"
+    },
+    "materials": {
+      "count": 4,
+      "digest": "b9e94057c3302704c63780dcc9765df1"
+    },
+    "mixed_production_requests": {
+      "count": 1,
+      "digest": "54a735c28155e9cbe2a1270923fbd7a8"
+    },
+    "online_orders": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "order_item_financials": {
+      "count": 2,
+      "digest": "4d9f7808a8666d08e739f59a7acc235e"
+    },
+    "order_items": {
+      "count": 2,
+      "digest": "95befb302483cfe7613eb4d3f292a5e8"
+    },
+    "orders": {
+      "count": 1,
+      "digest": "a9bcfac78fc8e3dee47c57452414729f"
+    },
+    "owner_definition_deletions": {
+      "count": 2,
+      "digest": "7c48b53d0342df2c49c5744372162633"
+    },
+    "permissions": {
+      "count": 36,
+      "digest": "8be94de4578e22a4c87a591bd1762b3c"
+    },
+    "production_batch_requests": {
+      "count": 1,
+      "digest": "ddd6c0313ea22dfb629c4493a970aa47"
+    },
+    "production_cost_inputs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_lines": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_issue_fabric_costs": {
+      "count": 1,
+      "digest": "29bad0ec63cdb370b9f0bfa9d3d7b911"
+    },
+    "production_job_tailors": {
+      "count": 1,
+      "digest": "0430e1a61811c7aa78caca39e0dfb4db"
+    },
+    "production_jobs": {
+      "count": 1,
+      "digest": "0bd3c5e67fdee958062530214169fe94"
+    },
+    "production_piece_specs": {
+      "count": 2,
+      "digest": "828d459395e6c06eaeec5b1eee728e50"
+    },
+    "production_requests": {
+      "count": 6,
+      "digest": "6e6448147b36f4ce8e57662419105696"
+    },
+    "production_status_events": {
+      "count": 1,
+      "digest": "df15c443a2ecd46baf4eabb93904c251"
+    },
+    "products": {
+      "count": 2,
+      "digest": "bcfd62055f985c46cba4785e0b9cd338"
+    },
+    "profiles": {
+      "count": 8,
+      "digest": "1b8962620f0f0f14d45fbcb2256ef7ef"
+    },
+    "receiving_batches": {
+      "count": 1,
+      "digest": "147cf392947d1bbe4450609139991407"
+    },
+    "role_permissions": {
+      "count": 42,
+      "digest": "f3b28968c2f987b9403c1bf2137b8c4e"
+    },
+    "roles": {
+      "count": 7,
+      "digest": "6fe27128a59fa3ede54703c7719708c1"
+    },
+    "sale_analysis_channels": {
+      "count": 1,
+      "digest": "9d53b520e0bdecaf5f1a49661c87c46f"
+    },
+    "sale_analysis_dimensions": {
+      "count": 2,
+      "digest": "35845ff744d47efa4a53585d0ca92a9b"
+    },
+    "sale_items": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "sales": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "stock_movements": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "stock_registration_batches": {
+      "count": 1,
+      "digest": "5584d0ff6f5aeb9ef18d6c01924b75df"
+    },
+    "stock_registration_fabric_types": {
+      "count": 3,
+      "digest": "038a4e31ae22ff2e8fd081ee9d0f6da7"
+    },
+    "stock_registration_requests": {
+      "count": 66,
+      "digest": "010ccd66ae194ec3c14e913c3008643b"
+    },
+    "stock_registration_variants": {
+      "count": 30,
+      "digest": "e38b1c6b3d8514957a123cfe07b180da"
+    },
+    "stock_transfer_lines": {
+      "count": 4,
+      "digest": "0bf5ed2451dfe4d12991b80a29231ed3"
+    },
+    "stock_transfers": {
+      "count": 2,
+      "digest": "e8da0ddf03c711f6a6c085f3fe039429"
+    },
+    "suppliers": {
+      "count": 6,
+      "digest": "5161e9d7943c0b4ba6b73922a21b5a64"
+    },
+    "tailor_assignments": {
+      "count": 1,
+      "digest": "a27f906922faf83ad92eebfe0d37f0b3"
+    },
+    "tailoring_charge_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_charges": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_factories": {
+      "count": 1,
+      "digest": "c695f5e267aa2f92a004cc1072b27798"
+    },
+    "tailoring_job_lines": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_jobs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_management_requests": {
+      "count": 3,
+      "digest": "4d97ed401ad0e9a6ea450cad59c582b5"
+    },
+    "tailoring_sections": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailors": {
+      "count": 1,
+      "digest": "548f9b5699508d839d9e2419e2408815"
+    },
+    "thaan_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "thaans": {
+      "count": 30,
+      "digest": "08f2cc7986c399cf4413b3cbe4d48f07"
+    },
+    "user_permission_overrides": {
+      "count": 4,
+      "digest": "545674b2636502d3c01a30cee1c7ae49"
+    },
+    "user_roles": {
+      "count": 14,
+      "digest": "46ed1ad948f92cdbfb0917da7c7a0042"
+    },
+    "whatsapp_messages": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "whatsapp_templates": {
+      "count": 3,
+      "digest": "a900e2ac79c915c0a1e459b040aa9e90"
+    }
+  },
+  "owner_business_analytics_verified": true,
+  "role_workspaces_verified": true,
+  "current_phase_verified": 15,
+  "stock_registration_verified": true,
+  "stock_transfer_counter_pricing_verified": true,
+  "salesperson_tailoring_verified": true,
+  "owner_production_workflow_verified": true,
+  "labels_first_stock_entry_verified": true,
+  "optional_thaan_details_verified": true,
+  "workshop_inventory_hierarchy_verified": true,
+  "delegated_thaan_permissions_verified": true,
+  "module_role_scope_verified": true,
+  "thaan_optional_colour_reason_verified": true,
+  "after": {
+    "audit_log": {
+      "count": 41,
+      "digest": "0b185a8bf9ae0ef7cc8097c9f8906f5a"
+    },
+    "barcodes": {
+      "count": 30,
+      "digest": "b2bc618afac16232910d458f8ca4993d"
+    },
+    "consumable_receipt_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "consumable_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "counter_bill_payments": {
+      "count": 1,
+      "digest": "e90a78b860f54ff5d14da7f9c4767755"
+    },
+    "counter_bill_print_records": {
+      "count": 1,
+      "digest": "9fcf19e1db5a750c9f499480fe288a7c"
+    },
+    "counter_bills": {
+      "count": 1,
+      "digest": "9eae667bd69bae0e5db8ec38ccf97bb5"
+    },
+    "counter_tailoring_details": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "counter_tailoring_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_issue_fabric_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_jobs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customer_tailoring_quotes": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "customers": {
+      "count": 5,
+      "digest": "197e612032d7bb9e1c1bdd870cdeb1a2"
+    },
+    "design_charge_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "designs": {
+      "count": 2,
+      "digest": "3e3b000e2e202da95c58b2be4c3613aa"
+    },
+    "domain_reconciliation": {
+      "count": 26,
+      "digest": "46558c1729ec56c1f515c69400779785"
+    },
+    "ecommerce_paid_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "ecommerce_sale_sources": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "erp_audit_records": {
+      "count": 946,
+      "digest": "b874c658050b6574e1bb23f8266db55a"
+    },
+    "fabric_entry_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fabric_stock": {
+      "count": 30,
+      "digest": "6fcf52dc098b5165c879092fc2f90b03"
+    },
+    "fabric_stock_costs": {
+      "count": 30,
+      "digest": "414fba29b18662c8ac53b9b1aee9bbb6"
+    },
+    "fabric_stock_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "fabrics": {
+      "count": 90,
+      "digest": "687858fa6be9e30af84023d6d2a12cb0"
+    },
+    "factory_user_requests": {
+      "count": 1,
+      "digest": "5619d606c50842ad8d1abb3e90bf5e93"
+    },
+    "finished_product_cost_allocations": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_materials": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_price_reviews": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_prices": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_receipt_pieces": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_receipts": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_sale_snapshots": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_product_transfer_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "finished_products": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "holds": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "inventory_items": {
+      "count": 30,
+      "digest": "9ae8567d7d199cc074799406a89bbc8e"
+    },
+    "inventory_movements": {
+      "count": 37,
+      "digest": "979040e35a10961cc4170c925a55c9bc"
+    },
+    "job_material_requirements": {
+      "count": 1,
+      "digest": "10a4364688bdca6afb7d23d612b62c48"
+    },
+    "listing_finished_product_links": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "listing_thaan_links": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "listing_variants": {
+      "count": 3,
+      "digest": "a07cc2f216f3546263b139863f34f5bb"
+    },
+    "listings": {
+      "count": 4,
+      "digest": "71a3daaa97d414280ceab16c956adab1"
+    },
+    "locations": {
+      "count": 7,
+      "digest": "326d1b807a9ad7d422a0b8f5df70990c"
+    },
+    "material_issue_lines": {
+      "count": 1,
+      "digest": "2bd926b79a56d682d9420aa09b1f2d6a"
+    },
+    "material_issues": {
+      "count": 1,
+      "digest": "ce7d81d8e737c9b2bd6fd9c61dbe7e27"
+    },
+    "materials": {
+      "count": 4,
+      "digest": "b9e94057c3302704c63780dcc9765df1"
+    },
+    "mixed_production_requests": {
+      "count": 1,
+      "digest": "54a735c28155e9cbe2a1270923fbd7a8"
+    },
+    "online_orders": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "order_item_financials": {
+      "count": 2,
+      "digest": "4d9f7808a8666d08e739f59a7acc235e"
+    },
+    "order_items": {
+      "count": 2,
+      "digest": "95befb302483cfe7613eb4d3f292a5e8"
+    },
+    "orders": {
+      "count": 1,
+      "digest": "a9bcfac78fc8e3dee47c57452414729f"
+    },
+    "owner_definition_deletions": {
+      "count": 2,
+      "digest": "7c48b53d0342df2c49c5744372162633"
+    },
+    "permissions": {
+      "count": 36,
+      "digest": "8be94de4578e22a4c87a591bd1762b3c"
+    },
+    "production_batch_requests": {
+      "count": 1,
+      "digest": "ddd6c0313ea22dfb629c4493a970aa47"
+    },
+    "production_cost_inputs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_lines": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_requests": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_cost_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "production_issue_fabric_costs": {
+      "count": 1,
+      "digest": "29bad0ec63cdb370b9f0bfa9d3d7b911"
+    },
+    "production_job_tailors": {
+      "count": 1,
+      "digest": "0430e1a61811c7aa78caca39e0dfb4db"
+    },
+    "production_jobs": {
+      "count": 1,
+      "digest": "0bd3c5e67fdee958062530214169fe94"
+    },
+    "production_piece_specs": {
+      "count": 2,
+      "digest": "828d459395e6c06eaeec5b1eee728e50"
+    },
+    "production_requests": {
+      "count": 6,
+      "digest": "6e6448147b36f4ce8e57662419105696"
+    },
+    "production_status_events": {
+      "count": 1,
+      "digest": "df15c443a2ecd46baf4eabb93904c251"
+    },
+    "products": {
+      "count": 2,
+      "digest": "bcfd62055f985c46cba4785e0b9cd338"
+    },
+    "profiles": {
+      "count": 8,
+      "digest": "1b8962620f0f0f14d45fbcb2256ef7ef"
+    },
+    "receiving_batches": {
+      "count": 1,
+      "digest": "147cf392947d1bbe4450609139991407"
+    },
+    "role_permissions": {
+      "count": 42,
+      "digest": "f3b28968c2f987b9403c1bf2137b8c4e"
+    },
+    "roles": {
+      "count": 7,
+      "digest": "6fe27128a59fa3ede54703c7719708c1"
+    },
+    "sale_analysis_channels": {
+      "count": 1,
+      "digest": "9d53b520e0bdecaf5f1a49661c87c46f"
+    },
+    "sale_analysis_dimensions": {
+      "count": 2,
+      "digest": "35845ff744d47efa4a53585d0ca92a9b"
+    },
+    "sale_items": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "sales": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "stock_movements": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "stock_registration_batches": {
+      "count": 1,
+      "digest": "5584d0ff6f5aeb9ef18d6c01924b75df"
+    },
+    "stock_registration_fabric_types": {
+      "count": 3,
+      "digest": "038a4e31ae22ff2e8fd081ee9d0f6da7"
+    },
+    "stock_registration_requests": {
+      "count": 66,
+      "digest": "010ccd66ae194ec3c14e913c3008643b"
+    },
+    "stock_registration_variants": {
+      "count": 30,
+      "digest": "e38b1c6b3d8514957a123cfe07b180da"
+    },
+    "stock_transfer_lines": {
+      "count": 4,
+      "digest": "0bf5ed2451dfe4d12991b80a29231ed3"
+    },
+    "stock_transfers": {
+      "count": 2,
+      "digest": "e8da0ddf03c711f6a6c085f3fe039429"
+    },
+    "suppliers": {
+      "count": 6,
+      "digest": "5161e9d7943c0b4ba6b73922a21b5a64"
+    },
+    "tailor_assignments": {
+      "count": 1,
+      "digest": "a27f906922faf83ad92eebfe0d37f0b3"
+    },
+    "tailoring_charge_versions": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_charges": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_factories": {
+      "count": 1,
+      "digest": "c695f5e267aa2f92a004cc1072b27798"
+    },
+    "tailoring_job_lines": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_jobs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailoring_management_requests": {
+      "count": 3,
+      "digest": "4d97ed401ad0e9a6ea450cad59c582b5"
+    },
+    "tailoring_sections": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "tailors": {
+      "count": 1,
+      "digest": "548f9b5699508d839d9e2419e2408815"
+    },
+    "thaan_costs": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "thaans": {
+      "count": 30,
+      "digest": "08f2cc7986c399cf4413b3cbe4d48f07"
+    },
+    "user_permission_overrides": {
+      "count": 4,
+      "digest": "545674b2636502d3c01a30cee1c7ae49"
+    },
+    "user_roles": {
+      "count": 14,
+      "digest": "46ed1ad948f92cdbfb0917da7c7a0042"
+    },
+    "whatsapp_messages": {
+      "count": 0,
+      "digest": "d41d8cd98f00b204e9800998ecf8427e"
+    },
+    "whatsapp_templates": {
+      "count": 3,
+      "digest": "a900e2ac79c915c0a1e459b040aa9e90"
+    }
+  },
+  "preservation_basis": "Full original-column fingerprints and metadata row sets checked inside locked migration transaction; normal post-commit app writes are permitted",
+  "finished_at": "2026-10-15T10:24:19.936Z"
+}

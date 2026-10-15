@@ -1,0 +1,20 @@
+{
+  "verifiedAt": "2026-10-15T10:25:40.1536220Z",
+  "sourceCommit": "d651499cef17355defcf12e56f411a3602f878df",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "deployment": {
+    "state": "success",
+    "url": "https://vercel.com/maaz-9032/maqdooms-big-mall/5Ss5XGh7J8nDpRDA2hHZoauFCcVp"
+  },
+  "mainAsset": "/assets/index-CP7qSI8Z.js",
+  "posAsset": "/assets/pos-NuxldHwU.js",
+  "receiptAsset": "/assets/CounterBillReceipt-DXXWyqMy.js",
+  "markersVerified": [
+    "Stitching charge",
+    "Add the selected tailoring job before completing this bill",
+    "stitching_paise",
+    "fabric_amount_paise"
+  ],
+  "scope": "Hosted bundle verification; browser, database and live read-only verification recorded separately.",
+  "passed": true
+}
