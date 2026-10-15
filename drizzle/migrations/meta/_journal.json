@@ -372,6 +372,13 @@
       "when": 1792023060000,
       "tag": "0053_counter_contact_digits",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1792023120000,
+      "tag": "0054_counter_stitching_pricing",
+      "breakpoints": true
     }
   ]
 }

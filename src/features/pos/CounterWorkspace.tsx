@@ -19,7 +19,6 @@ import { SourcePicker, type SourceLocation } from "@/shared/components/source-pi
 import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
-import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
@@ -28,6 +27,7 @@ import {
   reserveTotals,
   counterPayload,
   previewTotal,
+  tailoringAmounts,
   availableAt,
   type CounterRow,
   type ScanRecord,
@@ -48,7 +48,7 @@ const blankGroup = () => ({
   delivery: "",
   factory: "",
   assignment: "",
-  total: "",
+  stitching: "",
   design: "",
   customDesign: "",
 });
@@ -235,8 +235,9 @@ function CounterContent({
     try {
       const selected = rows.filter((r) => r.selected && !r.group && r.scan.kind === "fabric");
       if (!selected.length) throw new Error("Select one or more fabric rows");
-      if (!form.garment.trim() || !form.delivery || !form.assignment || !form.total.trim())
-        throw new Error("Enter garment, date, factory, tailor and entire tailoring total");
+      if (!form.delivery) throw new Error("Select a delivery date before adding the tailoring job");
+      if (!form.garment.trim() || !form.assignment || !form.stitching.trim())
+        throw new Error("Enter garment, factory, tailor and stitching charge");
       const group = { ...form, id: crypto.randomUUID(), keys: selected.map((r) => r.key) };
       counterPayload(
         selected.map((r) => ({ ...r, group: group.id })),
@@ -260,6 +261,8 @@ function CounterContent({
       return;
     }
     try {
+      if (rows.some((r) => r.selected && !r.group))
+        throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
       const payload = counterPayload(rows, groups, source!.id);
       bill.mutate({
@@ -277,7 +280,8 @@ function CounterContent({
     }
   }
   if (!source) return <SourcePicker onChoose={setSource} />;
-  const total = previewTotal(rows, groups);
+  const pendingTailoring = canTailor && rows.some((r) => r.selected && !r.group);
+  const total = previewTotal(rows, groups, pendingTailoring ? form.stitching : undefined);
   const updateRow = (key: string, change: Partial<CounterRow>) =>
     setRows(rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
   return (
@@ -357,7 +361,7 @@ function CounterContent({
         <>
           <Panel
             title="Current bill"
-            description="Fabric prices are per metre. Finished pieces use their saved fixed SP. Select fabric rows for a tailoring job priced as one total."
+            description="Fabric prices are per metre. Finished pieces use their saved fixed SP. A tailored item combines its fabric price and one stitching charge."
           >
             <fieldset disabled={frozen || scan.isPending} className="space-y-4">
               <div className="space-y-2">
@@ -417,9 +421,7 @@ function CounterContent({
                     ) : (
                       <p className="self-center text-sm">1 piece</p>
                     )}
-                    {r.group ? (
-                      <p className="self-center text-xs">Included in tailoring total</p>
-                    ) : r.scan.kind === "fabric" ? (
+                    {r.scan.kind === "fabric" ? (
                       <label className="text-xs">
                         Fabric price ₹ / metre
                         <Input
@@ -475,12 +477,12 @@ function CounterContent({
                       />
                     </label>
                     <label className="text-sm">
-                      Entire tailoring total ₹
+                      Stitching charge ₹ (entire job)
                       <Input
-                        aria-label="Entire tailoring total"
+                        aria-label="Stitching charge"
                         inputMode="decimal"
-                        value={form.total}
-                        onChange={(e) => setForm({ ...form, total: e.target.value })}
+                        value={form.stitching}
+                        onChange={(e) => setForm({ ...form, stitching: e.target.value })}
                       />
                     </label>
                     <label className="text-sm">
@@ -518,38 +520,54 @@ function CounterContent({
                     }
                   />
                   <Button onClick={addGroup}>Add tailoring job</Button>
+                  <p role="status" className="text-sm text-muted-foreground">
+                    Tailoring job pending. Complete its details and click Add tailoring job before
+                    completing the bill.
+                  </p>
                 </div>
               )}
-              {groups.map((g) => (
-                <div
-                  key={g.id}
-                  className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"
-                >
-                  <div>
-                    <strong>{g.garment}</strong>
-                    <p>
-                      {g.keys.length} fabrics · Delivery {g.delivery} · Whole job{" "}
-                      {reportMoney(String(fabricMoneyInput(g.total)))}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setGroups(groups.filter((x) => x.id !== g.id));
-                      setRows(
-                        rows.map((r) =>
-                          r.group === g.id
-                            ? { ...r, group: undefined, selected: true }
-                            : { ...r, selected: false },
-                        ),
-                      );
-                      setForm({ ...blankGroup(), ...g });
-                    }}
+              {groups.map((g) => {
+                let amounts;
+                try {
+                  amounts = tailoringAmounts(rows, g);
+                } catch {
+                  amounts = null;
+                }
+                return (
+                  <div
+                    key={g.id}
+                    className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"
                   >
-                    Edit job
-                  </Button>
-                </div>
-              ))}
+                    <div>
+                      <strong>{g.garment}</strong>
+                      <p>
+                        {g.keys.length} fabrics · Delivery {g.delivery}
+                      </p>
+                      <p>
+                        {amounts
+                          ? `Fabric ${reportMoney(String(amounts.fabric))} + Stitching ${reportMoney(String(amounts.stitching))} · Bill line ${reportMoney(String(amounts.total))}`
+                          : "Enter valid fabric quantities and prices"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setGroups(groups.filter((x) => x.id !== g.id));
+                        setRows(
+                          rows.map((r) =>
+                            r.group === g.id
+                              ? { ...r, group: undefined, selected: true }
+                              : { ...r, selected: false },
+                          ),
+                        );
+                        setForm({ ...blankGroup(), ...g });
+                      }}
+                    >
+                      Edit job
+                    </Button>
+                  </div>
+                );
+              })}
               {!!rows.length && (
                 <div className="space-y-3 rounded-xl border p-4">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -593,7 +611,15 @@ function CounterContent({
                     Bill total{" "}
                     {total === null ? "Enter quantities and prices" : reportMoney(String(total))}
                   </p>
-                  <Button disabled={!canSell || bill.isPending} onClick={submit}>
+                  {pendingTailoring && (
+                    <p role="status" className="text-sm">
+                      Add the selected tailoring job before completing this bill.
+                    </p>
+                  )}
+                  <Button
+                    disabled={!canSell || bill.isPending || pendingTailoring}
+                    onClick={submit}
+                  >
                     {pending
                       ? "Retry unchanged bill"
                       : groups.length

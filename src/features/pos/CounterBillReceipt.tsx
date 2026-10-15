@@ -25,6 +25,8 @@ export type CounterReceipt = {
     unit: string;
     price_paise: string | null;
     amount_paise: string;
+    fabric_amount_paise?: string | null;
+    stitching_paise?: string | null;
     job_id: string | null;
     job_code: string | null;
     delivery_date: string | null;
@@ -79,7 +81,11 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
               )}
               {line.kind === "tailoring" && (
                 <>
-                  <p>Customer tailoring · Entire job total · Delivery: {line.delivery_date}</p>
+                  <p>
+                    {line.fabric_amount_paise != null && line.stitching_paise != null
+                      ? `Fabric ${reportMoney(line.fabric_amount_paise)} + Stitching ${reportMoney(line.stitching_paise)} · Delivery: ${line.delivery_date}`
+                      : `Customer tailoring · Entire job total · Delivery: ${line.delivery_date}`}
+                  </p>
                   <p className="break-all font-mono text-xs">{line.job_code}</p>
                   {line.design && <p>Design: {line.design}</p>}
                   {line.fabrics?.map((cut, i) => (

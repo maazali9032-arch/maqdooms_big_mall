@@ -25,9 +25,14 @@ export const supabase={rpc:async(name:string,args:Record<string,unknown>={})=>{
  else if(name==='owner_factory_users')data=[{id:'user',name:'Existing Tailor',roles:['tailor']}];
  else if(name==='owner_tailoring_hierarchy')data={factories:[{id:'factory',code:'F1',name:'Central Factory',active:true}],tailors:[{id:'tailor',code:'T1',real_name:'Ali',profile_id:'user',active:true}],assignments:[{id:'a1',factory_id:'factory',tailor_id:'tailor',valid_until:null}]};
  else if(name==='complete_counter_bill'){
-  const items=args.p_items as {kind:string;quantity?:number;sp_paise_per_m?:number}[],groups=args.p_tailoring as {total_paise:number}[];
-  const total=items.reduce((n,r)=>n+(r.kind==='product'?500000:Math.round(r.quantity!*r.sp_paise_per_m!/1000)),0)+groups.reduce((n,g)=>n+g.total_paise,0);
-  receipt={id:'bill',code:'BILL-1',created_at:'2026-10-15T12:00:00Z',total_paise:String(total),paid:args.p_paid,paid_at:null,source:floor.name,salesperson:'Recorded Salesperson',customer:{name:null,phone:null},lines:[]};data='bill';
+  type Cut={inventory_item_id:string;quantity:number;sp_paise_per_m:number};
+  const items=args.p_items as ({kind:string}&Partial<Cut>)[],groups=args.p_tailoring as {items:Cut[];stitching_paise:number;garment:string;delivery_date:string}[];
+  const lines=[...items.map((r,i)=>({id:'retail-'+i,kind:r.kind,name:r.kind==='product'?'Suit':'Cotton',barcode:r.kind==='product'?'FP-1':r.inventory_item_id!.slice(5),quantity:String(r.kind==='product'?1:r.quantity),unit:r.kind==='product'?'pc':'mm',price_paise:r.kind==='product'?null:String(r.sp_paise_per_m),amount_paise:String(r.kind==='product'?500000:Math.round(r.quantity!*r.sp_paise_per_m!/1000))})),...groups.map((g,i)=>{
+   const fabric=g.items.reduce((n,c)=>n+Math.round(c.quantity*c.sp_paise_per_m/1000),0);
+   return {id:'tailoring-'+i,kind:'tailoring',name:g.garment,quantity:'1',unit:'job',amount_paise:String(fabric+g.stitching_paise),fabric_amount_paise:String(fabric),stitching_paise:String(g.stitching_paise),job_id:'new-job-'+i,job_code:'NEW-JOB-'+i,delivery_date:g.delivery_date,fabrics:g.items.map(c=>({name:'Cotton',barcode:c.inventory_item_id.slice(5),quantity_mm:String(c.quantity)}))};
+  })];
+  const total=lines.reduce((n,l)=>n+Number(l.amount_paise),0);
+  receipt={id:'bill',code:'BILL-1',created_at:'2026-10-15T12:00:00Z',total_paise:String(total),paid:args.p_paid,paid_at:null,source:floor.name,salesperson:'Recorded Salesperson',customer:{name:null,phone:null},lines};data='bill';
  }else if(name==='counter_bill')data=['TAIL-BILL','existing-bill'].includes(String(args.p_code))?existingReceipt:args.p_code==='RETAIL-BILL'?{...existingReceipt,id:'retail',code:'RETAIL-BILL'}:receipt&&[receipt.id,receipt.code].includes(args.p_code)?receipt:null;
  else if(name==='issue_additional_customer_fabric'||name==='issue_additional_production_fabric'){
   if(!posted.has(String(args.p_request))){posted.add(String(args.p_request));issues.push({name,...args});}

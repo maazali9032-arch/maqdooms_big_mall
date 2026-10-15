@@ -1,0 +1,19 @@
+{
+  "verified_at": "2026-10-15T10:20:57.229Z",
+  "passed": true,
+  "checks": 27,
+  "fixture": true,
+  "live_writes": false,
+  "example": {
+    "fabric_lines": [
+      500,
+      400
+    ],
+    "stitching": 300,
+    "bill_lines": [
+      500,
+      700
+    ],
+    "total": 1200
+  }
+}

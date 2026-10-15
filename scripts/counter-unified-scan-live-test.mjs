@@ -5,7 +5,8 @@ import postgres from 'postgres';
 process.loadEnvFile('.env');
 const sql=postgres(process.env.LOVABLE_DB_MIGRATION_URL,{ssl:'require',max:1,connect_timeout:15,onnotice:()=>{}});
 let checks=0;const check=(v,label)=>{assert(v,label);checks++;};
-const details=process.argv.includes('--barcode-details');
+const stitching=process.argv.includes('--stitching-pricing');
+const details=process.argv.includes('--barcode-details')||stitching;
 try{
  const users=await sql`select p.id,array_agg(r.role_key) roles from profiles p join user_roles r on r.user_id=p.id where p.active group by p.id`;
  const counter=users.find(u=>u.roles.includes('counter')&&!u.roles.includes('owner'));
@@ -42,7 +43,19 @@ try{
    }
   }
  }
- for(const u of users.filter(u=>!u.roles.includes('owner')&&!u.roles.includes('counter'))){let blocked=false;try{await read(u.id,'select counter_scan_barcode($1,$2) result',['__UNKNOWN_COUNTER_SCAN__',floor.id]);}catch{blocked=true;}check(blocked,'Other staff cannot use Counter barcode lookup');}
- await fs.writeFile(details?'docs/COUNTER_BARCODE_DETAILS_LIVE_VERIFICATION.json':'docs/COUNTER_UNIFIED_SCAN_LIVE_VERIFICATION.json',JSON.stringify({verified_at:new Date().toISOString(),passed:true,checks,read_only_transactions:true,existing_bills_checked:bills.length,existing_productions_checked:productions.length,live_writes:false},null,2)+'\n');
+ if(stitching){
+  const [grants]=await sql`select has_table_privilege('anon','counter_tailoring_sale_prices','SELECT') anon_read,has_table_privilege('authenticated','counter_tailoring_sale_prices','INSERT') raw_insert,has_table_privilege('authenticated','counter_tailoring_sale_prices','UPDATE') raw_update,has_table_privilege('authenticated','counter_tailoring_sale_prices','DELETE') raw_delete`;
+  check(Object.values(grants).every(v=>!v),'No anonymous financial access or raw authenticated pricing writes');
+  const [enabled]=await sql`select c.relrowsecurity,(select count(*) from pg_trigger where tgrelid=c.oid and tgname='tailoring_sale_price_immutable' and tgenabled='O')::int immutable from pg_class c where c.oid='counter_tailoring_sale_prices'::regclass`;
+  check(enabled.relrowsecurity&&enabled.immutable===1,'Price evidence has RLS and immutable history protection');
+  const [version]=await sql`select count(*)::int n from supabase_migrations.erp_execution_history where filename='20261015001200_counter_stitching_pricing.sql' and mode='applied'`;
+  check(version.n===1,'Forward stitching migration is recorded');
+  const [mismatch]=await sql`select count(*)::int n from counter_tailoring_sale_prices p join counter_tailoring_details d on d.job_id=p.job_id join order_items i on i.customer_tailoring_job_id=p.job_id join counter_bill_print_records b on b.bill_id=d.bill_id where p.total_paise<>i.final_customer_price_paise or not exists(select 1 from jsonb_array_elements(b.document->'lines') l where l->>'job_id'=p.job_id::text and l->>'amount_paise'=p.total_paise::text and l->>'fabric_amount_paise'=p.fabric_amount_paise::text and l->>'stitching_paise'=p.stitching_paise::text)`;
+  check(mismatch.n===0,'Any new recorded pricing agrees with its saved bill and immutable print line');
+  const [fabricStored]=await sql`select pg_get_functiondef('public.complete_counter_bill(uuid,uuid,jsonb,jsonb,boolean,uuid,uuid,text,text)'::regprocedure) body`;
+  check(fabricStored.body.includes('fabric_amount+stitching')&&fabricStored.body.includes('Refresh POS: enter fabric prices'),'Server computes combined prices and rejects ambiguous new whole-price requests');
+ }
+ for(const u of users.filter(u=>!u.roles.includes('owner')&&!u.roles.includes('counter'))){let blocked=false;try{await read(u.id,'select counter_scan_barcode($1,$2) result',['__UNKNOWN_COUNTER_SCAN__',floor.id]);}catch{blocked=true;}check(blocked,'Other staff cannot use Counter barcode lookup');if(stitching)check(Number(await read(u.id,'select count(*) result from counter_tailoring_sale_prices'))===0,'Other staff cannot read stitching sale-price evidence');}
+ await fs.writeFile(stitching?'docs/COUNTER_STITCHING_LIVE_VERIFICATION.json':details?'docs/COUNTER_BARCODE_DETAILS_LIVE_VERIFICATION.json':'docs/COUNTER_UNIFIED_SCAN_LIVE_VERIFICATION.json',JSON.stringify({verified_at:new Date().toISOString(),passed:true,checks,read_only_transactions:true,existing_bills_checked:bills.length,existing_productions_checked:productions.length,live_writes:false},null,2)+'\n');
  console.log('PASS: '+checks+' read-only Counter acceptance checks');
 }finally{await sql.end();}
