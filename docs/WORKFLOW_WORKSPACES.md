@@ -110,3 +110,5 @@ Rollout and acceptance completed: forward 0045–0050 applied, all rows in 88 pr
 Forward 0050 retains the existing Showroom-only authorization on the older finished-sale endpoint and captures actual per-piece design/size. It supersedes that compatibility function without editing previously applied migration bytes.
 
 Live role probes compare all business/audit and account identity/access fields. The normal concurrent profile last_login timestamp is excluded from acceptance fingerprints; atomic migration preservation includes every existing column.
+
+Production deployment confirmed for source fbe59dc: successful Vercel commit status and live JavaScript bundle contains the new combined bill and floor-first UI. See WORKFLOW_WORKSPACES_DEPLOYMENT.json. Authenticated hosted browser and physical-phone camera acceptance remain unperformed.

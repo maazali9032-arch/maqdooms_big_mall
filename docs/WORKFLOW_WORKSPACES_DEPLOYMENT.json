@@ -1,0 +1,13 @@
+{
+  "verified_at": "2026-10-15T05:38:34.316Z",
+  "source_commit": "fbe59dc",
+  "github_vercel_state": "success",
+  "deployment_url": "https://vercel.com/maaz-9032/maqdooms-big-mall/9tzz66gEwZJXZRFA6sdbaLH1TNs9",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "live_pos_bundle": "/assets/pos-BXdiLTHc.js",
+  "live_bundle_status": 200,
+  "combined_billing_confirmed": true,
+  "floor_first_confirmed": true,
+  "authenticated_browser_tested": false,
+  "physical_phone_camera_tested": false
+}
