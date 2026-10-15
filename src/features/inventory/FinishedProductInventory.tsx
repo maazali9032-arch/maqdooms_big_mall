@@ -1,3 +1,4 @@
+import { locationLabel } from "@/shared/utils/location-label";
 import { useId, useRef, useState } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -343,7 +344,7 @@ export function FinishedProductInventory() {
                   ?.filter((l) => l.active && (isOwner || l.kind === "workshop"))
                   .map((l) => (
                     <option key={l.id} value={l.id}>
-                      {l.name}
+                      {locationLabel(l)}
                     </option>
                   ))}
               </select>
@@ -360,7 +361,7 @@ export function FinishedProductInventory() {
                 <option value="">Select next location</option>
                 {destinations.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {l.name}
+                    {locationLabel(l)}
                   </option>
                 ))}
               </select>

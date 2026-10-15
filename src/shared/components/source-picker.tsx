@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "./page";
 import { QueryState } from "./query-state";
 import { Button } from "@/components/ui/button";
+import { locationLabel } from "@/shared/utils/location-label";
 export type SourceLocation = {
   id: string;
   name: string;
@@ -49,7 +50,7 @@ export function SourcePicker({
         onSubmit={(e) => {
           e.preventDefault();
           const chosen = locations.find((l) => l.id === id);
-          if (chosen) onChoose(chosen);
+          if (chosen) onChoose({ ...chosen, name: locationLabel(chosen) });
         }}
       >
         <select
@@ -61,7 +62,7 @@ export function SourcePicker({
           <option value="">Select location</option>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>
-              {l.name}
+              {locationLabel(l)}
             </option>
           ))}
         </select>

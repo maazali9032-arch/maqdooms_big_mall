@@ -6196,3 +6196,9 @@ Rollout and acceptance completed: forward 0045–0050 applied, all rows in 88 pr
 Forward 0050 retains the existing Showroom-only authorization on the older finished-sale endpoint and captures actual per-piece design/size. It supersedes that compatibility function without editing previously applied migration bytes.
 
 Live role probes compare all business/audit and account identity/access fields. The normal concurrent profile last_login timestamp is excluded from acceptance fingerprints; atomic migration preservation includes every existing column.
+
+# 56. SHOWROOM FLOOR VISIBILITY AND OWNER DEFINITION DELETE — 15 OCTOBER 2026
+
+Original transfer records identify general Showroom without a floor. The Owner selected Showroom F3; a separate posted transfer assigned the two Velvet Thaans (10 m each) to F3 without changing original history, total stock or CP. Administration now shows general Showroom and floor-level stock counts. Owner-confirmed Delete removes floors/products/designs from future work while retaining historical identity, cost and audit records; stocked floors and canonical roots are protected, with backend role/stale-value/retry checks. Forward 0051 preserves pre-existing rows. See docs/DEFINITION_REMOVAL.md and acceptance proof files.
+
+Completed: 0051 applied with all rows in 96 pre-existing public tables preserved. Verification passed 1,971 cumulative database assertions, 16 browser checks and 88 read-only live checks across 97 current tables. Live acceptance confirms F3 has two Thaans / 20 m and general Showroom has no unassigned Thaans. Normal concurrent profiles.last_login updates are excluded from read-only acceptance fingerprints; migration preservation checks include every column. TypeScript, scoped ESLint and isolated Vercel build passed.

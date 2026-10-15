@@ -1,0 +1,19 @@
+{
+  "recorded_at": "2026-10-15T07:56:53.645Z",
+  "request_id": "bcf8f373-ba6e-48ab-a510-f01e208ca3ab",
+  "transfer_id": "a2a1600f-fbde-4334-b5b9-49e4de5d0ed3",
+  "source": "Showroom",
+  "destination": "Showroom F3",
+  "barcodes": [
+    {
+      "barcode": "AND-90955888f",
+      "metres": 10
+    },
+    {
+      "barcode": "AND-90955888i",
+      "metres": 10
+    }
+  ],
+  "old_history_preserved": true,
+  "total_stock_and_CP_unchanged": true
+}

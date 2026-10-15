@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import type { Database } from "@/integrations/supabase/types";
+import { DeleteDefinition } from "@/shared/components/delete-definition";
 type Definition = { id: string; code: string; name: string; active: boolean };
 type Args = Database["public"]["Functions"]["manage_production_catalog"]["Args"];
 const empty = { id: "", code: "", name: "", active: true };
@@ -130,9 +131,18 @@ export function ProductDesignDefinitions() {
                   {d.code} · {d.active ? "Active" : "Inactive"}
                 </p>
               </div>
-              <Button variant="outline" onClick={() => setForm(d)}>
-                Edit
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setForm(d)}>
+                  Edit
+                </Button>
+                <DeleteDefinition
+                  kind={kind}
+                  item={d}
+                  onDeleted={() => {
+                    if (form.id === d.id) setForm(empty);
+                  }}
+                />
+              </div>
             </div>
           ))}
         </div>

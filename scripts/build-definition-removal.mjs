@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import {functionSQL,mirrorMigration} from './workflow-sql.mjs';
+let locations=await functionSQL('supabase/migrations/20261003000200_phase3_locations_ledger.sql','inventory_locations');
+locations=locations.replace('FROM public.locations ORDER BY','FROM public.locations WHERE public.definition_available(\'floor\',id) ORDER BY');
+let catalog=await functionSQL('supabase/migrations/20261014000000_role_workspaces.sql','owner_production_catalog');
+catalog=catalog.replaceAll('FROM public.products)',"FROM public.products WHERE public.definition_available('product',id))").replaceAll('FROM public.designs)',"FROM public.designs WHERE public.definition_available('design',id))");
+catalog=catalog.replace('FROM public.products p)',"FROM public.products p WHERE public.definition_available('product',p.id))");
+catalog=catalog.replace("v ON true),'[]'", "v ON true WHERE public.definition_available('design',d.id)),'[]'");
+let activity=await functionSQL('supabase/migrations/20261015000300_workspace_cleanup.sql','stock_activity');
+activity=activity.replace("'source',source.name,'destination',destination.name", "'source',CASE WHEN source.kind='showroom' THEN source.name||' — floor not assigned' ELSE source.name END,'destination',CASE WHEN destination.kind='showroom' THEN destination.name||' — floor not assigned' ELSE destination.name END");
+await mirrorMigration('20261015000900','0051','definition_removal','BEGIN;\n'+await fs.readFile('scripts/definition-removal-schema.sql','utf8')+'\n'+[locations,catalog,activity].join('\n')+"\nNOTIFY pgrst,'reload schema';\nCOMMIT;\n");

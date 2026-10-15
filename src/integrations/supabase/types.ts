@@ -1138,6 +1138,17 @@ export type Database = {
       };
     };
     Functions: {
+      owner_location_summary: { Args: Record<PropertyKey, never>; Returns: Json };
+      owner_delete_definition: {
+        Args: {
+          p_request: string;
+          p_kind: string;
+          p_id: string;
+          p_expected_name: string;
+          p_expected_active: boolean;
+        };
+        Returns: string;
+      };
       ongoing_production_work: { Args: Record<PropertyKey, never>; Returns: Json };
       owner_factory_users: { Args: Record<PropertyKey, never>; Returns: Json };
       owner_assign_factory_user: {

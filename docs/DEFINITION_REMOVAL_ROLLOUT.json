@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-10-15T08:08:01.569Z",
+  "finished_at": "2026-10-15T08:08:36.073Z",
+  "applied": [
+    "20261015000900_definition_removal.sql"
+  ],
+  "verified": [
+    "20261015000900_definition_removal.sql"
+  ],
+  "error": null,
+  "preexisting_tables_preserved": 96,
+  "all_existing_rows_preserved": true,
+  "sha256": "f6acd62c0601e8029b87da042d1c2408fb94b960a1e686d8e875c1f724b50e52"
+}

@@ -23,3 +23,6 @@ supabase/migrations/20261015000700_workflow_integrations.sql -text
 
 supabase/migrations/20261015000800_finished_sale_compatibility.sql -text
 drizzle/migrations/0050_finished_sale_compatibility.sql -text
+
+supabase/migrations/20261015000900_definition_removal.sql -text
+drizzle/migrations/0051_definition_removal.sql -text

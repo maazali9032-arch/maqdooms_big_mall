@@ -1,3 +1,4 @@
+import { locationLabel } from "@/shared/utils/location-label";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -277,7 +278,7 @@ export function FabricTransfer() {
                 ?.filter((l) => l.active)
                 .map((l) => (
                   <option key={l.id} value={l.id}>
-                    {l.name}
+                    {locationLabel(l)}
                   </option>
                 ))}
             </select>
@@ -388,7 +389,7 @@ export function FabricTransfer() {
                               )
                               .map((l) => (
                                 <option key={l.id} value={l.id}>
-                                  {l.name}
+                                  {locationLabel(l)}
                                 </option>
                               ))}
                           </select>

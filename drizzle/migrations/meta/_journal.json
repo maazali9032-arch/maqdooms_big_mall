@@ -351,6 +351,13 @@
       "when": 1792022880000,
       "tag": "0050_finished_sale_compatibility",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792022940000,
+      "tag": "0051_definition_removal",
+      "breakpoints": true
     }
   ]
 }
