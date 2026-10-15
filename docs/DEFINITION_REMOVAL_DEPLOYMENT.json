@@ -1,0 +1,45 @@
+{
+  "verifiedAt": "2026-10-15T08:14:32.166Z",
+  "sourceCommit": "5f551efb46a66325f1a52be0d37840597c3dfa49",
+  "site": "https://maqdooms-big-mall.vercel.app",
+  "deployment": {
+    "state": "success",
+    "description": "Deployment has completed",
+    "url": "https://vercel.com/maaz-9032/maqdooms-big-mall/9PEJvynRCjJ1bEVkbN2XQfJU37RP",
+    "completedAt": "2026-10-15T08:12:12Z"
+  },
+  "mainAsset": "/assets/index-DJWkxb4H.js",
+  "bundles": [
+    {
+      "path": "/assets/inventory.index-kETXLGur.js",
+      "httpStatus": 200,
+      "sha256": "d17f0fa79feb2c61bf7ea4fc9f3aae98c14caf435c5bb3ddae4cd1dc7f1bc4c3",
+      "markersVerified": [
+        "owner_location_summary",
+        "Showroom & floors",
+        "floor not assigned",
+        "Delete"
+      ]
+    },
+    {
+      "path": "/assets/delete-definition-D9awCAGj.js",
+      "httpStatus": 200,
+      "sha256": "d517b9ad4db3e4dd0be4fe84e340ccbabdde71955bf2747ad5e688c1b686b2ea",
+      "markersVerified": [
+        "owner_delete_definition",
+        "Delete"
+      ]
+    },
+    {
+      "path": "/assets/tailoring-VCeTvjK5.js",
+      "httpStatus": 200,
+      "sha256": "f6828d9c24f4017adb78cc3b49b983a70c1ddae06f93fd4d7950c3711b72b2d0",
+      "markersVerified": [
+        "Product types",
+        "Delete"
+      ]
+    }
+  ],
+  "scope": "Published bundle and deployment verification; browser interaction coverage is recorded separately in DEFINITION_REMOVAL_UI_VERIFICATION.json.",
+  "passed": true
+}

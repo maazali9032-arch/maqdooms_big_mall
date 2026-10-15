@@ -37,3 +37,5 @@ reactivation protection and retained production/cost evidence. Browser fixtures
 exercise Delete/Cancel/error flows, Owner-only access and 320/390/768/1440 layouts.
 
 Completed: 0051 applied with all rows in 96 pre-existing public tables preserved. Verification passed 1,971 cumulative database assertions, 16 browser checks and 88 read-only live checks across 97 current tables. Live acceptance confirms F3 has two Thaans / 20 m and general Showroom has no unassigned Thaans. Normal concurrent profiles.last_login updates are excluded from read-only acceptance fingerprints; migration preservation checks include every column. TypeScript, scoped ESLint and isolated Vercel build passed.
+
+Published source commit 5f551efb46a66325f1a52be0d37840597c3dfa49 passed Vercel deployment. The live site serves the updated location summary, unassigned-floor labels and shared Owner deletion controls. Deployment and published bundle evidence is recorded in DEFINITION_REMOVAL_DEPLOYMENT.json.
