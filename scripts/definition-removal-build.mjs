@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
 
 const root = process.cwd();
+const floorsOnly = process.argv.includes('--showroom-floors');
 const reuse = process.argv[2];
 const target = reuse
   ? path.resolve(reuse)
@@ -47,7 +48,7 @@ const env = {
   NODE_OPTIONS: "--v8-pool-size=1 --max-old-space-size=4096",
   NITRO_PRESET: "vercel",
 };
-const logFile = path.join(os.tmpdir(), "maqdooms-definition-removal-build.log");
+const logFile = path.join(os.tmpdir(), floorsOnly ? "maqdooms-showroom-floors-only-build.log" : "maqdooms-definition-removal-build.log");
 const log = fs.openSync(logFile, "w");
 const install = reuse
   ? { status: 0 }
@@ -88,7 +89,7 @@ const result = {
   fresh_install_reused: Boolean(reuse),
   vercel_output_present: fs.existsSync(path.join(target, ".vercel/output/config.json")),
 };
-fs.writeFileSync("docs/DEFINITION_REMOVAL_BUILD.json", JSON.stringify(result, null, 2));
+fs.writeFileSync(floorsOnly ? "docs/SHOWROOM_FLOORS_ONLY_BUILD.json" : "docs/DEFINITION_REMOVAL_BUILD.json", JSON.stringify(result, null, 2));
 console.log(JSON.stringify(result));
 process.exitCode =
   install.status === 0 && build?.status === 0 && result.vercel_output_present ? 0 : 1;

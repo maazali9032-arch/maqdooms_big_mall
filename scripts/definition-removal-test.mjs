@@ -1,6 +1,6 @@
 process.on("uncaughtException", (e) => {
   console.error(
-    e.message,
+      e.stack ?? e.message,
     e.position,
     e.query?.slice(Math.max(0, Number(e.position) - 100), Number(e.position) + 120),
   );
@@ -14,6 +14,7 @@ import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { verifyDelegation } from "./delegated-thaan-cases.mjs";
 import {definitionRemovalCases} from './definition-removal-cases.mjs';
+import {showroomFloorsOnlyCases} from './showroom-floors-only-cases.mjs';
 import { mixedProductionCases } from "./mixed-production-cases.mjs";
 import { workflowIntegrationCases } from "./workflow-integration-cases.mjs";
 import { counterWorkspaceCases } from "./counter-workspace-cases.mjs";
@@ -24,6 +25,7 @@ import { roleWorkspaceCases } from "./role-workspace-cases.mjs";
 import { optionalCases } from "./thaan-optional-details-cases.mjs";
 import { verifyModuleScope } from "./module-role-scope-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
+const floorsOnly=process.argv.includes('--showroom-floors');
 let checks = 0;
 const check = (value, label) => {
   assert(value, label);
@@ -42,7 +44,11 @@ for (const [directory, demo] of [
       throw new Error(sql + ": " + error.message);
     }
   };
-  const one = async (sql, args = []) => Object.values((await q(sql, args))[0])[0];
+  const one = async (sql, args = []) => {
+    const rows=await q(sql,args);
+    if(!rows.length)throw new Error('No test result rows: '+sql);
+    return Object.values(rows[0])[0];
+  };
   const denied = async (sql, args = []) => {
     let failure = false;
     try {
@@ -74,6 +80,7 @@ for (const [directory, demo] of [
       .filter((file) => file.endsWith(".sql") && !file.includes("_live_"))
       .sort()) {
       if (!demo && file.includes("demo_seed")) continue;
+      if (file.includes('_showroom_floors_only')) continue;
       if (
         file.includes("_definition_removal") || file.includes("_counter_workspace") || file.includes("_mixed_production") || file.includes("_owner_definitions") || file.includes("_workflow_integrations") || file.includes("_finished_sale_compatibility") || file.includes("_workspace_cleanup") ||
         file.includes("_owner_barcode_inspector") ||
@@ -839,6 +846,7 @@ for (const [directory, demo] of [
     await login(null);check((await one('select item_snapshot from finished_product_sale_snapshots where order_item_id in(select id from order_items where order_id=$1)',[compatBill])).size,'Older finished-sale API captures actual piece size');
     await workflowIntegrationCases({q,one,denied,login,users,check});
     await login(null);const removalFile=(await fs.readdir(directory)).find(f=>f.endsWith('_definition_removal.sql'));const beforeRemoval=await snapshot();await db.exec(await fs.readFile(resolve(directory,removalFile),'utf8'));check(beforeRemoval===await snapshot(),'Delete-controls migration preserves every pre-existing row');await definitionRemovalCases({q,one,denied,login,users,check});
+    if(floorsOnly){const file=(await fs.readdir(directory)).find(f=>f.endsWith('_showroom_floors_only.sql'));await showroomFloorsOnlyCases({db,q,one,denied,login,users,check,migration:await fs.readFile(resolve(directory,file),'utf8')});}
     console.log(
       directory + " " + (demo ? "demo" : "clean") + ": Labels-first Stock Entry verified",
     );
@@ -847,7 +855,7 @@ for (const [directory, demo] of [
   }
 }
 await fs.writeFile(
-  "docs/DEFINITION_REMOVAL_DATABASE_VERIFICATION.json",
+  floorsOnly ? "docs/SHOWROOM_FLOORS_ONLY_DATABASE_VERIFICATION.json" : "docs/DEFINITION_REMOVAL_DATABASE_VERIFICATION.json",
   JSON.stringify({ verified_at: new Date().toISOString(), checks, passed: true }, null, 2),
 );
 console.log(`PASS: ${checks} cumulative optional-detail Stock Entry checks`);

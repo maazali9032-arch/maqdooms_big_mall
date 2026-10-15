@@ -199,16 +199,8 @@ export function FinishedProductInventory() {
     locations.data?.filter(
       (l) =>
         l.active &&
-        ((src?.kind === "workshop" &&
-          ((l.kind === "showroom_sublocation" &&
-            locations.data?.some(
-              (parent) => parent.id === l.parent_id && parent.kind === "showroom" && parent.active,
-            )) ||
-            (isOwner && l.kind === "showroom"))) ||
-          (isOwner &&
-            src?.kind === "showroom" &&
-            (l.kind === "workshop" || l.parent_id === src.id)) ||
-          (isOwner && src?.kind === "showroom_sublocation" && l.id === src.parent_id)),
+        ((src?.kind === "workshop" && l.kind === "showroom_sublocation") ||
+          (isOwner && src?.kind === "showroom_sublocation" && l.kind === "workshop")),
     ) ?? [];
   const frozen = Boolean(pending) || transfer.isPending || scanPiece.isPending;
   const loadingError = inventory.error || locations.error;
@@ -224,7 +216,7 @@ export function FinishedProductInventory() {
       <ProductionReceipt />
       <Panel
         title="Finished Product inventory & transfers"
-        description="Each Product Barcode represents one physical piece. Move Workshop → Showroom → its sublocation; returns follow the same path in reverse."
+        description="Each Product Barcode represents one physical piece. Transfer Workshop stock directly to a Showroom floor; Owner returns go directly back to Workshop."
       >
         <div className="space-y-3">
           {loadingError ? (

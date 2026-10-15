@@ -1,0 +1,11 @@
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {functionSQL,mirrorMigration} from './workflow-sql.mjs';
+let scan=await functionSQL('supabase/migrations/20261015000400_counter_workspace.sql','counter_scan_barcode');
+const old="(l.kind='showroom' OR (l.kind='showroom_sublocation' AND parent.active AND parent.kind='showroom'))";
+assert(scan.includes(old));
+scan=scan.replace(old,"(l.kind='showroom_sublocation' AND parent.active AND parent.kind='showroom')");
+let saleable=await functionSQL('supabase/migrations/20261014000000_role_workspaces.sql','is_showroom_location');
+assert(saleable.includes(old));
+saleable=saleable.replace(old,"(l.kind='showroom_sublocation' AND parent.active AND parent.kind='showroom')");
+await mirrorMigration('20261015001000','0052','showroom_floors_only','BEGIN;\n'+await fs.readFile('scripts/showroom-floors-only-schema.sql','utf8')+'\n'+saleable+'\n'+scan+'\nCOMMIT;\n');

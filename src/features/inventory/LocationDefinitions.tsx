@@ -52,8 +52,8 @@ export function LocationDefinitions() {
   if (!isOwner) return <p>Owner access required.</p>;
   return (
     <Panel
-      title="Showroom & floors"
-      description="Define the floors used by Stock Transfer, Counter and Production. General Showroom stock has no assigned floor. Move stock out before deleting a floor; history is retained."
+      title="Showroom floors"
+      description="Define the floors used by Stock Transfer, Counter and Production. Move stock out before deleting a floor; history is retained."
     >
       <QueryState
         loading={query.isPending}
@@ -98,14 +98,14 @@ export function LocationDefinitions() {
       </form>
       <div className="space-y-2">
         {query.data
-          ?.filter((row) => ["showroom", "showroom_sublocation", "workshop"].includes(row.kind))
+          ?.filter((row) => ["showroom_sublocation", "workshop"].includes(row.kind))
           .map((row) => (
             <div
               key={row.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
             >
               <span>
-                {row.kind === "showroom" ? row.name + " — floor not assigned" : row.name}
+                {row.name}
                 <small className="ml-2 text-muted-foreground">
                   {row.active ? "Active" : "Inactive"}
                 </small>

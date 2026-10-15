@@ -31,9 +31,8 @@ export function SourcePicker({
   const locations = (query.data ?? []).filter(
     (l) =>
       l.active &&
-      ["workshop", "showroom", "showroom_sublocation"].includes(l.kind) &&
-      (showWorkshop || l.kind !== "workshop") &&
-      (!l.parent_id || (query.data ?? []).some((p) => p.id === l.parent_id && p.active)),
+      ["workshop", "showroom_sublocation"].includes(l.kind) &&
+      (showWorkshop || l.kind !== "workshop"),
   );
   return (
     <Panel

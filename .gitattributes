@@ -26,3 +26,6 @@ drizzle/migrations/0050_finished_sale_compatibility.sql -text
 
 supabase/migrations/20261015000900_definition_removal.sql -text
 drizzle/migrations/0051_definition_removal.sql -text
+
+supabase/migrations/20261015001000_showroom_floors_only.sql -text
+drizzle/migrations/0052_showroom_floors_only.sql -text

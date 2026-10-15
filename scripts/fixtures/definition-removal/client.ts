@@ -6,5 +6,6 @@ Object.assign(window,{definitionCalls:calls});
 export const supabase={rpc:async(name:string,args:Record<string,unknown>={})=>{
  calls.push({name,args});if(name==='owner_location_summary')return {data:locations.filter(l=>!deleted.has(l.id)),error:null};if(name==='owner_production_catalog')return {data:{products:products.filter(p=>!deleted.has(p.id)),designs:designs.filter(d=>!deleted.has(d.id))},error:null};
  if(name==='owner_delete_definition'){if(location.search.includes('reject'))return {data:null,error:{code:'P0001',message:'Move all stock out of this floor before deleting it'}};deleted.add(String(args.p_id));return {data:args.p_id,error:null};}
+ if(name==='inventory_locations')return {data:[...locations.filter(l=>l.kind!=='showroom'&&!deleted.has(l.id)),{id:'workshop',name:'Workshop',kind:'workshop',active:true,parent_id:null}],error:null};
  return {data:null,error:new Error('Unexpected fixture RPC '+name)};
 }};

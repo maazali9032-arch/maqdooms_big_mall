@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import assert from "node:assert/strict";
 import postgres from "postgres";
 process.loadEnvFile(".env");
+const floorsOnly = process.argv.includes('--showroom-floors');
 const sql = postgres(process.env.LOVABLE_DB_MIGRATION_URL, {
   ssl: "require",
   max: 1,
@@ -101,8 +102,15 @@ try {
   const protectedTables=['counter_bills','counter_bill_payments','counter_tailoring_details','customer_issue_fabric_costs','counter_bill_print_records','production_piece_specs','mixed_production_requests','factory_user_requests','owner_definition_deletions'];
   for(const table of protectedTables){const p=(await sql.unsafe(`select has_table_privilege('anon',$1,'SELECT') a, has_table_privilege('authenticated',$1,'INSERT') i,has_table_privilege('authenticated',$1,'UPDATE') u,has_table_privilege('authenticated',$1,'DELETE') d`,[table]))[0];check(!p.a&&!p.i&&!p.u&&!p.d,'Protected history has no raw writes/anonymous grant: '+table);}
   const summaries=(await read(owner.id,'select owner_location_summary() result'))[0].result;
-  const root=summaries.find(l=>l.kind==='showroom'),f3=summaries.find(l=>l.name==='Showroom F3');
-  check(root&&root.fabric_thaans===0,'General Showroom is visible with no unassigned Thaans');
+  const rootSummary=summaries.find(l=>l.kind==='showroom'),f3=summaries.find(l=>l.name==='Showroom F3');
+  const root=floorsOnly?(await sql`select id,name from locations where kind='showroom'`)[0]:rootSummary;
+  check(floorsOnly?!rootSummary:root&&root.fabric_thaans===0,floorsOnly?'General Showroom is absent from administration':'General Showroom is visible with no unassigned Thaans');
+  if(floorsOnly){
+    for(const u of users){const choices=await read(u.id,'select * from inventory_locations()');check(!choices.some(l=>l.kind==='showroom'||l.id===root.id),'General Showroom is not a work option for '+u.role_key);}
+    let blocked=false;try{await read(owner.id,'select counter_scan_barcode($1,$2)',['unknown-barcode',root.id]);}catch(e){blocked=e.message.includes('active Showroom floor');}check(blocked,'Stale Counter source cannot use general Showroom');
+    check((await sql`select count(*)::int n from pg_trigger where tgname='inventory_movement_showroom_floor_guard' and tgenabled='O'`)[0].n===1,'General Showroom ledger guard is enabled');
+    check(!(await sql`select exists(select 1 from inventory_items i where inventory_balance(i.id,${root.id})<>0) yes`)[0].yes,'General Showroom contains no inventory');
+  }
   check(f3&&f3.fabric_thaans===2&&Number(f3.fabric_mm)===20000,'F3 has exactly the two authorized 10-metre Thaans');
   check(activity.some(r=>r.kind==='TRANSFER'&&r.source==='Showroom — floor not assigned'&&r.destination==='Showroom F3'),'History distinguishes root Showroom from the newly assigned floor');
   for(const u of users){if((await sql`select exists(select 1 from user_roles where user_id=${u.id} and role_key='owner') yes`)[0].yes)continue;let rejected=false;try{await read(u.id,'select owner_delete_definition($1,$2,$3,$4,true)',['00000000-0000-0000-0000-000000000051','floor',root.id,root.name]);}catch(e){rejected=e.code==='42501';}check(rejected,'Staff Delete denied before any operational write: '+u.role_key);}
@@ -113,7 +121,7 @@ try {
   assert.deepEqual(await fingerprint(), before);
   check(true, "Every public row unchanged during acceptance");
   await fs.writeFile(
-    "docs/DEFINITION_REMOVAL_LIVE_VERIFICATION.json",
+    floorsOnly ? "docs/SHOWROOM_FLOORS_ONLY_LIVE_VERIFICATION.json" : "docs/DEFINITION_REMOVAL_LIVE_VERIFICATION.json",
     JSON.stringify(
       {
         verified_at: new Date().toISOString(),
