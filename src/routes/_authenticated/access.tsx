@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
 import { CreateStaff } from "@/features/access/CreateStaff";
 import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
-import { PosTerminalManagement } from "@/features/access/PosTerminalManagement";
+import { PosTerminalManagement, PosUserAssignment } from "@/features/access/PosTerminalManagement";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -302,6 +302,7 @@ function AccessPage() {
                             );
                           })}
                         </div>
+                        <PosUserAssignment user={user} />
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge

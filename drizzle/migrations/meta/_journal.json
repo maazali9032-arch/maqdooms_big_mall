@@ -414,6 +414,13 @@
       "when": 1792110120000,
       "tag": "0059_pos_terminal_pool",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1792195200000,
+      "tag": "0060_pos_user_assignment",
+      "breakpoints": true
     }
   ]
 }

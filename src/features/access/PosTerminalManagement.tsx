@@ -14,17 +14,15 @@ type Terminal = {
   user_name: string | null;
   user_active: boolean | null;
 };
-type Staff = { id: string; full_name: string; active: boolean; roles: string[] };
+export type PosStaff = { id: string; full_name: string; active: boolean; roles: string[] };
 
 const rpc = supabase.rpc as unknown as (
   name: string,
   args: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: Error | null }>;
 
-export function PosTerminalManagement({ staff }: { staff: Staff[] }) {
-  const qc = useQueryClient();
-  const [newCode, setNewCode] = useState("");
-  const terminals = useQuery({
+function usePosTerminals() {
+  return useQuery({
     queryKey: ["pos-terminals"],
     queryFn: async () => {
       const { data, error } = await rpc("owner_pos_terminals", {});
@@ -32,12 +30,71 @@ export function PosTerminalManagement({ staff }: { staff: Staff[] }) {
       return (data ?? []) as Terminal[];
     },
   });
+}
+
+export function PosUserAssignment({ user }: { user: PosStaff }) {
+  const qc = useQueryClient();
+  const terminals = usePosTerminals();
+  const current = terminals.data?.find((terminal) => terminal.user_id === user.id);
+  const assign = useMutation({
+    mutationFn: async (terminalId: string | null) => {
+      const { error } = await rpc("owner_set_user_pos_terminal", {
+        p_user: user.id,
+        p_terminal: terminalId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["pos-terminals"] });
+      toast.success("User POS ID updated");
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  if (!user.roles.includes("counter") || user.roles.includes("owner")) return null;
+  return (
+    <div className="mt-2">
+      <label className="flex max-w-sm items-center gap-2 text-[11px] font-medium">
+        POS ID
+        <select
+          aria-label={`POS ID for ${user.full_name}`}
+          className="h-8 min-w-44 rounded-md border border-input bg-background px-2 text-xs"
+          value={current?.id ?? ""}
+          disabled={terminals.isLoading || assign.isPending}
+          onChange={(event) => assign.mutate(event.target.value || null)}
+        >
+          <option value="">Unassigned</option>
+          {terminals.data
+            ?.filter((terminal) => !terminal.user_id || terminal.user_id === user.id)
+            .map((terminal) => (
+              <option key={terminal.id} value={terminal.id}>
+                {terminal.code}
+                {terminal.active ? "" : " (inactive)"}
+              </option>
+            ))}
+        </select>
+        {!terminals.isLoading &&
+        !current &&
+        !terminals.data?.some((terminal) => !terminal.user_id) ? (
+          <span className="text-muted-foreground">Create a POS ID below first.</span>
+        ) : null}
+      </label>
+      {!user.active ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          This POS ID is reserved, but cannot be used until the account is reactivated.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function PosTerminalManagement({ staff }: { staff: PosStaff[] }) {
+  const qc = useQueryClient();
+  const [newCode, setNewCode] = useState("");
+  const terminals = usePosTerminals();
   const eligibleCounters = useMemo(
     () =>
-      staff.filter(
-        (person) =>
-          person.active && person.roles.includes("counter") && !person.roles.includes("owner"),
-      ),
+      staff.filter((person) => person.roles.includes("counter") && !person.roles.includes("owner")),
     [staff],
   );
   const refresh = () => void qc.invalidateQueries({ queryKey: ["pos-terminals"] });
@@ -92,8 +149,8 @@ export function PosTerminalManagement({ staff }: { staff: Staff[] }) {
           <div>
             <h2 className="text-xl font-semibold">POS terminals</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Create your POS IDs here, then assign each ID to one active Counter user. Owners never
-              receive a POS ID.
+              Create your POS IDs here, then assign each ID to a Counter user. Disabled accounts can
+              reserve an ID but cannot use it. Owners never receive a POS ID.
             </p>
           </div>
         </div>
@@ -142,7 +199,7 @@ function TerminalRow({
   onSave,
 }: {
   terminal: Terminal;
-  users: Staff[];
+  users: PosStaff[];
   assignedUsers: Set<string>;
   busy: boolean;
   onSave: (input: { terminal: string; code: string; user: string | null; active: boolean }) => void;
@@ -177,6 +234,7 @@ function TerminalRow({
             disabled={assignedUsers.has(person.id) && person.id !== terminal.user_id}
           >
             {person.full_name}
+            {person.active ? "" : " (disabled)"}
           </option>
         ))}
       </select>
