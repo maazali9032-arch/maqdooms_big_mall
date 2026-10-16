@@ -393,6 +393,27 @@
       "when": 1792023240000,
       "tag": "0056_showroom_fabric_available",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1792110000000,
+      "tag": "0057_pos_terminal_advance_and_showroom",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1792110060000,
+      "tag": "0058_tailor_work_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792110120000,
+      "tag": "0059_pos_terminal_pool",
+      "breakpoints": true
     }
   ]
 }
