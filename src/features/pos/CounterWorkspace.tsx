@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ const blankGroup = () => ({
   stitching: "",
   design: "",
   customDesign: "",
+  notes: "",
 });
 export function CounterWorkspace() {
   const { isOwner, roles, can } = useSession();
@@ -537,6 +539,15 @@ function CounterContent({
                         placeholder="Describe custom design"
                       />
                     )}
+                    <label className="text-sm sm:col-span-2">
+                      Tailor notes (optional)
+                      <Textarea
+                        aria-label="Tailor notes"
+                        value={form.notes}
+                        onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                        placeholder="Measurements, finishing instructions or customer requests"
+                      />
+                    </label>
                   </div>
                   <FactoryTailorPicker
                     factory={form.factory}

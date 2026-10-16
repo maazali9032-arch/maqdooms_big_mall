@@ -45,6 +45,7 @@ export type TailoringGroup = {
   stitching: string;
   design?: string;
   customDesign?: string;
+  notes?: string;
 };
 export function availableAt(row: CounterRow, source: string) {
   return Number(row.cut?.locations.find((l) => l.id === source)?.quantity_mm ?? 0);
@@ -94,6 +95,7 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[], sou
       stitching_paise: fabricMoneyInput(g.stitching),
       ...(g.design ? { design_id: g.design === "custom" ? null : g.design } : {}),
       ...(g.design === "custom" ? { custom_design: g.customDesign?.trim() } : {}),
+      ...(g.notes?.trim() ? { notes: g.notes.trim() } : {}),
     };
   });
   return { items, tailoring };

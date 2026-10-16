@@ -1,4 +1,7 @@
 import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/shared/components/page";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
@@ -38,6 +41,23 @@ export type CounterReceipt = {
 };
 export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
   const printable = useRef<HTMLDivElement>(null);
+  const tailorPrintable = useRef<HTMLDivElement>(null);
+  const tailorOrder = useQuery({
+    queryKey: ["tailor-work-order", receipt.id],
+    enabled: false,
+    queryFn: async () => {
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: Error | null }>
+      )("tailor_work_order", {
+        p_bill: receipt.id,
+      });
+      if (error) throw error;
+      return (data ?? []) as TailorOrder[];
+    },
+  });
   return (
     <Panel
       title="Customer bill"
@@ -118,6 +138,68 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
           <p className="text-xs">Paid: {new Date(receipt.paid_at).toLocaleString("en-IN")}</p>
         )}
       </div>
+      {receipt.lines.some((line) => line.kind === "tailoring") && (
+        <div className="mt-5 border-t pt-4">
+          <Button
+            variant="outline"
+            disabled={tailorOrder.isFetching}
+            onClick={() =>
+              void tailorOrder.refetch().then((result) => {
+                if (result.error) toast.error(result.error.message);
+              })
+            }
+          >
+            {tailorOrder.isFetching ? "Preparing tailor work order…" : "Prepare tailor work order"}
+          </Button>
+          {tailorOrder.data?.length ? (
+            <div className="mt-4 space-y-3">
+              <div ref={tailorPrintable} className="space-y-4 bg-white p-4 text-black">
+                <h2 className="text-xl font-semibold">MAQDOOM’S Big Mall · Tailor work order</h2>
+                <p className="font-mono text-xs">Customer bill: {receipt.code}</p>
+                {tailorOrder.data.map((job) => (
+                  <section key={job.job_code} className="rounded border p-3 text-sm">
+                    <strong>{job.garment}</strong>
+                    <p className="font-mono text-xs">{job.job_code}</p>
+                    <p>
+                      Delivery: {job.delivery_date} · {job.factory} → {job.tailor}
+                    </p>
+                    {job.design && <p>Design: {job.design}</p>}
+                    {job.notes && <p>Notes: {job.notes}</p>}
+                    <div className="mt-2 border-t pt-2">
+                      <strong>Fabric to stitch</strong>
+                      {job.fabrics.map((fabric, index) => (
+                        <p key={index}>
+                          {fabric.name} · {reportQuantity(fabric.quantity_mm, "mm")} ·{" "}
+                          {fabric.barcode}
+                        </p>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+              <Button
+                onClick={() =>
+                  tailorPrintable.current &&
+                  printFabricLabel(tailorPrintable.current, `Tailor work order ${receipt.code}`)
+                }
+              >
+                Print tailor work order
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
     </Panel>
   );
 }
+
+type TailorOrder = {
+  job_code: string;
+  garment: string;
+  delivery_date: string;
+  design: string | null;
+  notes: string | null;
+  factory: string;
+  tailor: string;
+  fabrics: { barcode: string; name: string; quantity_mm: string }[];
+};
