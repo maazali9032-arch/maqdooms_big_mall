@@ -19,6 +19,7 @@ import { SourcePicker, type SourceLocation } from "@/shared/components/source-pi
 import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
@@ -42,6 +43,7 @@ type BillRequest = {
   p_salesperson: string;
   p_name: string;
   p_contact: string;
+  p_advance_paise?: number;
 };
 const blankGroup = () => ({
   garment: "",
@@ -85,7 +87,8 @@ function CounterContent({
   const [salesperson, setSalesperson] = useState(""),
     [name, setName] = useState(""),
     [contact, setContact] = useState(""),
-    [paid, setPaid] = useState(true);
+    [paid, setPaid] = useState(true),
+    [advance, setAdvance] = useState("");
   const [form, setForm] = useState(blankGroup),
     [reserves, setReserves] = useState<ScanRecord | null>(null),
     [ambiguous, setAmbiguous] = useState<ScanRecord | null>(null);
@@ -173,7 +176,19 @@ function CounterContent({
   const bill = useMutation({
     mutationFn: async (args: BillRequest) => {
       setPending(args);
-      const { data, error } = await supabase.rpc("complete_counter_bill", args);
+      const { p_advance_paise, p_paid, ...standard } = args;
+      const { data, error } =
+        p_advance_paise === undefined
+          ? await supabase.rpc("complete_counter_bill", { ...standard, p_paid })
+          : await (
+              supabase.rpc as unknown as (
+                name: string,
+                args: Record<string, unknown>,
+              ) => Promise<{ data: string | null; error: Error | null }>
+            )("complete_counter_bill_with_advance", {
+              ...standard,
+              p_advance_paise,
+            });
       if (error) throw error;
       billCommitted.current = true;
       const result = await supabase.rpc("counter_bill", { p_code: data });
@@ -190,6 +205,7 @@ function CounterContent({
       setName("");
       setContact("");
       setPaid(true);
+      setAdvance("");
       void qc.invalidateQueries();
       toast.success("Bill saved; stock updated");
     },
@@ -265,15 +281,26 @@ function CounterContent({
         throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
       const payload = counterPayload(rows, groups, source!.id);
+      const billTotal = previewTotal(rows, groups);
+      const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
+      if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
+        throw new Error("Advance cannot exceed the bill total");
       bill.mutate({
         p_request: crypto.randomUUID(),
         p_source: source!.id,
         p_items: payload.items,
         p_tailoring: payload.tailoring,
-        p_paid: groups.length ? paid : true,
+        p_paid: groups.length
+          ? advancePaise === null
+            ? paid
+            : billTotal === BigInt(advancePaise)
+          : true,
         p_salesperson: salesperson,
         p_name: name,
         p_contact: contact,
+        ...(groups.length && advancePaise !== null && billTotal !== BigInt(advancePaise)
+          ? { p_advance_paise: advancePaise }
+          : {}),
       });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Check the bill");
@@ -594,18 +621,47 @@ function CounterContent({
                     disabled={frozen}
                   />
                   {!!groups.length && (
-                    <label className="block text-sm">
-                      Payment status
-                      <select
-                        aria-label="Bill payment status"
-                        className="ml-3 min-h-11 rounded border bg-background p-2"
-                        value={paid ? "paid" : "unpaid"}
-                        onChange={(e) => setPaid(e.target.value === "paid")}
-                      >
-                        <option value="paid">Paid in full</option>
-                        <option value="unpaid">Unpaid</option>
-                      </select>
-                    </label>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block text-sm">
+                        Advance received ₹
+                        <Input
+                          aria-label="Advance received"
+                          inputMode="decimal"
+                          value={advance}
+                          onChange={(event) => {
+                            setAdvance(event.target.value);
+                            setPaid(false);
+                          }}
+                          placeholder="Enter amount paid now"
+                        />
+                      </label>
+                      <div className="self-end rounded-lg border bg-muted/30 p-3 text-sm">
+                        Balance ₹{" "}
+                        {(() => {
+                          try {
+                            const received = advance.trim()
+                              ? BigInt(fabricMoneyInput(advance))
+                              : 0n;
+                            return total === null ? "—" : reportMoney(String(total - received));
+                          } catch {
+                            return "—";
+                          }
+                        })()}
+                      </div>
+                      <label className="block text-sm">
+                        Or payment status
+                        <select
+                          aria-label="Bill payment status"
+                          className="ml-3 min-h-11 rounded border bg-background p-2"
+                          value={paid ? "paid" : "unpaid"}
+                          disabled={!!advance.trim()}
+                          onChange={(e) => setPaid(e.target.value === "paid")}
+                        >
+                          <option value="paid">Paid in full</option>
+                          <option value="unpaid">No advance yet</option>
+                        </select>
+                      </label>
+                    </div>
                   )}
                   <p className="font-semibold">
                     Bill total{" "}

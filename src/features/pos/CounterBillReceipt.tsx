@@ -9,6 +9,9 @@ export type CounterReceipt = {
   code: string;
   created_at: string;
   total_paise: string;
+  paid_amount_paise?: string;
+  balance_paise?: string;
+  pos_code?: string | null;
   paid: boolean;
   paid_at: string | null;
   source: string;
@@ -55,6 +58,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
         <BarcodeGraphic code={receipt.code} />
         <p className="text-sm">
           {new Date(receipt.created_at).toLocaleString("en-IN")} · {receipt.source}
+          {receipt.pos_code ? ` · ${receipt.pos_code}` : ""}
         </p>
         {(receipt.customer?.name || receipt.customer?.phone) && (
           <p className="text-sm">
@@ -100,8 +104,16 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
         </div>
         <div className="flex justify-between border-t pt-3">
           <strong>Total {reportMoney(receipt.total_paise)}</strong>
-          <strong>{receipt.paid ? "Paid" : "Unpaid"}</strong>
+          <strong>
+            {receipt.paid ? "Paid" : receipt.paid_amount_paise ? "Advance received" : "Unpaid"}
+          </strong>
         </div>
+        {receipt.paid_amount_paise !== undefined && (
+          <div className="flex justify-between text-sm">
+            <span>Advance {reportMoney(receipt.paid_amount_paise)}</span>
+            <strong>Balance {reportMoney(receipt.balance_paise ?? "0")}</strong>
+          </div>
+        )}
         {receipt.paid_at && (
           <p className="text-xs">Paid: {new Date(receipt.paid_at).toLocaleString("en-IN")}</p>
         )}

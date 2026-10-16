@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
 import { CreateStaff } from "@/features/access/CreateStaff";
 import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
+import { PosTerminalManagement } from "@/features/access/PosTerminalManagement";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -360,6 +361,7 @@ function AccessPage() {
           onClose={() => setPermissionUserId(null)}
         />
       )}
+      <PosTerminalManagement staff={staffList} />
       <details className="panel group overflow-hidden">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
