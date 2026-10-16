@@ -23,14 +23,18 @@ export type LabelProfile = {
   dpi: number;
 };
 
-/** A practical starting point for the photographed TSC TE244 two-up thermal roll. */
+/**
+ * The installed showroom media: two 2 × 1 inch labels across a four-inch roll.
+ * Each print page is one physical row, so more barcodes automatically continue
+ * onto the next row without a staff member choosing a row count.
+ */
 export const STARTING_LABEL_PROFILE: LabelProfile = {
   mode: "roll",
-  width: 40,
-  height: 30,
+  width: 50.8,
+  height: 25.4,
   columns: 2,
   rows: 1,
-  gap: 3,
+  gap: 0,
   rowGap: 0,
   pageWidth: 0,
   pageHeight: 0,

@@ -19,7 +19,8 @@ import {
   type LabelProfile,
   type Sticker,
 } from "./label-print-model";
-const PROFILE_KEY = "maqdooms.thermal-label-profile.v1";
+// Versioned so previously saved 83 × 30 mm guesses cannot override the verified roll layout.
+const PROFILE_KEY = "maqdooms.barcode-label-profile.v2";
 function profileFromStorage() {
   try {
     const p = normalizeProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null"));
@@ -81,10 +82,10 @@ export function LabelPrintDialog({
   const tooLong = symbols.some((s) => s.dots < 1),
     dense = symbols.some((s) => s.dots === 1);
   const pages = valid ? labelPages(labels, profile).length : 0;
-  const applyPreset = (preset: "thermal-1" | "thermal-2" | "a4-2x7" | "a4-3x8") => {
+  const applyPreset = (preset: "tsc-2up" | "thermal-1" | "a4-2x7" | "a4-3x8") => {
     const presets: Record<typeof preset, LabelProfile> = {
-      "thermal-1": { ...STARTING_LABEL_PROFILE, columns: 1, gap: 0 },
-      "thermal-2": STARTING_LABEL_PROFILE,
+      "tsc-2up": STARTING_LABEL_PROFILE,
+      "thermal-1": { ...STARTING_LABEL_PROFILE, width: 101.6, columns: 1 },
       "a4-2x7": {
         mode: "sheet",
         width: 90,
@@ -125,16 +126,16 @@ export function LabelPrintDialog({
         <DialogHeader>
           <DialogTitle>Barcode Label Setup</DialogTitle>
           <DialogDescription>
-            Choose a roll or sheet layout, enter its measurements and print one test page before a
-            batch.
+            TSC TE244 two-column roll is ready for your installed labels. More barcodes continue
+            automatically onto the next row.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => applyPreset("thermal-1")}>
-            1-up thermal
+          <Button type="button" variant="outline" onClick={() => applyPreset("tsc-2up")}>
+            TSC 4-inch, 2-column roll
           </Button>
-          <Button type="button" variant="outline" onClick={() => applyPreset("thermal-2")}>
-            2-up thermal
+          <Button type="button" variant="outline" onClick={() => applyPreset("thermal-1")}>
+            1-up thermal roll
           </Button>
           <Button type="button" variant="outline" onClick={() => applyPreset("a4-2x7")}>
             A4 2 × 7 sheet
@@ -184,10 +185,12 @@ export function LabelPrintDialog({
             </label>
           ))}
           {(
-            [
-              ["columns", "Labels across"],
-              ["rows", "Labels down per page"],
-            ] as const
+            (profile.mode === "roll"
+              ? [["columns", "Labels across"]]
+              : [
+                  ["columns", "Labels across"],
+                  ["rows", "Labels down per page"],
+                ]) as (readonly ["columns" | "rows", string])[]
           ).map(([field, label]) => (
             <label className="text-sm" key={field}>
               {label}
@@ -256,7 +259,7 @@ export function LabelPrintDialog({
         <p className="text-sm">
           {labels.length} unique item labels · {pages} print page{pages === 1 ? "" : "s"}.{" "}
           {profile.mode === "roll"
-            ? "Each browser page is one row of stickers."
+            ? "Two stickers print across each row; additional barcode pairs continue onto the next row automatically."
             : "Each browser page fills the selected sheet layout."}
         </p>
         <p className="text-sm">

@@ -20,17 +20,23 @@ const labels = Array.from({ length: 5 }, (_, index) => ({
 }));
 check(
   validProfile(STARTING_LABEL_PROFILE),
-  "Starting TE244 label profile fits the printer media width",
+  "Starting TE244 profile fits the installed four-inch media width",
 );
 check(
-  validProfile({ ...STARTING_LABEL_PROFILE, width: 60, columns: 2, gap: 3 }),
-  "Wider thermal media can use an independently configured two-up layout",
+  STARTING_LABEL_PROFILE.width * STARTING_LABEL_PROFILE.columns === 101.6,
+  "TSC default uses the full four-inch media width for two labels",
 );
 check(
   labelRows(labels, 2)
     .map((row) => row.length)
     .join(",") === "2,2,1",
   "Five labels print as two-column rows",
+);
+check(
+  labelPages(labels, STARTING_LABEL_PROFILE)
+    .map((page) => page.length)
+    .join(",") === "2,2,1",
+  "TSC profile automatically continues barcode pairs onto new physical rows",
 );
 check(
   labelPages(labels, {
@@ -76,9 +82,9 @@ check(
 );
 const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
-  css.includes("@page{size:83mm 30mm;margin:0}") &&
-    css.includes("grid-template-columns:repeat(2,40mm)"),
-  "Print CSS uses exact two-column label dimensions with no browser page margin",
+  css.includes("@page{size:101.6mm 25.4mm;margin:0}") &&
+    css.includes("grid-template-columns:repeat(2,50.8mm)"),
+  "Print CSS uses the installed two-column TSC label row with no browser page margin",
 );
 await fs.writeFile(
   "docs/THERMAL_LABEL_MODEL_VERIFICATION.json",
