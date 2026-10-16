@@ -1,17 +1,17 @@
 {
-  "verified_at": "2026-10-16T15:04:28.011Z",
+  "verified_at": "2026-10-16T15:25:21.578Z",
   "passed": true,
-  "checks": 9,
+  "checks": 10,
   "profile": {
-    "mode": "roll",
+    "mode": "sheet",
     "width": 50.8,
     "height": 25.4,
     "columns": 2,
-    "rows": 1,
+    "rows": 6,
     "gap": 0,
     "rowGap": 0,
-    "pageWidth": 0,
-    "pageHeight": 0,
+    "pageWidth": 101.6,
+    "pageHeight": 152.4,
     "margin": 0,
     "dpi": 203
   }

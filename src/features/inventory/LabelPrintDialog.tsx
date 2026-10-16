@@ -19,8 +19,8 @@ import {
   type LabelProfile,
   type Sticker,
 } from "./label-print-model";
-// Versioned so previously saved 83 × 30 mm guesses cannot override the verified roll layout.
-const PROFILE_KEY = "maqdooms.barcode-label-profile.v2";
+// Versioned so previously saved experimental layouts cannot override the original 4 × 6 setup.
+const PROFILE_KEY = "maqdooms.barcode-label-profile.v3";
 function profileFromStorage() {
   try {
     const p = normalizeProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null"));
@@ -82,10 +82,22 @@ export function LabelPrintDialog({
   const tooLong = symbols.some((s) => s.dots < 1),
     dense = symbols.some((s) => s.dots === 1);
   const pages = valid ? labelPages(labels, profile).length : 0;
-  const applyPreset = (preset: "tsc-2up" | "thermal-1" | "a4-2x7" | "a4-3x8") => {
+  const applyPreset = (preset: "tsc-4x6" | "thermal-1" | "a4-2x7" | "a4-3x8") => {
     const presets: Record<typeof preset, LabelProfile> = {
-      "tsc-2up": STARTING_LABEL_PROFILE,
-      "thermal-1": { ...STARTING_LABEL_PROFILE, width: 101.6, columns: 1 },
+      "tsc-4x6": STARTING_LABEL_PROFILE,
+      "thermal-1": {
+        mode: "roll",
+        width: 101.6,
+        height: 25.4,
+        columns: 1,
+        rows: 1,
+        gap: 0,
+        rowGap: 0,
+        pageWidth: 0,
+        pageHeight: 0,
+        margin: 0,
+        dpi: 203,
+      },
       "a4-2x7": {
         mode: "sheet",
         width: 90,
@@ -126,13 +138,13 @@ export function LabelPrintDialog({
         <DialogHeader>
           <DialogTitle>Barcode Label Setup</DialogTitle>
           <DialogDescription>
-            TSC TE244 two-column roll is ready for your installed labels. More barcodes continue
-            automatically onto the next row.
+            TSC TE244 original 4 × 6 setup is ready. Barcodes fill two columns, then continue
+            automatically onto the next row and page.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" onClick={() => applyPreset("tsc-2up")}>
-            TSC 4-inch, 2-column roll
+          <Button type="button" variant="outline" onClick={() => applyPreset("tsc-4x6")}>
+            TSC original 4 × 6
           </Button>
           <Button type="button" variant="outline" onClick={() => applyPreset("thermal-1")}>
             1-up thermal roll
@@ -156,7 +168,7 @@ export function LabelPrintDialog({
               }
             >
               <option value="roll">Continuous / thermal roll</option>
-              <option value="sheet">Label sheet (A4, Letter, etc.)</option>
+              <option value="sheet">Fixed printer page (4 × 6, A4, Letter, etc.)</option>
             </select>
           </label>
           {(
@@ -185,7 +197,7 @@ export function LabelPrintDialog({
             </label>
           ))}
           {(
-            (profile.mode === "roll"
+            (profile === STARTING_LABEL_PROFILE || profile.mode === "roll"
               ? [["columns", "Labels across"]]
               : [
                   ["columns", "Labels across"],
@@ -258,9 +270,11 @@ export function LabelPrintDialog({
         </div>
         <p className="text-sm">
           {labels.length} unique item labels · {pages} print page{pages === 1 ? "" : "s"}.{" "}
-          {profile.mode === "roll"
-            ? "Two stickers print across each row; additional barcode pairs continue onto the next row automatically."
-            : "Each browser page fills the selected sheet layout."}
+          {profile === STARTING_LABEL_PROFILE
+            ? "Two labels print across each row. Barcode pairs continue automatically; up to 12 labels fit on the original 4 × 6 page."
+            : profile.mode === "roll"
+              ? "Two stickers print across each row; additional barcode pairs continue onto the next row automatically."
+              : "Each browser page fills the selected sheet layout."}
         </p>
         <p className="text-sm">
           This works with any printer that appears in the browser’s Print window. Select that

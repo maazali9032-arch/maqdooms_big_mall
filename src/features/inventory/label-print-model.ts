@@ -24,20 +24,20 @@ export type LabelProfile = {
 };
 
 /**
- * The installed showroom media: two 2 × 1 inch labels across a four-inch roll.
- * Each print page is one physical row, so more barcodes automatically continue
- * onto the next row without a staff member choosing a row count.
+ * The original showroom driver configuration: USER 4 × 6 inches with two
+ * 2 × 1 inch labels across and six rows on each printer page. Labels fill
+ * left-to-right then continue onto the next row and page automatically.
  */
 export const STARTING_LABEL_PROFILE: LabelProfile = {
-  mode: "roll",
+  mode: "sheet",
   width: 50.8,
   height: 25.4,
   columns: 2,
-  rows: 1,
+  rows: 6,
   gap: 0,
   rowGap: 0,
-  pageWidth: 0,
-  pageHeight: 0,
+  pageWidth: 101.6,
+  pageHeight: 152.4,
   margin: 0,
   dpi: 203,
 };

@@ -20,11 +20,12 @@ const labels = Array.from({ length: 5 }, (_, index) => ({
 }));
 check(
   validProfile(STARTING_LABEL_PROFILE),
-  "Starting TE244 profile fits the installed four-inch media width",
+  "Starting TE244 profile fits the original four-by-six media",
 );
 check(
-  STARTING_LABEL_PROFILE.width * STARTING_LABEL_PROFILE.columns === 101.6,
-  "TSC default uses the full four-inch media width for two labels",
+  Math.abs(STARTING_LABEL_PROFILE.width * STARTING_LABEL_PROFILE.columns - 101.6) < 0.001 &&
+    Math.abs(STARTING_LABEL_PROFILE.height * STARTING_LABEL_PROFILE.rows - 152.4) < 0.001,
+  "TSC default fills the original four-by-six media with two columns and six rows",
 );
 check(
   labelRows(labels, 2)
@@ -35,8 +36,17 @@ check(
 check(
   labelPages(labels, STARTING_LABEL_PROFILE)
     .map((page) => page.length)
-    .join(",") === "2,2,1",
-  "TSC profile automatically continues barcode pairs onto new physical rows",
+    .join(",") === "5",
+  "TSC profile automatically fills available rows on the original printer page",
+);
+check(
+  labelPages(
+    Array.from({ length: 13 }, () => labels[0]),
+    STARTING_LABEL_PROFILE,
+  )
+    .map((page) => page.length)
+    .join(",") === "12,1",
+  "TSC profile continues onto a new page after twelve labels",
 );
 check(
   labelPages(labels, {
@@ -82,9 +92,9 @@ check(
 );
 const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
-  css.includes("@page{size:101.6mm 25.4mm;margin:0}") &&
+  css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
     css.includes("grid-template-columns:repeat(2,50.8mm)"),
-  "Print CSS uses the installed two-column TSC label row with no browser page margin",
+  "Print CSS uses the original four-by-six TSC layout with no browser page margin",
 );
 await fs.writeFile(
   "docs/THERMAL_LABEL_MODEL_VERIFICATION.json",
