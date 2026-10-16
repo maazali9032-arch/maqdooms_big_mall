@@ -48,6 +48,22 @@ check(
   }).length === 1,
   "An arbitrary sheet layout groups labels into one configured print page",
 );
+check(
+  validProfile({
+    mode: "sheet",
+    width: 90,
+    height: 37,
+    columns: 2,
+    rows: 7,
+    gap: 5,
+    rowGap: 2,
+    pageWidth: 210,
+    pageHeight: 297,
+    margin: 8,
+    dpi: 300,
+  }),
+  "The A4 two-by-seven preset fits inside its paper height and width",
+);
 const short = symbolSize(labels[0].code, STARTING_LABEL_PROFILE);
 check(
   short.dots >= 2 && short.width <= STARTING_LABEL_PROFILE.width - 4,

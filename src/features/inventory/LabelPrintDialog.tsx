@@ -88,14 +88,14 @@ export function LabelPrintDialog({
       "a4-2x7": {
         mode: "sheet",
         width: 90,
-        height: 38,
+        height: 37,
         columns: 2,
         rows: 7,
         gap: 5,
         rowGap: 2,
         pageWidth: 210,
         pageHeight: 297,
-        margin: 10,
+        margin: 8,
         dpi: 300,
       },
       "a4-3x8": {
