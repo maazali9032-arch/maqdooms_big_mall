@@ -4,6 +4,7 @@ import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductionReceipt } from "./ProductionReceipt";
 import { FinishedProductInventory } from "./FinishedProductInventory";
+import { CustomerTailoringReceipt } from "./CustomerTailoringReceipt";
 export function FinishedProductWorkspace() {
   const { isOwner, roles, can } = useSession();
   const transferAllowed =
@@ -21,6 +22,7 @@ export function FinishedProductWorkspace() {
   });
   return (
     <div className="space-y-4">
+      <CustomerTailoringReceipt />
       <ProductionReceipt onLoaded={() => setLoaded(true)} />
       {existing.error && (
         <p role="alert">

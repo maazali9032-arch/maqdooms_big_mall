@@ -5,7 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { SourceLocation } from "@/shared/components/source-picker";
 import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import { reportQuantity } from "@/features/reports/report-value";
@@ -31,7 +30,7 @@ export function AdditionalCounterFabric({
   disabled,
   canIssue,
 }: {
-  source: SourceLocation;
+  source: { id: string; name: string };
   work: CounterWork;
   scanned: ScanRecord | null;
   onScannedChange: (scan: ScanRecord | null) => void;

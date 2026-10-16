@@ -6,7 +6,7 @@ export function FabricReserveTree({
   onChoose,
 }: {
   scan: ScanRecord;
-  onChoose?: (cut: ReserveCut) => void;
+  onChoose?: (cut: ReserveCut, location: ReserveCut["locations"][number]) => void;
 }) {
   const variants: ReserveVariant[] = onChoose
     ? [
@@ -43,11 +43,24 @@ export function FabricReserveTree({
                                 {l.name}: {reportQuantity(String(l.quantity_mm), "mm")}
                               </p>
                             ))}
-                            {onChoose && (
-                              <Button variant="outline" size="sm" onClick={() => onChoose(c)}>
-                                Select Thaan {c.thaan_id.slice(0, 8)}
-                              </Button>
-                            )}
+                            {onChoose &&
+                              c.locations
+                                .filter(
+                                  (location) =>
+                                    location.kind === "showroom_sublocation" &&
+                                    Number(location.quantity_mm) > 0,
+                                )
+                                .map((location) => (
+                                  <Button
+                                    key={location.id}
+                                    variant="outline"
+                                    size="sm"
+                                    className="mr-2 mt-1"
+                                    onClick={() => onChoose(c, location)}
+                                  >
+                                    Select {location.name}
+                                  </Button>
+                                ))}
                           </div>
                         ))}
                       </div>

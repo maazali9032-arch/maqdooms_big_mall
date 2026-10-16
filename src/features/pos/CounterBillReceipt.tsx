@@ -31,12 +31,14 @@ export type CounterReceipt = {
     unit: string;
     price_paise: string | null;
     amount_paise: string;
+    source?: string | null;
     fabric_amount_paise?: string | null;
     stitching_paise?: string | null;
     job_id: string | null;
     job_code: string | null;
     delivery_date: string | null;
-    fabrics: { barcode: string; name: string; quantity_mm: string }[] | null;
+    fabrics:
+      { barcode: string; name: string; quantity_mm: string; source?: string | null }[] | null;
   }[];
 };
 export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
@@ -93,6 +95,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
                 <strong>{reportMoney(line.amount_paise)}</strong>
               </div>
               {line.barcode && <p className="break-all font-mono text-xs">{line.barcode}</p>}
+              {line.source && <p className="text-xs">Stock source: {line.source}</p>}
               {line.size && (
                 <p>
                   Size {line.size} · {line.design}
@@ -115,6 +118,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
                   {line.fabrics?.map((cut, i) => (
                     <p key={i} className="break-words">
                       {cut.name} · {cut.barcode} · {reportQuantity(cut.quantity_mm, "mm")}
+                      {cut.source ? ` · ${cut.source}` : ""}
                     </p>
                   ))}
                 </>

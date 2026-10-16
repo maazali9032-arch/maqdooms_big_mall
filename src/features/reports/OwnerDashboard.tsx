@@ -140,20 +140,24 @@ export function OwnerDashboard() {
     (r) => inventory !== "fabric" || r.data["kind"] === "fabric",
   );
   const stockGroups = group(inventoryRows, inventory === "location" ? "location" : "item");
-  const stockDetails = stockGroups.map((g) => {
-    const matching = inventoryRows.filter(
-      (r) => String(r.data[inventory === "location" ? "location" : "item"]) === g.name,
+  const stockDetails = stockGroups
+    .map((g) => {
+      const matching = inventoryRows.filter(
+        (r) => String(r.data[inventory === "location" ? "location" : "item"]) === g.name,
+      );
+      const units = [...new Set(matching.map((r) => String(r.data["unit"])))];
+      return {
+        name: g.name,
+        value: g.value,
+        units: units.map((unit) => ({
+          unit,
+          total: quantityTotal(matching.filter((r) => r.data["unit"] === unit)),
+        })),
+      };
+    })
+    .filter((group) =>
+      group.units.some((entry) => entry.total.unknown > 0 || Number(entry.total.value) !== 0),
     );
-    const units = [...new Set(matching.map((r) => String(r.data["unit"])))];
-    return {
-      name: g.name,
-      value: g.value,
-      units: units.map((unit) => ({
-        unit,
-        total: quantityTotal(matching.filter((r) => r.data["unit"] === unit)),
-      })),
-    };
-  });
   return (
     <div className="owner-workspace owner-dashboard space-y-5">
       <OwnerBarcodeInspector />

@@ -23,6 +23,8 @@ export type ScanRecord = {
   sp_paise?: number;
   sp_version_id?: string;
   available?: boolean;
+  source_location_id?: string;
+  source_name?: string;
   cuts?: ReserveCut[];
   variants?: ReserveVariant[];
 };
@@ -30,6 +32,7 @@ export type CounterRow = {
   key: string;
   scan: ScanRecord;
   cut?: ReserveCut;
+  source: { id: string; name: string };
   metres: string;
   price: string;
   selected: boolean;
@@ -47,18 +50,17 @@ export type TailoringGroup = {
   customDesign?: string;
   notes?: string;
 };
-export function availableAt(row: CounterRow, source: string) {
-  return Number(row.cut?.locations.find((l) => l.id === source)?.quantity_mm ?? 0);
+export function availableAt(row: CounterRow) {
+  return Number(row.cut?.locations.find((l) => l.id === row.source.id)?.quantity_mm ?? 0);
 }
-export function counterPayload(rows: CounterRow[], groups: TailoringGroup[], source: string) {
+export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
   if (!rows.length) throw new Error("Scan at least one item");
   const quantities = new Map(
     rows
       .filter((r) => r.scan.kind === "fabric")
       .map((r) => {
         const mm = quantityInput(r.metres, "mm");
-        if (mm > availableAt(r, source))
-          throw new Error(`${r.scan.barcode}: cut exceeds available stock`);
+        if (mm > availableAt(r)) throw new Error(`${r.scan.barcode}: cut exceeds available stock`);
         return [r.key, mm];
       }),
   );
@@ -66,12 +68,18 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[], sou
     .filter((r) => !r.group)
     .map((r) =>
       r.scan.kind === "product"
-        ? { kind: "product", piece_id: r.scan.id!, sp_version_id: r.scan.sp_version_id! }
+        ? {
+            kind: "product",
+            piece_id: r.scan.id!,
+            sp_version_id: r.scan.sp_version_id!,
+            source_location_id: r.source.id,
+          }
         : {
             kind: "fabric",
             inventory_item_id: r.cut!.inventory_item_id,
             quantity: quantities.get(r.key)!,
             sp_paise_per_m: fabricMoneyInput(r.price),
+            source_location_id: r.source.id,
           },
     );
   const tailoring = groups.map((g) => {
@@ -87,6 +95,7 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[], sou
           inventory_item_id: r.cut.inventory_item_id,
           quantity: quantities.get(key)!,
           sp_paise_per_m: fabricMoneyInput(r.price),
+          source_location_id: r.source.id,
         };
       }),
       garment: g.garment.trim(),

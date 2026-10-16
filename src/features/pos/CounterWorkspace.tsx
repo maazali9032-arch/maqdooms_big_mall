@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Panel } from "@/shared/components/page";
 import { BarcodeEntry } from "@/shared/components/barcode-entry";
-import { SourcePicker, type SourceLocation } from "@/shared/components/source-picker";
 import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
@@ -37,7 +36,6 @@ import {
 } from "./counter-workspace-model";
 type BillRequest = {
   p_request: string;
-  p_source: string;
   p_items: ReturnType<typeof counterPayload>["items"];
   p_tailoring: ReturnType<typeof counterPayload>["tailoring"];
   p_paid: boolean;
@@ -78,7 +76,7 @@ function CounterContent({
 }) {
   const qc = useQueryClient();
   const billCommitted = useRef(false);
-  const [source, setSource] = useState<SourceLocation | null>(null);
+  const [extraSource, setExtraSource] = useState<{ id: string; name: string } | null>(null);
   const [work, setWork] = useState<CounterWork | null>(null);
   const [extraScanned, setExtraScanned] = useState<ScanRecord | null>(null);
   const [extraLocked, setExtraLocked] = useState(false);
@@ -109,7 +107,7 @@ function CounterContent({
     },
   });
   const scan = useMutation({
-    mutationFn: (code: string) => resolveCounterBarcode(code, source!.id),
+    mutationFn: (code: string) => resolveCounterBarcode(code),
     onSuccess: (result) => {
       if (result.kind === "document") {
         if (rows.length) {
@@ -120,6 +118,7 @@ function CounterContent({
         setWork(result.work);
         setReceipt(result.receipt);
         setExtraScanned(null);
+        setExtraSource(null);
         setBarcode("");
         return;
       }
@@ -131,23 +130,31 @@ function CounterContent({
         return;
       }
       if (record.kind === "product" && !record.available) {
-        toast.error("This finished piece is not available on your selected floor");
+        toast.error("This finished piece is not available on a Showroom floor");
         return;
       }
-      const cuts = (record.cuts ?? []).filter(
-        (c) => Number(c.locations.find((l) => l.id === source!.id)?.quantity_mm ?? 0) > 0,
+      const cuts = record.cuts ?? [];
+      const choices = cuts.flatMap((cut) =>
+        cut.locations
+          .filter(
+            (location) =>
+              location.kind === "showroom_sublocation" && Number(location.quantity_mm) > 0,
+          )
+          .map((location) => ({ cut, location })),
       );
       if (record.kind === "fabric" && !cuts.length) {
         setReserves(record);
-        toast.error("No fabric is available on this floor");
+        toast.error("No fabric is available on a Showroom floor");
         return;
       }
       if (work) {
-        if (cuts.length !== 1) {
-          toast.error("Scan the physical Thaan’s unique barcode on this floor");
+        if (choices.length !== 1) {
+          setAmbiguous(record);
+          toast.info("Choose the Showroom floor holding this fabric");
           return;
         }
-        setExtraScanned({ ...record, cuts });
+        setExtraScanned({ ...record, cuts: [choices[0].cut] });
+        setExtraSource(choices[0].location);
         setBarcode("");
         return;
       }
@@ -156,22 +163,45 @@ function CounterContent({
         return;
       }
       setReceipt(null);
-      if (cuts.length > 1) {
+      if (record.kind === "product") {
+        addRow(record, undefined, {
+          id: record.source_location_id!,
+          name: record.source_name!,
+        });
+        return;
+      }
+      if (choices.length > 1) {
         setAmbiguous({ ...record, cuts });
         return;
       }
-      addRow(record, cuts[0]);
+      if (!choices.length) {
+        setReserves(record);
+        toast.error("No fabric is available on a Showroom floor");
+        return;
+      }
+      addRow(record, choices[0].cut, choices[0].location);
     },
     onError: (e) => toast.error(e.message),
   });
-  function addRow(record: ScanRecord, cut?: CounterRow["cut"]) {
-    const key = record.kind === "product" ? record.id! : cut!.inventory_item_id;
+  function addRow(
+    record: ScanRecord,
+    cut: CounterRow["cut"],
+    source: { id: string; name: string },
+  ) {
+    if (work) {
+      setExtraScanned({ ...record, cuts: cut ? [cut] : [] });
+      setExtraSource(source);
+      setBarcode("");
+      setAmbiguous(null);
+      return;
+    }
+    const key = record.kind === "product" ? record.id! : `${cut!.inventory_item_id}:${source.id}`;
     if (rows.some((r) => r.key === key)) {
       toast.info("This barcode is already listed");
       setBarcode("");
       return;
     }
-    setRows([...rows, { key, scan: record, cut, metres: "", price: "", selected: false }]);
+    setRows([...rows, { key, scan: record, cut, source, metres: "", price: "", selected: false }]);
     setBarcode("");
     setAmbiguous(null);
   }
@@ -181,13 +211,18 @@ function CounterContent({
       const { p_advance_paise, p_paid, ...standard } = args;
       const { data, error } =
         p_advance_paise === undefined
-          ? await supabase.rpc("complete_counter_bill", { ...standard, p_paid })
+          ? await (
+              supabase.rpc as unknown as (
+                name: string,
+                args: Record<string, unknown>,
+              ) => Promise<{ data: string | null; error: Error | null }>
+            )("complete_counter_bill_multi", { ...standard, p_paid })
           : await (
               supabase.rpc as unknown as (
                 name: string,
                 args: Record<string, unknown>,
               ) => Promise<{ data: string | null; error: Error | null }>
-            )("complete_counter_bill_with_advance", {
+            )("complete_counter_bill_multi_with_advance", {
               ...standard,
               p_advance_paise,
             });
@@ -236,10 +271,10 @@ function CounterContent({
   });
   const frozen = bill.isPending || !!pending || extraLocked || settle.isPending;
   async function refreshWork() {
-    if (!work || !source) return;
+    if (!work) return;
     const version = contextVersion.current;
     try {
-      const result = await resolveCounterBarcode(work.code, source.id);
+      const result = await resolveCounterBarcode(work.code);
       if (version !== contextVersion.current) return;
       if (result.kind === "document") {
         setWork(result.work);
@@ -260,7 +295,6 @@ function CounterContent({
       counterPayload(
         selected.map((r) => ({ ...r, group: group.id })),
         [group],
-        source!.id,
       );
       setGroups([...groups, group]);
       setRows(
@@ -282,14 +316,13 @@ function CounterContent({
       if (rows.some((r) => r.selected && !r.group))
         throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
-      const payload = counterPayload(rows, groups, source!.id);
+      const payload = counterPayload(rows, groups);
       const billTotal = previewTotal(rows, groups);
       const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
       if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
         throw new Error("Advance cannot exceed the bill total");
       bill.mutate({
         p_request: crypto.randomUUID(),
-        p_source: source!.id,
         p_items: payload.items,
         p_tailoring: payload.tailoring,
         p_paid: groups.length
@@ -308,36 +341,18 @@ function CounterContent({
       toast.error(e instanceof Error ? e.message : "Check the bill");
     }
   }
-  if (!source) return <SourcePicker onChoose={setSource} />;
   const pendingTailoring = canTailor && rows.some((r) => r.selected && !r.group);
   const total = previewTotal(rows, groups, pendingTailoring ? form.stitching : undefined);
   const updateRow = (key: string, change: Partial<CounterRow>) =>
     setRows(rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-3">
-        <strong>{source.name}</strong>
-        <Button
-          variant="outline"
-          disabled={frozen || scan.isPending || !!rows.length}
-          onClick={() => {
-            contextVersion.current++;
-            setSource(null);
-            setWork(null);
-            setExtraScanned(null);
-            setReceipt(null);
-            setBarcode("");
-          }}
-        >
-          Change floor
-        </Button>
-      </div>
       <Panel
         title="Scan item, customer bill or Production ID"
         description={
           work
-            ? `Extra fabric for ${work.code} · ${source.name}`
-            : "Item barcode: add a sale. Existing bill or Production ID: load its recorded work."
+            ? `Extra fabric for ${work.code}`
+            : "Scan any Showroom item. Its recorded floor is attached automatically to this bill."
         }
         actions={
           (work || receipt) && (
@@ -349,6 +364,7 @@ function CounterContent({
                 setWork(null);
                 setReceipt(null);
                 setExtraScanned(null);
+                setExtraSource(null);
                 setBarcode("");
               }}
             >
@@ -362,6 +378,7 @@ function CounterContent({
           onChange={(value) => {
             setBarcode(value);
             setExtraScanned(null);
+            setExtraSource(null);
           }}
           onScan={(code) => scan.mutate(code)}
           label="Counter barcode"
@@ -373,10 +390,10 @@ function CounterContent({
           disabled={frozen || scan.isPending}
         />
       </Panel>
-      {work && (
+      {work && extraSource && (
         <AdditionalCounterFabric
-          key={`${source.id}:${work.kind}:${work.code}`}
-          source={source}
+          key={`${extraSource.id}:${work.kind}:${work.code}`}
+          source={extraSource}
           work={work}
           scanned={extraScanned}
           onScannedChange={setExtraScanned}
@@ -422,7 +439,8 @@ function CounterContent({
                           ) : (
                             <>
                               <p className="text-xs">
-                                Available: {reportQuantity(String(availableAt(r, source.id)), "mm")}
+                                {r.source.name} · Available:{" "}
+                                {reportQuantity(String(availableAt(r)), "mm")}
                               </p>
                               <Button
                                 size="sm"
@@ -744,7 +762,10 @@ function CounterContent({
             </DialogDescription>
           </DialogHeader>
           {ambiguous ? (
-            <FabricReserveTree scan={ambiguous} onChoose={(c) => addRow(ambiguous, c)} />
+            <FabricReserveTree
+              scan={ambiguous}
+              onChoose={(c, location) => addRow(ambiguous, c, location)}
+            />
           ) : (
             reserves && <FabricReserveTree scan={reserves} />
           )}

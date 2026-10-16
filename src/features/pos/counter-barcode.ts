@@ -21,11 +21,16 @@ export type CounterBarcode =
   | { kind: "document"; work: CounterWork | null; receipt: CounterReceipt | null };
 
 /** Exact recorded identities only. Resolving a scan never posts an operation. */
-export async function resolveCounterBarcode(code: string, source: string): Promise<CounterBarcode> {
+export async function resolveCounterBarcode(code: string): Promise<CounterBarcode> {
   const value = code.trim();
-  if (!value || !source) throw new Error("Choose a floor and enter a barcode");
+  if (!value) throw new Error("Enter a barcode");
   const [stock, bill, customer, production] = await Promise.all([
-    supabase.rpc("counter_scan_barcode", { p_barcode: value, p_source: source }),
+    (
+      supabase.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: Error | null }>
+    )("counter_scan_barcode_any", { p_barcode: value }),
     supabase.rpc("counter_bill", { p_code: value }),
     supabase.rpc("customer_tailoring_work", { p_code: value }),
     supabase.rpc("production_job_document", { p_code: value }),
