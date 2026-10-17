@@ -1,5 +1,5 @@
 import { Panel, StatCard } from "@/shared/components/page";
-import { reportMoney, reportQuantity } from "./report-value";
+import { reportQuantity } from "./report-value";
 
 export type DailyBusiness = {
   revenue_paise: string;
@@ -22,18 +22,6 @@ export type DailyBusiness = {
 export function DailyOperations({ data, day }: { data: DailyBusiness; day: string }) {
   const link = (dataset: string) => `/reports?from=${day}&through=${day}#${dataset}`;
   const cards = [
-    {
-      label: "Counter sales",
-      value: reportMoney(data.counter_paise),
-      hint: "Paid bills completed on this day",
-      href: `/reports?from=${day}&through=${day}&channel=counter#sales_lines`,
-    },
-    {
-      label: "E-commerce sales",
-      value: reportMoney(data.ecommerce_paise),
-      hint: "Paid online checkouts; counted once",
-      href: `/reports?from=${day}&through=${day}&channel=ecommerce#sales_lines`,
-    },
     {
       label: "Stock entry",
       value: `${data.thaans_registered} Thaans`,
