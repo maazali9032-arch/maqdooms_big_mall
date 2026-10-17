@@ -46,3 +46,16 @@ Source d651499cef17355defcf12e56f411a3602f878df is deployed; the published POS
 and receipt assets contain the new pricing fields and pending-job protection.
 Migration SHA256: a05edbfbca39ff12b838181601bc54191ff566e857240ebd39ee5e2d3206bad7.
 No live stock, sale, customer or tailoring fixtures were created.
+
+## Current payment and document outputs
+
+Counter now enters the customer's advance and the balance is calculated from the
+final combined bill. One invoice can contain sale lines from multiple Showroom
+floors because every scanned line records its own source location.
+
+The customer receipt contains prices, advance and balance. A separate tailor work
+order contains the garment or product, design, size, selected fabric and custom
+notes, but no selling or payment information. When the stitched customer garment
+returns to Workshop, the customer bill or job is scanned and a new short barcode
+is generated for that garment only after its name, size and SP are entered. See
+`docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.

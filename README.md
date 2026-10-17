@@ -1774,6 +1774,18 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
+### Current POS, Showroom and customer-tailoring revision
+
+The 17 October 2026 workflow is implemented, migrated live and pushed. Owners
+manage editable POS terminal IDs and assign them to Counter users; one customer
+invoice can scan stock from any physical Showroom floors while each item retains
+its exact source. Counter records an advance and the system calculates the balance.
+The sale produces a priced customer receipt and a separate price-free tailor work
+order. When a customer's stitched garment returns to Workshop, scanning its bill
+or job creates a short barcode for that garment after name, size and SP are entered.
+The empty internal Showroom parent and duplicate dashboard sales cards are hidden.
+See [the current operational contract](docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md).
+
 ### Current Stock Entry revision
 
 The Owner-approved provider/delivery → Fabric Type → individually barcoded Than

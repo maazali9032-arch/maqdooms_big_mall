@@ -1901,3 +1901,13 @@ Counter uses POS and Account only. After selecting a physical Showroom floor, on
 POS compact reserves show only the selected Thaan balances, while the existing expanded tree retains every variant. Salesperson names replace visible UUID suffixes while attribution IDs remain unchanged. Optional contact input accepts digits and preserves leading zeros. Forward 0053 prospectively validates new Counter bill contacts without editing existing customer/bill history or breaking exact historical retries. See docs/COUNTER_BARCODE_DETAILS.md and validation proof files.
 
 Completed: 0053 applied with every row in all 97 existing public tables preserved. All 23 read-only live checks passed; sampled physical Thaan totals match the current location ledger. Source df0aaf2ae65f53dde31eb344d21dcac2f974677d is deployed and its published POS bundle verified. Migration SHA256: 43ed5e5bb92a823ed0357f9975f3b79df78a5a7702e8ae9aae0c98875dfaec25. No live stock or customer fixtures were posted.
+
+# 62. POS TERMINALS, MULTI-FLOOR BILLING AND CUSTOMER FINISHING — 17 OCTOBER 2026
+
+This section supersedes the earlier floor-first Counter wording in Sections 55 and 58. Owner manages editable POS terminal codes separately from staff accounts and assigns active terminals to Counter users; Owner accounts do not require a POS code. Current live assignments are `counter@example.com` → `F3-POS1` and `maaz7do@gmail.com` → `F3-POS2`.
+
+One invoice can contain stock from multiple physical Showroom floors. Every sale line records, validates, locks and debits its own source location atomically. The receipt and Owner evidence retain both the item floor and transaction POS code. The internal Showroom parent remains for hierarchy and history but is excluded from operational stock cards and sale sources.
+
+Counter records the advance and the remaining balance is calculated. Customer receipts contain prices; a separate tailor work order contains production details and notes without prices. Workshop can scan a customer bill or job, enter the stitched garment's name, size and SP and receive it under a new short barcode. This barcode is for the customer-finished garment only and does not convert purchased fabric into store-owned finished stock.
+
+Forward Supabase migrations `20261016000100`–`20261016000400`, `20261017000100` and `20261017000200`, mirrored by Drizzle `0057`–`0062`, are applied. Dashboard cleanup hides the two legacy-only controls and duplicate lower sales cards while retaining detailed reports. Contract: `docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.

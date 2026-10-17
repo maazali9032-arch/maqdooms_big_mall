@@ -1,8 +1,17 @@
 # Maqdoom's Big Mall ERP — Complete System and Operations Guide
 
-> **Implementation status reference:** 27 September 2026  
-> **Scope:** the current staff ERP in this repository, including all migrations through
-> `20260927000100_customer_multi_fabric_sale.sql`.  
+> **Current workflow update — 17 October 2026:** POS terminal administration,
+> multi-floor single-invoice billing, advance/balance collection, the price-free
+> tailor work order and Workshop receipt of customer-finished garments are now
+> implemented. See
+> `docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`. Where older sections
+> below say that Counter must select one floor before scanning, the 17 October
+> contract supersedes that instruction: each scanned sale line carries its own
+> physical-floor source.
+
+> **Implementation status reference:** 17 October 2026
+> **Scope:** the current staff ERP in this repository, including migrations through
+> `20261017000200_multi_floor_counter_bill.sql`.
 > **Purpose:** document what the system actually does today. This is not a wish list and it does
 > not describe the future public storefront as though it already exists.
 

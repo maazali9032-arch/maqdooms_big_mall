@@ -29,6 +29,14 @@ If an old long barcode makes a dense symbol, the dialog warns before print. It l
 that existing identity intact; use a wider label or a higher-resolution printer for
 that legacy label.
 
+## Separate customer-tailoring receipt
+
+This document describes store-owned Owner production. A customer's stitched garment
+uses the separate customer bill or tailoring-job receipt flow: Workshop records its
+name, size and SP and generates a short barcode for that garment only. The customer's
+purchased fabric is not converted into store finished stock. See
+`docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.
+
 ## Controls and evidence
 
 The receipt RPC is backend-authorized (`production.receive`), records the user who

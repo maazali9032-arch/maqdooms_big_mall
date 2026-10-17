@@ -21,8 +21,10 @@ explicit system annotation rather than a fabricated staff explanation.
 
 ## Counter
 
-The operator chooses the Showroom floor before scanning. Fabric and finished
-product scans append compact rows. Direct fabric uses exact per-metre pricing;
+The POS resolves the physical Showroom floor from each scanned stock item. One
+invoice can contain stock from several floors; there is no single floor selection
+for the bill. Fabric and finished product scans append compact rows. Direct fabric
+uses exact per-metre pricing;
 finished pieces use saved fixed SP and its reviewed cost version. Selected fabric
 cuts can become one tailoring job with one manually entered whole-job total,
 garment, due date, defined/custom design and Factory → Tailor. That total replaces
@@ -30,15 +32,22 @@ per-metre pricing for its grouped cuts and is counted once. Customer contact is
 optional; saved normalized contacts are reused. Counter requires a credited
 Salesperson. Factory/Tailor assignment and CP never appear on the printed bill.
 
-Only bills containing tailoring can be unpaid. There are no deposits or partial
-payments. An unpaid bill deducts stock immediately; later full collection creates
-an immutable payment receipt without rewriting the bill. Parent bill collections
+Counter can record an advance and the remaining balance is calculated from the
+final bill total. Later collections create immutable payment evidence without
+rewriting the bill. Parent bill collections
 and tailoring booking amounts remain distinct in reporting. Exact retries are
 idempotent, including a committed bill whose receipt response was interrupted.
 
 Reserve summaries show numeric Showroom and Workshop quantities; opening them
 reveals Batch → Fabric → physical barcode → location details without CP. The
-selected floor remains the source for both new bills and additional issues.
+Each scanned item's recorded floor remains its source for new bills and additional
+issues.
+
+The customer receives the priced receipt. A separate tailor work order includes
+the garment, design, size, fabric and custom notes without prices or payment data.
+Workshop can later scan that bill or job, enter the finished garment's name, size
+and SP and generate its own short barcode. See
+`docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.
 
 Additional fabric is issued against an existing customer bill/job or Production
 ID. The job must remain eligible for an issue. Its quantity and captured issue-time

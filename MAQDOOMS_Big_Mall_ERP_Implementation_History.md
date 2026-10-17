@@ -6247,3 +6247,13 @@ or account fixture was posted to the live database.
 Source `2fa9240` is deployed successfully. The published production assets contain
 the scan receipt, Showroom card and thermal-label setup. An authenticated hosted
 browser session and a physical TSC test-row print remain user acceptance steps.
+
+# 62. POS TERMINALS, MULTI-FLOOR SALES AND CUSTOMER-FINISHED RECEIPT — 17 OCTOBER 2026
+
+Completed the Owner-requested POS terminal pool and user assignment, including live assignments `F3-POS1` for `counter@example.com` and `F3-POS2` for `maaz7do@gmail.com`. Bills record the POS identity while Owner accounts remain unassigned.
+
+Counter no longer selects one floor for the whole bill. Each scanned line retains its actual physical-floor source, allowing one invoice across floors with atomic validation and debit. Advance and calculated balance are stored as payment evidence. The customer receives the priced invoice and the tailor receives a separate work order without price or payment details.
+
+Workshop receipt of a customer-tailoring job captures the finished garment's name, size and SP and generates a new short unique barcode for that garment only. The customer's purchased fabric is not added to store-owned finished stock.
+
+Supabase migrations `20261016000100`–`20261016000400`, `20261017000100` and `20261017000200` (Drizzle `0057`–`0062`) were applied live. Transactional multi-floor rollback, read-only live acceptance, TypeScript, scoped ESLint and the production build passed. Dashboard cleanup removed the empty Showroom parent, legacy-only dashboard controls and duplicated lower sales-channel cards while retaining their underlying reports and evidence. See `docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.
