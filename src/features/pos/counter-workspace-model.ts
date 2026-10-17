@@ -1,6 +1,12 @@
 import { reportQuantity } from "@/features/reports/report-value";
 import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
+import {
+  calculateTaxPaise,
+  defaultGstRule,
+  type GstSupplyType,
+  type GstTransactionConfiguration,
+} from "@/features/gst/tax";
 export type ReserveCut = {
   inventory_item_id: string;
   thaan_id: string;
@@ -135,6 +141,46 @@ export function previewTotal(
       groups.reduce((sum, g) => sum + BigInt(fabricMoneyInput(g.stitching)), 0n) +
       (draftStitching === undefined ? 0n : BigInt(fabricMoneyInput(draftStitching)))
     );
+  } catch {
+    return null;
+  }
+}
+
+export function gstPreview(
+  rows: CounterRow[],
+  groups: TailoringGroup[],
+  configuration: GstTransactionConfiguration | undefined,
+  supplyType: GstSupplyType,
+) {
+  const config = configuration?.configuration;
+  if (!config?.enabled) {
+    const total = previewTotal(rows, groups);
+    return total === null
+      ? null
+      : { taxable: total, gst: 0n, cgst: 0n, sgst: 0n, igst: 0n, final: total };
+  }
+  try {
+    let taxable = 0n,
+      gst = 0n,
+      cgst = 0n,
+      sgst = 0n,
+      igst = 0n,
+      final = 0n;
+    const add = (amount: bigint, category: "fabric_sale" | "finished_sale" | "tailoring") => {
+      const rule = defaultGstRule(configuration, category);
+      if (!rule) throw new Error(`Configure the default ${category} GST rule`);
+      const tax = calculateTaxPaise(amount, rule.rate_bps, config.price_mode, supplyType);
+      taxable += tax.taxablePaise;
+      gst += tax.gstPaise;
+      cgst += tax.cgstPaise;
+      sgst += tax.sgstPaise;
+      igst += tax.igstPaise;
+      final += tax.finalPaise;
+    };
+    for (const row of rows)
+      add(rowAmount(row), row.scan.kind === "product" ? "finished_sale" : "fabric_sale");
+    for (const group of groups) add(BigInt(fabricMoneyInput(group.stitching)), "tailoring");
+    return { taxable, gst, cgst, sgst, igst, final };
   } catch {
     return null;
   }

@@ -26,6 +26,7 @@ export const PAGE_NAMES: Record<string, string> = {
   "/my-work": "Salesperson Work",
   "/customers": "Customers",
   "/access": "Users & Permissions",
+  "/gst": "GST Configuration",
   "/settings": "Account",
   "/whatsapp": "WhatsApp",
 };

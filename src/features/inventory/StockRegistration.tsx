@@ -14,9 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { quantityInput } from "./ledger-quantity";
-import { reportQuantity } from "@/features/reports/report-value";
+import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import {
+  calculateTaxPaise,
+  defaultGstRule,
+  formatGstRate,
+  useGstConfiguration,
+} from "@/features/gst/tax";
 type Variant = {
   id: string;
   code: string;
@@ -46,6 +52,16 @@ type Work =
         quantity: number;
         rows: { colour: string | null; length_mm: number | null; cp_paise_per_m: number | null }[];
       }[];
+      purchase: {
+        supplier_gstin: string;
+        invoice_number: string;
+        invoice_date: string;
+        supply_type: "intra_state" | "inter_state";
+        itc_status: "eligible" | "ineligible" | "reversed" | "pending";
+        actual_taxable_paise: number | null;
+        actual_gst_paise: number | null;
+        actual_supplier_paise: number | null;
+      };
     }
   | {
       kind: "details";
@@ -137,6 +153,7 @@ export function StockRegistration() {
   const allowed = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const qc = useQueryClient();
   const suppliers = useSuppliers();
+  const gst = useGstConfiguration();
   const [stage, setStage] = useState<"home" | "create" | "labels">("home");
   const [provider, setProvider] = useState("");
   const [date, setDate] = useState(() =>
@@ -148,6 +165,18 @@ export function StockRegistration() {
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
+  const [supplierGstin, setSupplierGstin] = useState("");
+  const [supplierInvoice, setSupplierInvoice] = useState("");
+  const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
+  const [purchaseSupply, setPurchaseSupply] = useState<"intra_state" | "inter_state">(
+    "intra_state",
+  );
+  const [itcStatus, setItcStatus] = useState<"eligible" | "ineligible" | "reversed" | "pending">(
+    "pending",
+  );
+  const [actualTaxable, setActualTaxable] = useState("");
+  const [actualGst, setActualGst] = useState("");
+  const [actualSupplier, setActualSupplier] = useState("");
   const [rows, setRows] = useState<EntryRow[]>([emptyRow()]);
   const [batchId, setBatchId] = useState("");
   const [groupIndex, setGroupIndex] = useState(0);
@@ -190,6 +219,26 @@ export function StockRegistration() {
     (sum, r) => sum + (/^\d+$/.test(r.quantity) ? Number(r.quantity) : 0),
     0,
   );
+  const purchaseRule = defaultGstRule(gst.data, "purchase");
+  const gstEnabled = Boolean(gst.data?.configuration?.enabled && purchaseRule);
+  const purchaseTotals = (() => {
+    try {
+      let base = 0n;
+      for (const row of rows)
+        for (let index = 0; index < rowCount(row.quantity); index++) {
+          const detail = thaanDetail(row, index);
+          if (!detail.length.trim() || !detail.cp.trim()) continue;
+          base +=
+            (BigInt(quantityInput(detail.length, "mm")) * BigInt(fabricMoneyInput(detail.cp)) +
+              500n) /
+            1000n;
+        }
+      const tax = calculateTaxPaise(base, purchaseRule?.rate_bps ?? 0, "exclusive", purchaseSupply);
+      return { base, gst: tax.gstPaise, supplier: tax.finalPaise };
+    } catch {
+      return null;
+    }
+  })();
   const action = useMutation({
     mutationFn: async (args: Pending) => {
       setPending(args);
@@ -215,12 +264,18 @@ export function StockRegistration() {
                 })),
               })
             : w.kind === "batch"
-              ? await supabase.rpc("create_barcode_batch_with_details", {
+              ? await (
+                  supabase.rpc as unknown as (
+                    name: string,
+                    args: Record<string, unknown>,
+                  ) => Promise<{ data: string | null; error: Error | null }>
+                )("create_barcode_batch_with_gst", {
                   p_request: args.request,
                   p_provider: w.provider,
                   p_arrival_date: w.date,
                   p_remarks: w.remarks,
                   p_fabrics: w.fabrics,
+                  p_purchase: w.purchase,
                 })
               : w.kind === "details"
                 ? await supabase.rpc("save_registered_thaan_details", {
@@ -241,7 +296,7 @@ export function StockRegistration() {
     onSuccess: async (id, args) => {
       setPending(null);
       if (args.work.kind === "batch") {
-        setBatchId(id);
+        setBatchId(String(id));
         setGroupIndex(0);
         setPrinted([]);
         setStage("labels");
@@ -381,6 +436,74 @@ export function StockRegistration() {
               </div>
             </fieldset>
           </Panel>
+          {gstEnabled && (
+            <Panel
+              title="Supplier invoice & purchase GST"
+              description={`CP remains the base cost excluding GST. The active purchase rule is ${formatGstRate(purchaseRule!.rate_bps)} (${purchaseRule!.classification_code}).`}
+            >
+              <fieldset disabled={frozen} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Input
+                  aria-label="Supplier GSTIN"
+                  placeholder="Supplier GSTIN (optional)"
+                  value={supplierGstin}
+                  onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                />
+                <Input
+                  aria-label="Supplier invoice number"
+                  placeholder="Supplier invoice number"
+                  value={supplierInvoice}
+                  onChange={(e) => setSupplierInvoice(e.target.value)}
+                />
+                <Input
+                  aria-label="Supplier invoice date"
+                  type="date"
+                  value={supplierInvoiceDate}
+                  onChange={(e) => setSupplierInvoiceDate(e.target.value)}
+                />
+                <select
+                  aria-label="Purchase supply type"
+                  className="h-11 rounded border bg-background p-2"
+                  value={purchaseSupply}
+                  onChange={(e) => setPurchaseSupply(e.target.value as typeof purchaseSupply)}
+                >
+                  <option value="intra_state">Intra-state · CGST + SGST</option>
+                  <option value="inter_state">Inter-state · IGST</option>
+                </select>
+                <select
+                  aria-label="Input tax credit status"
+                  className="h-11 rounded border bg-background p-2"
+                  value={itcStatus}
+                  onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
+                >
+                  <option value="pending">ITC pending review</option>
+                  <option value="eligible">ITC eligible</option>
+                  <option value="ineligible">ITC ineligible</option>
+                  <option value="reversed">ITC reversed</option>
+                </select>
+                <Input
+                  aria-label="Actual taxable amount"
+                  inputMode="decimal"
+                  placeholder="Invoice taxable ₹ (optional)"
+                  value={actualTaxable}
+                  onChange={(e) => setActualTaxable(e.target.value)}
+                />
+                <Input
+                  aria-label="Actual GST amount"
+                  inputMode="decimal"
+                  placeholder="Invoice GST ₹ (optional)"
+                  value={actualGst}
+                  onChange={(e) => setActualGst(e.target.value)}
+                />
+                <Input
+                  aria-label="Actual supplier total"
+                  inputMode="decimal"
+                  placeholder="Supplier total ₹ (optional)"
+                  value={actualSupplier}
+                  onChange={(e) => setActualSupplier(e.target.value)}
+                />
+              </fieldset>
+            </Panel>
+          )}
           <Panel
             title="Fabric Types & Quantities"
             description="Choose your fabrics and the number of physical Thaans for each."
@@ -472,7 +595,9 @@ export function StockRegistration() {
                           />
                         </div>
                         <div>
-                          <Label htmlFor={"bulk-cp-" + r.id}>CP for all / metre (₹)</Label>
+                          <Label htmlFor={"bulk-cp-" + r.id}>
+                            Base CP for all / metre, excluding GST (₹)
+                          </Label>
                           <Input
                             id={"bulk-cp-" + r.id}
                             aria-label={"CP for all fabric " + (i + 1)}
@@ -576,7 +701,7 @@ export function StockRegistration() {
                             [
                               ["colour", "Colour (optional)"],
                               ["length", "Length (metres)"],
-                              ["cp", "CP per metre (optional)"],
+                              ["cp", "Base CP per metre, excluding GST (optional)"],
                             ] as const
                           ).map(([field, label]) => (
                             <div key={field} className="min-w-0">
@@ -622,6 +747,33 @@ export function StockRegistration() {
                               />
                             </div>
                           ))}
+                          {gstEnabled &&
+                            (() => {
+                              try {
+                                const detail = thaanDetail(r, n);
+                                if (!detail.length.trim() || !detail.cp.trim()) return null;
+                                const base =
+                                  (BigInt(quantityInput(detail.length, "mm")) *
+                                    BigInt(fabricMoneyInput(detail.cp)) +
+                                    500n) /
+                                  1000n;
+                                const tax = calculateTaxPaise(
+                                  base,
+                                  purchaseRule!.rate_bps,
+                                  "exclusive",
+                                  purchaseSupply,
+                                );
+                                return (
+                                  <p className="text-[11px] text-muted-foreground sm:col-span-3 lg:col-span-4">
+                                    Base {reportMoney(String(base))} · GST{" "}
+                                    {reportMoney(String(tax.gstPaise))} · Supplier amount{" "}
+                                    {reportMoney(String(tax.finalPaise))}
+                                  </p>
+                                );
+                              } catch {
+                                return null;
+                              }
+                            })()}
                           <Button
                             type="button"
                             size="icon"
@@ -679,6 +831,13 @@ export function StockRegistration() {
               <p>Total Thaans: {total}</p>
               <p>Fabric Types: {rows.length}</p>
               <p>Estimated Barcodes: {total}</p>
+              {gstEnabled && purchaseTotals && (
+                <p>
+                  Base {reportMoney(String(purchaseTotals.base))} · GST{" "}
+                  {reportMoney(String(purchaseTotals.gst))} · Supplier total{" "}
+                  {reportMoney(String(purchaseTotals.supplier))}
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 sm:shrink-0">
               <Button
@@ -737,6 +896,20 @@ export function StockRegistration() {
                             : null,
                         })),
                       })),
+                      purchase: {
+                        supplier_gstin: supplierGstin.trim(),
+                        invoice_number: supplierInvoice.trim(),
+                        invoice_date: supplierInvoiceDate,
+                        supply_type: purchaseSupply,
+                        itc_status: itcStatus,
+                        actual_taxable_paise: actualTaxable.trim()
+                          ? fabricMoneyInput(actualTaxable)
+                          : null,
+                        actual_gst_paise: actualGst.trim() ? fabricMoneyInput(actualGst) : null,
+                        actual_supplier_paise: actualSupplier.trim()
+                          ? fabricMoneyInput(actualSupplier)
+                          : null,
+                      },
                     });
                   } catch (error) {
                     toast.error(

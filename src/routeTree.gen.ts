@@ -17,6 +17,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedCustomersRouteImport } from './routes/_authenticated/customers'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedEcommerceRouteImport } from './routes/_authenticated/ecommerce'
+import { Route as AuthenticatedGstRouteImport } from './routes/_authenticated/gst'
 import { Route as AuthenticatedMyWorkRouteImport } from './routes/_authenticated/my-work'
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -64,6 +65,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedEcommerceRoute = AuthenticatedEcommerceRouteImport.update({
   id: '/ecommerce',
   path: '/ecommerce',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGstRoute = AuthenticatedGstRouteImport.update({
+  id: '/gst',
+  path: '/gst',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMyWorkRoute = AuthenticatedMyWorkRouteImport.update({
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/gst': typeof AuthenticatedGstRoute
   '/my-work': typeof AuthenticatedMyWorkRoute
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/customers': typeof AuthenticatedCustomersRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/gst': typeof AuthenticatedGstRoute
   '/my-work': typeof AuthenticatedMyWorkRoute
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/customers': typeof AuthenticatedCustomersRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/ecommerce': typeof AuthenticatedEcommerceRoute
+  '/_authenticated/gst': typeof AuthenticatedGstRoute
   '/_authenticated/my-work': typeof AuthenticatedMyWorkRoute
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/ecommerce'
+    | '/gst'
     | '/my-work'
     | '/pos'
     | '/reports'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/ecommerce'
+    | '/gst'
     | '/my-work'
     | '/pos'
     | '/reports'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/_authenticated/customers'
     | '/_authenticated/dashboard'
     | '/_authenticated/ecommerce'
+    | '/_authenticated/gst'
     | '/_authenticated/my-work'
     | '/_authenticated/pos'
     | '/_authenticated/reports'
@@ -293,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEcommerceRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/gst': {
+      id: '/_authenticated/gst'
+      path: '/gst'
+      fullPath: '/gst'
+      preLoaderRoute: typeof AuthenticatedGstRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/my-work': {
       id: '/_authenticated/my-work'
       path: '/my-work'
@@ -365,6 +384,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCustomersRoute: typeof AuthenticatedCustomersRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEcommerceRoute: typeof AuthenticatedEcommerceRoute
+  AuthenticatedGstRoute: typeof AuthenticatedGstRoute
   AuthenticatedMyWorkRoute: typeof AuthenticatedMyWorkRoute
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -382,6 +402,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCustomersRoute: AuthenticatedCustomersRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEcommerceRoute: AuthenticatedEcommerceRoute,
+  AuthenticatedGstRoute: AuthenticatedGstRoute,
   AuthenticatedMyWorkRoute: AuthenticatedMyWorkRoute,
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,

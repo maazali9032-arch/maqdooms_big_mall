@@ -68,85 +68,85 @@ Subfeatures are separated where their classifications differ. A correct building
 
 ### Feature classification register
 
-| ID | Feature/scope | Classification | Evidence and finding |
-| --- | --- | --- | --- |
-| A01 | Existing React/TanStack/Supabase architecture and feature separation | ALREADY CORRECT | `package.json`, `src/router.tsx`, `src/features/`; reusable platform, no requirement to rewrite it. |
-| A02 | Integer mm/paise conversions and rounded sale line calculation | ALREADY CORRECT | `src/shared/utils/units.ts`, `complete_fabric_sale`; matches units without inventing yards or a new currency model. |
-| A03 | Email/password and Google staff authentication | ALREADY CORRECT | `src/routes/auth.tsx`, Supabase/Lovable integration; authentication is present. Provider settings remain unverified. |
-| A04 | Shared role navigation, authenticated route guard and receiving action guard | ALREADY CORRECT | `src/app/access/modules.ts`, `_authenticated/route.tsx`, AppShell; server data authorization is separate from UI navigation. |
-| A05 | Owner, Stock Entry, Counter and Tailor role foundations | ALREADY CORRECT | Core role seeds and role labels; all four required roles already exist, and no Factory login role is created. |
-| A06 | Active staff permission enforcement and client rechecks | NEEDS MODIFICATION | `has_perm`, `has_role`, session focus/60-second/Realtime checks exist, but assigned-job self-read clauses lack active-staff checks and some helpers bypass scoped reads; see security findings. |
-| A07 | Multiple roles, permission overrides and effective permission bootstrap | NEEDS MODIFICATION | `role_permissions`, `user_permission_overrides`, `bootstrap_current_user`; reconcile union/override semantics with strict Owner-only finance and workflow-limited Stock Entry CP. |
-| A08 | Owner role assignment and staff enable/disable UI | ALREADY CORRECT | Access screen and `src/features/access/index.ts`; present Owner management foundation. |
-| A09 | Last active Owner protection | ALREADY CORRECT | September 26 hardening/completion triggers use advisory locks; preserve DB invariant and UI checks. |
-| A10 | First-login role bootstrap and sign-up lifecycle | NEEDS MODIFICATION | New login automatically receives Counter and first bootstrap can become Owner; bootstrap has no serialization around initial Owner creation. Plan does not specify onboarding policy; do not silently invent one. |
-| A11 | Browser query cache/session boundary | NEEDS MODIFICATION | Shared QueryClient, non-user-scoped query keys, session provider does not clear domain cache on logout/role change; verify/restrict stale protected-data display across account changes. |
-| A12 | Separate cost storage and restricted cost snapshot columns | ALREADY CORRECT | `thaan_costs`, restricted SELECT grants on `stock_movements`, `tailoring_job_lines`, `materials`; useful backend financial separation, not only UI hiding. |
-| A13 | Default Counter/Tailor CP retrieval restrictions | ALREADY CORRECT | Default roles lack `inventory.view_cost`/`tailoring.view_costs`; cost RPCs gate results and direct snapshot columns are revoked. This is source inspection only, subject to overrides and deployed state. |
-| A14 | Stock Entry ongoing CP reads/history and unrestricted receiving-cost writes | CONFLICTING | Stock Entry inherits `inventory.view_cost`; cost read/write policies have no workflow/completion scope. `FOR ALL` cost-write policy also contributes SELECT access for `inventory.receive`. |
-| A15 | Stock Entry SP editing/control | CONFLICTING | Receiving bulk/editor writes `thaans.price_paise`; DB edit policy permits any `inventory.edit_thaan` holder. Plan reserves SP control to Owner. |
-| A16 | Owner SP management after complete stock entry | MISSING | No dedicated Owner scan/set-SP operation; incomplete correction rejects already-complete active rolls. Generic patch capability is not the required Owner pricing workflow/history. |
-| I01 | Fabric and supplier catalogues, receiving batch records | NEEDS MODIFICATION | Existing `fabrics`, `suppliers`, `receiving_batches`, pick-or-type helpers are reusable; require mandatory fabric identity and Fabric + Batch stock identity semantics. Current batch is a receiving session potentially spanning fabrics. |
-| I02 | Individual physical Than rows and variable original lengths | ALREADY CORRECT | `thaans.original_mm`, fabric/batch links; preserve physical row history internally. Its public barcode mapping is assessed separately. |
-| I03 | Public unique barcode per physical roll | CONFLICTING | `thaans.barcode text unique not null`, receiving “One scan = one physical roll,” POS `lookupThaan`; same Fabric + Batch can have many TH barcodes. Required public identity is one Fabric + Batch barcode. |
-| I04 | Fabric + Batch stock identity and aggregate barcode lookup | MISSING | No `fabric_stock`/equivalent identity table or unique Fabric + Batch barcode. Grouping reports by fabric name does not implement it. |
-| I05 | Barcode as stable identifier without embedded prices | ALREADY CORRECT | Barcode text is independent of mutable CP/SP/length; no separate CP/SP barcodes exist. Preserve this principle while changing identity mapping. |
-| I06 | Keyboard scanner/manual Enter input | NEEDS MODIFICATION | Receiving and POS inputs/refocus work on roll barcodes; adapt to Fabric Barcode identity and authorized aggregate/Than allocation behavior. No allocation rule is chosen during audit. |
-| I07 | Fabric ID/barcode generation, Code 128 rendering and label printing | MISSING | Existing helpers generate fabric codes/batch codes, but raw roll barcode is entered/scanned externally. No barcode encoder/library or label/print workflow found. |
-| I08 | Receiving activation requires SP and treats CP/fabric as optional | CONFLICTING | `commit_receiving_batch`, `correct_incomplete_thaan`, `v_thaan_overview`, `incompleteReasons`; length + SP determines completeness, contradicting CP entry and SP-later stock workflow. |
-| I09 | Draft receiving, bulk edits and incomplete correction | NEEDS MODIFICATION | Preserve draft/commit/correction concepts and locked idempotent INWARD activation; change completeness, ownership, atomic editing and workflow scope. Bulk patch is not an atomic CP/stock/audit operation. |
-| I10 | Fabric ledger balance derivation | ALREADY CORRECT | `SUM(stock_movements.delta_mm)`, overview/movement queries; not a destructively overwritten remaining length. |
-| I11 | Atomic sale/multi-cut deduction and stock row locks | ALREADY CORRECT | `cut_thaan`, `complete_fabric_sale`, `issue_tailoring_fabrics` validate availability and perform transactional writes; multi-item operations order locks and roll back failures. Extend these patterns. |
-| I12 | Inventory ledger schema and movement dimensions | NEEDS MODIFICATION | Ledger is Than-only, `delta_mm`; no source/destination/location/unit/general material/product linkage. Kind CHECK supports INWARD/SALE/TAILORING/RETURN/WASTAGE/ADJUSTMENT but not TRANSFER/MATERIAL_ISSUE/PRODUCTION. |
-| I13 | Workshop, Showroom and dynamic Showroom sublocations | MISSING | Only free-text `thaans.rack`; no location hierarchy or inventory balances by location. A rack is not Workshop/Showroom stock. |
-| I14 | Stock Transfers and transactional location balances | MISSING | No transfer tables/RPC/screens, from/to locations, paired ledger records or over-transfer validation. |
-| I15 | Explicit adjustment/return/wastage ledger operations | NEEDS MODIFICATION | Owner `adjust_thaan` prevents negative ledger balance but needs event-linked material/job/location traceability, reason/quantity invariants and role refinement. |
-| I16 | No automatic wastage | ALREADY CORRECT | Sale/tailoring RPCs deduct requested quantity only. WASTAGE is an explicit adjustment option; seed example has a damage reason, not automatic percentage deduction. |
-| I17 | Depleted stock/history retained | ALREADY CORRECT | Depletion changes status; sale/issue operations do not hard-delete Thaans. |
-| I18 | Constraints and concurrency coverage outside sale/cut | NEEDS MODIFICATION | Missing positive/nonnegative length/price/cost constraints; receiving/correction checks completeness by NULL only. `place_hold` lacks matching stock row lock; generic edits can change active stock metadata outside controlled ledger corrections. |
-| S01 | Direct Fabric Sale uses database SP | ALREADY CORRECT | `complete_fabric_sale` calculates from current `thaans.price_paise`, never accepts browser cost/price as authority; keeps CP out of result. |
-| S02 | Direct-sale workflow and source-location deduction | NEEDS MODIFICATION | Existing staged multi-fabric bill/customer/receipt is reusable; roll lookup and global balance must become Fabric Barcode and correct source-location stock. |
-| S03 | Sale price/cost snapshots | ALREADY CORRECT | Sale items store SP; linked SALE movements preserve CP/SP at transaction time. Owner history access/UI still incomplete. |
-| S04 | Complete Owner CP + SP order history and cancellation history | NEEDS MODIFICATION | `useRecentSales`, POS/report bills omit CP; movement log excludes CP for everyone, no Owner movement-cost reader found. No tailoring/product unified order history, location snapshot or cancellation/refund workflow. |
-| C01 | Customer creation/selection and WhatsApp contact storage | ALREADY CORRECT | `find_or_create_customer`, `customers.whatsapp_phone`, POS new/existing sale customers; reuse contact normalization/deduplication and advisory-lock pattern. |
-| C02 | Customer attachment and WhatsApp in tailoring creation flow | NEEDS MODIFICATION | Job RPC supports nullable customer, but POS new-job and Tailoring screen calls omit it; customer form is sale-oriented. Must implement the required customer-linked job flow. |
-| T01 | Tailoring job IDs, statuses, real active Tailor assignments | ALREADY CORRECT | Job creation/assignment/status RPCs, `tailor_id` FK/index, eligibility trigger and assigned-job UI; preserve validated people/job distinction. |
-| T02 | Job creation by Counter and selection of actionable jobs | ALREADY CORRECT | Latest multi-cut migration permits Owner/Counter creation; active-tailor and eligible-job RPCs exist. Hierarchy/pricing/customer additions are separate findings. |
-| T03 | Factory → Section → Tailor entities and management | MISSING | Tailors are profiles with roles; no factory/section tables, assignments, IDs or dynamic management/filtering. |
-| T04 | Assigned Tailor isolation in reads/aggregates | NEEDS MODIFICATION | Eligible-job RPC and issue trigger limit pure Tailor to own jobs, but `tailoring_job_totals` bypasses RLS and aggregates all jobs for issue/manage permissions; self-read predicates omit active state. |
-| T05 | Customer Tailoring versus no-customer shop work separation | CONFLICTING | One `tailoring_jobs` model allows nullable customers; screen labels null-customer jobs “Shop stock.” Required Owner Production must be separate, not anonymous Customer Tailoring. |
-| T06 | SP-based tailoring selling-value calculation/display | CONFLICTING | `issue_tailoring_fabrics` returns SP-derived `selling_value_paise`; POS staging and `lineValue` show selling values. Required final Customer Tailoring price uses CP + applicable Tailoring Charge, and Counter sees final price only. No completed charge-based billing exists. |
-| T07 | Configurable Owner Tailoring Charges and secure final-price calculation | MISSING | No charge catalogue, charge selection/snapshot, CP-based final-price RPC or Customer Tailoring bill/order flow. Do not choose an undefined charge formula or default illustrative rupee value. |
-| T08 | Atomic multi-fabric issue to same job | ALREADY CORRECT | Existing multi-cut RPC and repeated issue sessions link Than/job and retain requested quantity; reuse as transaction foundation. |
-| T09 | Generic Issue Material to Job / Additional Material Issue | NEEDS MODIFICATION | Current RPC/input accepts only barcode + length cuts. Requires consumables, unit, customer, factory/section/tailor, source, issuer and explicit additional-issue event/context. |
-| T10 | Legacy free-text tailor assignment as active authority | DEPRECATED | `tailor_name` retained for historical display; migration 0007/20260926000400 requires real active Tailor profile for new issues. Preserve old names but do not restore free-text eligibility. |
-| M01 | Consumable catalogue and stored units | NEEDS MODIFICATION | `materials` and material-linked job lines exist; seeded padding/buttons/lining, no complete receipt/issue/return management or thread-specific workflow. |
-| M02 | Consumable inventory ledger and atomic material issue | MISSING | `materials.qty_on_hand` is a stored numeric balance; stock ledger requires a Than FK. Seeded material job line does not deduct consumable stock. No production/general material issue transaction. |
-| P01 | Separate Owner Production Job domain | MISSING | No product/design/quantity/factory/section/production-job model, routes or RPCs. Null-customer tailoring is not an implementation. |
-| P02 | Configurable designs and Design/Embroidery Charges | MISSING | `fabrics.design` is free text, not a charge catalogue or production design relationship. |
-| P03 | Production Materials Issued, status and completion | MISSING | No production material ledger linkage or completion transaction. |
-| P04 | Individual Finished Products and unique Product Barcodes | MISSING | Listing variants/manual quantities do not represent physical produced pieces with unique IDs, job links and barcodes. |
-| P05 | Finished Product genealogy and Owner barcode detail | MISSING | No chain from piece to Production Job/design/fabric quantities/materials/factory/section/tailor/history/cost/location. |
-| P06 | Complete Production Cost and cost per piece | MISSING | No fabric + labor + design + buttons/thread/padding/other cost breakdown, total cost, quantity allocation or cost-change history. Existing tailoring material totals are not complete production cost. |
-| P07 | Owner Finished Product SP and backend cost privacy | MISSING | No Finished Product financial model or role-safe scan/sales APIs. |
-| P08 | Production completion returns Finished Products to Workshop first | MISSING | No required return destination, Workshop receipt or subsequent Showroom transfer sequence. |
-| P09 | Finished Product Counter scan, counts and sales | MISSING | No physical piece scan/SP/location counts/identical-product availability/sale/order flow. |
-| R01 | Owner dashboard and fabric/sales/tailoring reporting | NEEDS MODIFICATION | Existing dashboard/reports are reusable views, but globally aggregate old roll/SP model; limited recent-sale/movement queries (100 rows on reports) are not full history. |
-| R02 | Location/transfer/factory/production/Finished Product reports | MISSING | Underlying transactional domains absent; build only after their transactions are reliable. |
-| R03 | Audit table and Owner-gated audit viewing | ALREADY CORRECT | `audit_log`, `audit.view`, audit screen; no authenticated direct append/update/delete policy, useful history foundation. |
-| R04 | Complete automatic action audit, financial before/after and immutable boundary | NEEDS MODIFICATION | Some RPCs audit atomically, but direct CP/SP writes have no automatic history trigger; access writes then log in separate requests; barcode creation is not logged; listing/order updates are incomplete. `log_audit` accepts caller-supplied detail from any active staff. |
-| X01 | Internal e-commerce listings, images, variants and pick/hold foundations | NEEDS MODIFICATION | Existing extra module is outside core master-plan workflows; preserve pending explicit scope. Roll links/availability will need reconciliation with new identity; manual variants must not masquerade as Finished Products. |
-| X02 | E-commerce Manager extra login role | NEEDS MODIFICATION | Fifth existing role is not a required core role; plan does not explicitly order its removal. Preserve it, assess access against protected fields, do not invent Factory role or delete staff assignments. |
-| X03 | WhatsApp receipt/template preview foundation | ALREADY CORRECT | Preview explicitly says no provider configured; customer WhatsApp storage exists. Plan does not require a live sending provider in Phase 0. |
-| X04 | Settings/account information and shared UI components | ALREADY CORRECT | Existing units/account/integration display and UI primitives can be reused. These do not implement business administration catalogues. |
-| X05 | Approved terminology across operational screens | NEEDS MODIFICATION | “thaan,” “Counter / POS,” “Shop stock,” “selling value,” “laag at/Laagat” labels and roll-oriented navigation need approved Than/Counter/CP/Lagat/Customer Tailoring/Owner Production terms. |
-| X06 | Old guide's roll-barcode/activation/CP rules as future specification | DEPRECATED | Guide principles 1 and 4 and ongoing Stock Entry cost permission are superseded by master plan. Preserve guide as historical reference; do not treat it as new ERP authority. |
-| D01 | Version-controlled ordered SQL migration chain and mirror journal | ALREADY CORRECT | Ten Supabase migrations and ten ordered Drizzle files/journal entries; preserve applied history and add only new migrations in later authorized phases. |
-| D02 | Drizzle schema/snapshots as full current schema contract | NEEDS MODIFICATION | `drizzle/schema.ts` is intentionally empty; snapshots stop at 0003 while journal reaches 0009. SQL is the actual available schema; do not generate a replacement initial schema that drops deployed objects. |
-| D03 | Existing demo data compatibility with new ERP | NEEDS MODIFICATION | Demo migration seeds TH-0001–TH-0017 with multiple barcodes per Fabric + Batch, optional-cost model, unlinked free-text Tailors and shop-stock tailoring. No new-location/production/security acceptance fixtures. Do not edit/replay/delete old seed in Phase 0. |
-| D04 | Demo versus real data provenance presentation | NEEDS MODIFICATION | Supplier/batch/customer notes mark examples, but not every fabric/material/listing/transaction visibly carries DEMO; live data provenance/counts unverified. Do not assume current production contains demo data. |
-| D05 | Automated ERP/database/role acceptance tests | MISSING | No test script or test suite found; guide checklist is manual documentation, not executed tests. Need new-domain, concurrency and adversarial role tests in appropriate phases. |
-| D06 | Confirmed deployed migration/schema parity | MISSING | No live schema/migration-application verification performed or retained in repository evidence; this audit cannot certify applied state. |
+| ID  | Feature/scope                                                                  | Classification     | Evidence and finding                                                                                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A01 | Existing React/TanStack/Supabase architecture and feature separation           | ALREADY CORRECT    | `package.json`, `src/router.tsx`, `src/features/`; reusable platform, no requirement to rewrite it.                                                                                                                                                                              |
+| A02 | Integer mm/paise conversions and rounded sale line calculation                 | ALREADY CORRECT    | `src/shared/utils/units.ts`, `complete_fabric_sale`; matches units without inventing yards or a new currency model.                                                                                                                                                              |
+| A03 | Email/password and Google staff authentication                                 | ALREADY CORRECT    | `src/routes/auth.tsx`, Supabase/Lovable integration; authentication is present. Provider settings remain unverified.                                                                                                                                                             |
+| A04 | Shared role navigation, authenticated route guard and receiving action guard   | ALREADY CORRECT    | `src/app/access/modules.ts`, `_authenticated/route.tsx`, AppShell; server data authorization is separate from UI navigation.                                                                                                                                                     |
+| A05 | Owner, Stock Entry, Counter and Tailor role foundations                        | ALREADY CORRECT    | Core role seeds and role labels; all four required roles already exist, and no Factory login role is created.                                                                                                                                                                    |
+| A06 | Active staff permission enforcement and client rechecks                        | NEEDS MODIFICATION | `has_perm`, `has_role`, session focus/60-second/Realtime checks exist, but assigned-job self-read clauses lack active-staff checks and some helpers bypass scoped reads; see security findings.                                                                                  |
+| A07 | Multiple roles, permission overrides and effective permission bootstrap        | NEEDS MODIFICATION | `role_permissions`, `user_permission_overrides`, `bootstrap_current_user`; reconcile union/override semantics with strict Owner-only finance and workflow-limited Stock Entry CP.                                                                                                |
+| A08 | Owner role assignment and staff enable/disable UI                              | ALREADY CORRECT    | Access screen and `src/features/access/index.ts`; present Owner management foundation.                                                                                                                                                                                           |
+| A09 | Last active Owner protection                                                   | ALREADY CORRECT    | September 26 hardening/completion triggers use advisory locks; preserve DB invariant and UI checks.                                                                                                                                                                              |
+| A10 | First-login role bootstrap and sign-up lifecycle                               | NEEDS MODIFICATION | New login automatically receives Counter and first bootstrap can become Owner; bootstrap has no serialization around initial Owner creation. Plan does not specify onboarding policy; do not silently invent one.                                                                |
+| A11 | Browser query cache/session boundary                                           | NEEDS MODIFICATION | Shared QueryClient, non-user-scoped query keys, session provider does not clear domain cache on logout/role change; verify/restrict stale protected-data display across account changes.                                                                                         |
+| A12 | Separate cost storage and restricted cost snapshot columns                     | ALREADY CORRECT    | `thaan_costs`, restricted SELECT grants on `stock_movements`, `tailoring_job_lines`, `materials`; useful backend financial separation, not only UI hiding.                                                                                                                       |
+| A13 | Default Counter/Tailor CP retrieval restrictions                               | ALREADY CORRECT    | Default roles lack `inventory.view_cost`/`tailoring.view_costs`; cost RPCs gate results and direct snapshot columns are revoked. This is source inspection only, subject to overrides and deployed state.                                                                        |
+| A14 | Stock Entry ongoing CP reads/history and unrestricted receiving-cost writes    | CONFLICTING        | Stock Entry inherits `inventory.view_cost`; cost read/write policies have no workflow/completion scope. `FOR ALL` cost-write policy also contributes SELECT access for `inventory.receive`.                                                                                      |
+| A15 | Stock Entry SP editing/control                                                 | CONFLICTING        | Receiving bulk/editor writes `thaans.price_paise`; DB edit policy permits any `inventory.edit_thaan` holder. Plan reserves SP control to Owner.                                                                                                                                  |
+| A16 | Owner SP management after complete stock entry                                 | MISSING            | No dedicated Owner scan/set-SP operation; incomplete correction rejects already-complete active rolls. Generic patch capability is not the required Owner pricing workflow/history.                                                                                              |
+| I01 | Fabric and supplier catalogues, receiving batch records                        | NEEDS MODIFICATION | Existing `fabrics`, `suppliers`, `receiving_batches`, pick-or-type helpers are reusable; require mandatory fabric identity and Fabric + Batch stock identity semantics. Current batch is a receiving session potentially spanning fabrics.                                       |
+| I02 | Individual physical Than rows and variable original lengths                    | ALREADY CORRECT    | `thaans.original_mm`, fabric/batch links; preserve physical row history internally. Its public barcode mapping is assessed separately.                                                                                                                                           |
+| I03 | Public unique barcode per physical roll                                        | CONFLICTING        | `thaans.barcode text unique not null`, receiving “One scan = one physical roll,” POS `lookupThaan`; same Fabric + Batch can have many TH barcodes. Required public identity is one Fabric + Batch barcode.                                                                       |
+| I04 | Fabric + Batch stock identity and aggregate barcode lookup                     | MISSING            | No `fabric_stock`/equivalent identity table or unique Fabric + Batch barcode. Grouping reports by fabric name does not implement it.                                                                                                                                             |
+| I05 | Barcode as stable identifier without embedded prices                           | ALREADY CORRECT    | Barcode text is independent of mutable CP/SP/length; no separate CP/SP barcodes exist. Preserve this principle while changing identity mapping.                                                                                                                                  |
+| I06 | Keyboard scanner/manual Enter input                                            | NEEDS MODIFICATION | Receiving and POS inputs/refocus work on roll barcodes; adapt to Fabric Barcode identity and authorized aggregate/Than allocation behavior. No allocation rule is chosen during audit.                                                                                           |
+| I07 | Fabric ID/barcode generation, Code 128 rendering and label printing            | MISSING            | Existing helpers generate fabric codes/batch codes, but raw roll barcode is entered/scanned externally. No barcode encoder/library or label/print workflow found.                                                                                                                |
+| I08 | Receiving activation requires SP and treats CP/fabric as optional              | CONFLICTING        | `commit_receiving_batch`, `correct_incomplete_thaan`, `v_thaan_overview`, `incompleteReasons`; length + SP determines completeness, contradicting CP entry and SP-later stock workflow.                                                                                          |
+| I09 | Draft receiving, bulk edits and incomplete correction                          | NEEDS MODIFICATION | Preserve draft/commit/correction concepts and locked idempotent INWARD activation; change completeness, ownership, atomic editing and workflow scope. Bulk patch is not an atomic CP/stock/audit operation.                                                                      |
+| I10 | Fabric ledger balance derivation                                               | ALREADY CORRECT    | `SUM(stock_movements.delta_mm)`, overview/movement queries; not a destructively overwritten remaining length.                                                                                                                                                                    |
+| I11 | Atomic sale/multi-cut deduction and stock row locks                            | ALREADY CORRECT    | `cut_thaan`, `complete_fabric_sale`, `issue_tailoring_fabrics` validate availability and perform transactional writes; multi-item operations order locks and roll back failures. Extend these patterns.                                                                          |
+| I12 | Inventory ledger schema and movement dimensions                                | NEEDS MODIFICATION | Ledger is Than-only, `delta_mm`; no source/destination/location/unit/general material/product linkage. Kind CHECK supports INWARD/SALE/TAILORING/RETURN/WASTAGE/ADJUSTMENT but not TRANSFER/MATERIAL_ISSUE/PRODUCTION.                                                           |
+| I13 | Workshop, Showroom and dynamic Showroom sublocations                           | MISSING            | Only free-text `thaans.rack`; no location hierarchy or inventory balances by location. A rack is not Workshop/Showroom stock.                                                                                                                                                    |
+| I14 | Stock Transfers and transactional location balances                            | MISSING            | No transfer tables/RPC/screens, from/to locations, paired ledger records or over-transfer validation.                                                                                                                                                                            |
+| I15 | Explicit adjustment/return/wastage ledger operations                           | NEEDS MODIFICATION | Owner `adjust_thaan` prevents negative ledger balance but needs event-linked material/job/location traceability, reason/quantity invariants and role refinement.                                                                                                                 |
+| I16 | No automatic wastage                                                           | ALREADY CORRECT    | Sale/tailoring RPCs deduct requested quantity only. WASTAGE is an explicit adjustment option; seed example has a damage reason, not automatic percentage deduction.                                                                                                              |
+| I17 | Depleted stock/history retained                                                | ALREADY CORRECT    | Depletion changes status; sale/issue operations do not hard-delete Thaans.                                                                                                                                                                                                       |
+| I18 | Constraints and concurrency coverage outside sale/cut                          | NEEDS MODIFICATION | Missing positive/nonnegative length/price/cost constraints; receiving/correction checks completeness by NULL only. `place_hold` lacks matching stock row lock; generic edits can change active stock metadata outside controlled ledger corrections.                             |
+| S01 | Direct Fabric Sale uses database SP                                            | ALREADY CORRECT    | `complete_fabric_sale` calculates from current `thaans.price_paise`, never accepts browser cost/price as authority; keeps CP out of result.                                                                                                                                      |
+| S02 | Direct-sale workflow and source-location deduction                             | NEEDS MODIFICATION | Existing staged multi-fabric bill/customer/receipt is reusable; roll lookup and global balance must become Fabric Barcode and correct source-location stock.                                                                                                                     |
+| S03 | Sale price/cost snapshots                                                      | ALREADY CORRECT    | Sale items store SP; linked SALE movements preserve CP/SP at transaction time. Owner history access/UI still incomplete.                                                                                                                                                         |
+| S04 | Complete Owner CP + SP order history and cancellation history                  | NEEDS MODIFICATION | `useRecentSales`, POS/report bills omit CP; movement log excludes CP for everyone, no Owner movement-cost reader found. No tailoring/product unified order history, location snapshot or cancellation/refund workflow.                                                           |
+| C01 | Customer creation/selection and WhatsApp contact storage                       | ALREADY CORRECT    | `find_or_create_customer`, `customers.whatsapp_phone`, POS new/existing sale customers; reuse contact normalization/deduplication and advisory-lock pattern.                                                                                                                     |
+| C02 | Customer attachment and WhatsApp in tailoring creation flow                    | NEEDS MODIFICATION | Job RPC supports nullable customer, but POS new-job and Tailoring screen calls omit it; customer form is sale-oriented. Must implement the required customer-linked job flow.                                                                                                    |
+| T01 | Tailoring job IDs, statuses, real active Tailor assignments                    | ALREADY CORRECT    | Job creation/assignment/status RPCs, `tailor_id` FK/index, eligibility trigger and assigned-job UI; preserve validated people/job distinction.                                                                                                                                   |
+| T02 | Job creation by Counter and selection of actionable jobs                       | ALREADY CORRECT    | Latest multi-cut migration permits Owner/Counter creation; active-tailor and eligible-job RPCs exist. Hierarchy/pricing/customer additions are separate findings.                                                                                                                |
+| T03 | Factory → Section → Tailor entities and management                             | MISSING            | Tailors are profiles with roles; no factory/section tables, assignments, IDs or dynamic management/filtering.                                                                                                                                                                    |
+| T04 | Assigned Tailor isolation in reads/aggregates                                  | NEEDS MODIFICATION | Eligible-job RPC and issue trigger limit pure Tailor to own jobs, but `tailoring_job_totals` bypasses RLS and aggregates all jobs for issue/manage permissions; self-read predicates omit active state.                                                                          |
+| T05 | Customer Tailoring versus no-customer shop work separation                     | CONFLICTING        | One `tailoring_jobs` model allows nullable customers; screen labels null-customer jobs “Shop stock.” Required Owner Production must be separate, not anonymous Customer Tailoring.                                                                                               |
+| T06 | SP-based tailoring selling-value calculation/display                           | CONFLICTING        | `issue_tailoring_fabrics` returns SP-derived `selling_value_paise`; POS staging and `lineValue` show selling values. Required final Customer Tailoring price uses CP + applicable Tailoring Charge, and Counter sees final price only. No completed charge-based billing exists. |
+| T07 | Configurable Owner Tailoring Charges and secure final-price calculation        | MISSING            | No charge catalogue, charge selection/snapshot, CP-based final-price RPC or Customer Tailoring bill/order flow. Do not choose an undefined charge formula or default illustrative rupee value.                                                                                   |
+| T08 | Atomic multi-fabric issue to same job                                          | ALREADY CORRECT    | Existing multi-cut RPC and repeated issue sessions link Than/job and retain requested quantity; reuse as transaction foundation.                                                                                                                                                 |
+| T09 | Generic Issue Material to Job / Additional Material Issue                      | NEEDS MODIFICATION | Current RPC/input accepts only barcode + length cuts. Requires consumables, unit, customer, factory/section/tailor, source, issuer and explicit additional-issue event/context.                                                                                                  |
+| T10 | Legacy free-text tailor assignment as active authority                         | DEPRECATED         | `tailor_name` retained for historical display; migration 0007/20260926000400 requires real active Tailor profile for new issues. Preserve old names but do not restore free-text eligibility.                                                                                    |
+| M01 | Consumable catalogue and stored units                                          | NEEDS MODIFICATION | `materials` and material-linked job lines exist; seeded padding/buttons/lining, no complete receipt/issue/return management or thread-specific workflow.                                                                                                                         |
+| M02 | Consumable inventory ledger and atomic material issue                          | MISSING            | `materials.qty_on_hand` is a stored numeric balance; stock ledger requires a Than FK. Seeded material job line does not deduct consumable stock. No production/general material issue transaction.                                                                               |
+| P01 | Separate Owner Production Job domain                                           | MISSING            | No product/design/quantity/factory/section/production-job model, routes or RPCs. Null-customer tailoring is not an implementation.                                                                                                                                               |
+| P02 | Configurable designs and Design/Embroidery Charges                             | MISSING            | `fabrics.design` is free text, not a charge catalogue or production design relationship.                                                                                                                                                                                         |
+| P03 | Production Materials Issued, status and completion                             | MISSING            | No production material ledger linkage or completion transaction.                                                                                                                                                                                                                 |
+| P04 | Individual Finished Products and unique Product Barcodes                       | MISSING            | Listing variants/manual quantities do not represent physical produced pieces with unique IDs, job links and barcodes.                                                                                                                                                            |
+| P05 | Finished Product genealogy and Owner barcode detail                            | MISSING            | No chain from piece to Production Job/design/fabric quantities/materials/factory/section/tailor/history/cost/location.                                                                                                                                                           |
+| P06 | Complete Production Cost and cost per piece                                    | MISSING            | No fabric + labor + design + buttons/thread/padding/other cost breakdown, total cost, quantity allocation or cost-change history. Existing tailoring material totals are not complete production cost.                                                                           |
+| P07 | Owner Finished Product SP and backend cost privacy                             | MISSING            | No Finished Product financial model or role-safe scan/sales APIs.                                                                                                                                                                                                                |
+| P08 | Production completion returns Finished Products to Workshop first              | MISSING            | No required return destination, Workshop receipt or subsequent Showroom transfer sequence.                                                                                                                                                                                       |
+| P09 | Finished Product Counter scan, counts and sales                                | MISSING            | No physical piece scan/SP/location counts/identical-product availability/sale/order flow.                                                                                                                                                                                        |
+| R01 | Owner dashboard and fabric/sales/tailoring reporting                           | NEEDS MODIFICATION | Existing dashboard/reports are reusable views, but globally aggregate old roll/SP model; limited recent-sale/movement queries (100 rows on reports) are not full history.                                                                                                        |
+| R02 | Location/transfer/factory/production/Finished Product reports                  | MISSING            | Underlying transactional domains absent; build only after their transactions are reliable.                                                                                                                                                                                       |
+| R03 | Audit table and Owner-gated audit viewing                                      | ALREADY CORRECT    | `audit_log`, `audit.view`, audit screen; no authenticated direct append/update/delete policy, useful history foundation.                                                                                                                                                         |
+| R04 | Complete automatic action audit, financial before/after and immutable boundary | NEEDS MODIFICATION | Some RPCs audit atomically, but direct CP/SP writes have no automatic history trigger; access writes then log in separate requests; barcode creation is not logged; listing/order updates are incomplete. `log_audit` accepts caller-supplied detail from any active staff.      |
+| X01 | Internal e-commerce listings, images, variants and pick/hold foundations       | NEEDS MODIFICATION | Existing extra module is outside core master-plan workflows; preserve pending explicit scope. Roll links/availability will need reconciliation with new identity; manual variants must not masquerade as Finished Products.                                                      |
+| X02 | E-commerce Manager extra login role                                            | NEEDS MODIFICATION | Fifth existing role is not a required core role; plan does not explicitly order its removal. Preserve it, assess access against protected fields, do not invent Factory role or delete staff assignments.                                                                        |
+| X03 | WhatsApp receipt/template preview foundation                                   | ALREADY CORRECT    | Preview explicitly says no provider configured; customer WhatsApp storage exists. Plan does not require a live sending provider in Phase 0.                                                                                                                                      |
+| X04 | Settings/account information and shared UI components                          | ALREADY CORRECT    | Existing units/account/integration display and UI primitives can be reused. These do not implement business administration catalogues.                                                                                                                                           |
+| X05 | Approved terminology across operational screens                                | NEEDS MODIFICATION | “thaan,” “Counter / POS,” “Shop stock,” “selling value,” “laag at/Laagat” labels and roll-oriented navigation need approved Than/Counter/CP/Lagat/Customer Tailoring/Owner Production terms.                                                                                     |
+| X06 | Old guide's roll-barcode/activation/CP rules as future specification           | DEPRECATED         | Guide principles 1 and 4 and ongoing Stock Entry cost permission are superseded by master plan. Preserve guide as historical reference; do not treat it as new ERP authority.                                                                                                    |
+| D01 | Version-controlled ordered SQL migration chain and mirror journal              | ALREADY CORRECT    | Ten Supabase migrations and ten ordered Drizzle files/journal entries; preserve applied history and add only new migrations in later authorized phases.                                                                                                                          |
+| D02 | Drizzle schema/snapshots as full current schema contract                       | NEEDS MODIFICATION | `drizzle/schema.ts` is intentionally empty; snapshots stop at 0003 while journal reaches 0009. SQL is the actual available schema; do not generate a replacement initial schema that drops deployed objects.                                                                     |
+| D03 | Existing demo data compatibility with new ERP                                  | NEEDS MODIFICATION | Demo migration seeds TH-0001–TH-0017 with multiple barcodes per Fabric + Batch, optional-cost model, unlinked free-text Tailors and shop-stock tailoring. No new-location/production/security acceptance fixtures. Do not edit/replay/delete old seed in Phase 0.                |
+| D04 | Demo versus real data provenance presentation                                  | NEEDS MODIFICATION | Supplier/batch/customer notes mark examples, but not every fabric/material/listing/transaction visibly carries DEMO; live data provenance/counts unverified. Do not assume current production contains demo data.                                                                |
+| D05 | Automated ERP/database/role acceptance tests                                   | MISSING            | No test script or test suite found; guide checklist is manual documentation, not executed tests. Need new-domain, concurrency and adversarial role tests in appropriate phases.                                                                                                  |
+| D06 | Confirmed deployed migration/schema parity                                     | MISSING            | No live schema/migration-application verification performed or retained in repository evidence; this audit cannot certify applied state.                                                                                                                                         |
 
 ### Priority findings and business/security consequences
 
@@ -163,18 +163,18 @@ Subfeatures are separated where their classifications differ. A correct building
 
 This inventory records existing files, not newly completed work or proof of their application. For every row: replay/live verification **not run**; static SQL inspection performed; file left unchanged.
 
-| Supabase filename | Drizzle mirror | Purpose / affected schema, permissions, functions and indexes |
-| --- | --- | --- |
-| `20260924000000_erp_core_schema.sql` | `0000_erp_core_schema.sql` | 26 domain/access/integration tables, role/permission seeds, unique Than barcode/FKs/indexes, RLS/grants, ledger views and stock/auth/audit RPCs. |
-| `20260924000100_demo_seed_data.sql` | `0001_demo_seed_data.sql` | Inserts fictional catalogues, batches/Than costs, stock movements, sales/customers/jobs/material lines/listings/variants/orders/holds/templates/audit; no new schema. |
-| `20260924000200_reporting_views.sql` | `0002_reporting_views.sql` | Security-invoker overview/movement/listing views, grants, dashboard and tailoring aggregate functions. |
-| `20260926000000_role_access_hardening.sql` | `0003_role_access_hardening.sql` | Active-user helpers/bootstrap, role permission, last-Owner triggers, scoped reads, cost-column grants/RPCs, listing image constraint/storage policies. |
-| `20260926000100_requirements_completion.sql` | `0004_requirements_completion.sql` | Effective permissions, serialized last-Owner and profile-activation triggers, role/RLS scoping, material cost RPC/grants, reporting/hold auth, linked-listing trigger and private image bucket. |
-| `20260926000200_incomplete_stock_correction.sql` | `0005_incomplete_stock_correction.sql` | Locked incomplete-correction and receiving RPC replacements; idempotent INWARD/adjustment and audit, correction execution grants. |
-| `20260926000300_pos_customer_details.sql` | `0006_pos_customer_details.sql` | Nullable customer name and WhatsApp column, contact-deduplication RPC/grants, job eligibility trigger on material lines. |
-| `20260926000400_tailor_job_assignment.sql` | `0007_tailor_job_assignment.sql` | Valid Tailor profile FK/index and legacy invalid-assignee cleanup; creation/assignment/status/eligibility RPCs, scoped job/line RLS, direct job-write revocation and execution grants. |
-| `20260927000000_tailoring_multi_cut.sql` | `0008_tailoring_multi_cut.sql` | Owner/Counter active-tailor/job creation plus transactional multi-fabric issue RPC, sorted locks via cut RPC, audit and execution grants. |
-| `20260927000100_customer_multi_fabric_sale.sql` | `0009_customer_multi_fabric_sale.sql` | Atomic multi-line bill RPC; customer validation, invoice advisory lock, sorted stock locks, availability/hold checks, CP/SP snapshots, audit and grants. |
+| Supabase filename                                | Drizzle mirror                         | Purpose / affected schema, permissions, functions and indexes                                                                                                                                   |
+| ------------------------------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20260924000000_erp_core_schema.sql`             | `0000_erp_core_schema.sql`             | 26 domain/access/integration tables, role/permission seeds, unique Than barcode/FKs/indexes, RLS/grants, ledger views and stock/auth/audit RPCs.                                                |
+| `20260924000100_demo_seed_data.sql`              | `0001_demo_seed_data.sql`              | Inserts fictional catalogues, batches/Than costs, stock movements, sales/customers/jobs/material lines/listings/variants/orders/holds/templates/audit; no new schema.                           |
+| `20260924000200_reporting_views.sql`             | `0002_reporting_views.sql`             | Security-invoker overview/movement/listing views, grants, dashboard and tailoring aggregate functions.                                                                                          |
+| `20260926000000_role_access_hardening.sql`       | `0003_role_access_hardening.sql`       | Active-user helpers/bootstrap, role permission, last-Owner triggers, scoped reads, cost-column grants/RPCs, listing image constraint/storage policies.                                          |
+| `20260926000100_requirements_completion.sql`     | `0004_requirements_completion.sql`     | Effective permissions, serialized last-Owner and profile-activation triggers, role/RLS scoping, material cost RPC/grants, reporting/hold auth, linked-listing trigger and private image bucket. |
+| `20260926000200_incomplete_stock_correction.sql` | `0005_incomplete_stock_correction.sql` | Locked incomplete-correction and receiving RPC replacements; idempotent INWARD/adjustment and audit, correction execution grants.                                                               |
+| `20260926000300_pos_customer_details.sql`        | `0006_pos_customer_details.sql`        | Nullable customer name and WhatsApp column, contact-deduplication RPC/grants, job eligibility trigger on material lines.                                                                        |
+| `20260926000400_tailor_job_assignment.sql`       | `0007_tailor_job_assignment.sql`       | Valid Tailor profile FK/index and legacy invalid-assignee cleanup; creation/assignment/status/eligibility RPCs, scoped job/line RLS, direct job-write revocation and execution grants.          |
+| `20260927000000_tailoring_multi_cut.sql`         | `0008_tailoring_multi_cut.sql`         | Owner/Counter active-tailor/job creation plus transactional multi-fabric issue RPC, sorted locks via cut RPC, audit and execution grants.                                                       |
+| `20260927000100_customer_multi_fabric_sale.sql`  | `0009_customer_multi_fabric_sale.sql`  | Atomic multi-line bill RPC; customer validation, invoice advisory lock, sorted stock locks, availability/hold checks, CP/SP snapshots, audit and grants.                                        |
 
 Mirror comparison: seven pairs match after CRLF normalization. Completion/correction mirrors differ only by a trailing blank line. The multi-fabric-sale mirror differs in comments/formatting; inspected function logic is equivalent. These differences were not rewritten. Journal contains all ten tags in order; generated snapshots exist only for 0000–0003. Historical migration application order and actual deployed definitions remain unverified.
 
@@ -212,34 +212,44 @@ STATUS:
 Audit complete; implementation frozen. Stop for approval before Phase 1.
 
 IMPLEMENTED:
+
 - Audit documentation and permanent history record only. No ERP implementation changes were made.
 
 MODIFIED:
+
 - Created `MAQDOOMS_Big_Mall_ERP_Implementation_History.md` only; all existing working-tree edits retained.
 
 REUSED:
+
 - Identified existing auth/role guards, integer units, internal Than rows, cost separation, ledger/atomic deduction, snapshots, customer contacts, job assignment, last-Owner protection and UI foundations for preservation in later phases.
 
 DATABASE CHANGES:
+
 - None. No new or modified migrations, schema, grants, RLS, functions, indexes, seed or production changes; ten existing migration pairs inspected only.
 
 SECURITY / PERMISSIONS:
+
 - No changes. Findings include ongoing Stock Entry CP access/SP control, cost override scope, helper/aggregate/self-read authorization gaps and cache isolation; default Counter/Tailor CP exclusion exists in source but live permission tests are unverified.
 
 TESTS:
+
 - TypeScript passed; lint passed with eight existing warnings; static schema/migration/business-rule/security review completed. Database and business acceptance scenarios not executed.
 
 BUILD:
+
 - Passed client, SSR and Nitro compilation in a temporary copy; existing build warnings recorded above. No deployment or runtime acceptance claim.
 
 BUSINESS RULES VERIFIED:
+
 - Source-level: ledger-derived fabric balance, direct sale using SP, stable identifier independent of CP/SP, explicit-only wastage, stock deductions under transactional checks, individual Than history and default Counter/Tailor CP restrictions.
 - Not compliant: public roll barcode identity, SP-required/CP-optional receiving, Stock Entry CP/SP permissions, SP-valued tailoring, nullable-customer shared shop-work jobs. Missing location/hierarchy/production/product/costing rules are registered above.
 
 REMAINING:
+
 - Approval for Phase 1; all required changes remain unimplemented. Live migration parity and role/database acceptance verification remain outstanding and must not be assumed.
 
 NEXT PHASE:
+
 - PHASE 1 — Database / Domain Model, only after explicit approval. Phase 1 has not started.
 
 ## 2026-10-03 — PHASE 1 — Database / Domain Model
@@ -269,21 +279,21 @@ All application/source files, dependency manifests/lockfiles, configuration, ori
 
 ### Migration record
 
-| Field | Actual implementation |
-| --- | --- |
-| Canonical filename | `20261003000000_phase1_domain_model.sql` |
-| Execution-path mirror | `0010_phase1_domain_model.sql` (one logical migration, not a second change to apply after the canonical file) |
-| Purpose | Add Phase 1 domain relationships, guarded historical financial/transaction records and conservative legacy identity/reconciliation mapping. |
-| SQL boundary | Explicit BEGIN/COMMIT; create new objects, add compatibility columns/constraints, perform documented backfill, seal new tables. Migration tracking must prevent a second execution. |
-| New tables | 34 public tables, listed below. |
-| Existing schema changes | `thaans.fabric_stock_id`, nullable legacy `thaans.barcode`, identity checks/composite FKs/unique pair/index; `materials.active`; Auth/profile FK and profile FKs for role/override assignments. |
-| RLS/grants | RLS enabled on all new tables, no browser policies; revoke PUBLIC/anon/authenticated table access; service_role table privileges only. Existing table policies and role assignments unchanged. Trigger function direct browser execution revoked. |
-| Functions/triggers | Six new invoker trigger functions guarding hierarchy, piece/job quantities/identity, cross-record links, stable identities and immutable history. No new business-operation RPC. |
-| Indexes | Root singleton/current-assignment uniqueness, codes/barcodes/stock pair/revision/piece/composite FK keys; location, stock, job, issue/transfer/order, inventory item/location/time, cost, genealogy and audit lookup indexes; transfer/issue posting-reference partial uniqueness. Exact names/definitions in SQL and contract. |
-| Backfill | Fabric + Batch grouping/parent links; new stable FAB identifiers; unanimous valid CP/SP snapshots only; reconciliation flags for missing/conflicting financial identity, physical locations, legacy job domain/assignment, consumable openings and Auth/profile/role orphans. No legacy values/ledger rows overwritten or deleted. |
-| Verification | Both complete 11-file chains replayed independently; clean chain without demo also replayed; historical row preservation, relationship/constraint guards, sealed access and legacy RPC regressions verified. See exact validation results below. |
-| Production status | Not applied. Actual deployed schema/grants/version/migration ledger and legacy data reconciliation remain unverified. |
-| Final SQL SHA-256 | `3c7baf5f4d04a1189a88dfad857ba8b31d2e0a278bd739f918a1165096586116` for both copies. |
+| Field                   | Actual implementation                                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canonical filename      | `20261003000000_phase1_domain_model.sql`                                                                                                                                                                                                                                                                                           |
+| Execution-path mirror   | `0010_phase1_domain_model.sql` (one logical migration, not a second change to apply after the canonical file)                                                                                                                                                                                                                      |
+| Purpose                 | Add Phase 1 domain relationships, guarded historical financial/transaction records and conservative legacy identity/reconciliation mapping.                                                                                                                                                                                        |
+| SQL boundary            | Explicit BEGIN/COMMIT; create new objects, add compatibility columns/constraints, perform documented backfill, seal new tables. Migration tracking must prevent a second execution.                                                                                                                                                |
+| New tables              | 34 public tables, listed below.                                                                                                                                                                                                                                                                                                    |
+| Existing schema changes | `thaans.fabric_stock_id`, nullable legacy `thaans.barcode`, identity checks/composite FKs/unique pair/index; `materials.active`; Auth/profile FK and profile FKs for role/override assignments.                                                                                                                                    |
+| RLS/grants              | RLS enabled on all new tables, no browser policies; revoke PUBLIC/anon/authenticated table access; service_role table privileges only. Existing table policies and role assignments unchanged. Trigger function direct browser execution revoked.                                                                                  |
+| Functions/triggers      | Six new invoker trigger functions guarding hierarchy, piece/job quantities/identity, cross-record links, stable identities and immutable history. No new business-operation RPC.                                                                                                                                                   |
+| Indexes                 | Root singleton/current-assignment uniqueness, codes/barcodes/stock pair/revision/piece/composite FK keys; location, stock, job, issue/transfer/order, inventory item/location/time, cost, genealogy and audit lookup indexes; transfer/issue posting-reference partial uniqueness. Exact names/definitions in SQL and contract.    |
+| Backfill                | Fabric + Batch grouping/parent links; new stable FAB identifiers; unanimous valid CP/SP snapshots only; reconciliation flags for missing/conflicting financial identity, physical locations, legacy job domain/assignment, consumable openings and Auth/profile/role orphans. No legacy values/ledger rows overwritten or deleted. |
+| Verification            | Both complete 11-file chains replayed independently; clean chain without demo also replayed; historical row preservation, relationship/constraint guards, sealed access and legacy RPC regressions verified. See exact validation results below.                                                                                   |
+| Production status       | Not applied. Actual deployed schema/grants/version/migration ledger and legacy data reconciliation remain unverified.                                                                                                                                                                                                              |
+| Final SQL SHA-256       | `3c7baf5f4d04a1189a88dfad857ba8b31d2e0a278bd739f918a1165096586116` for both copies.                                                                                                                                                                                                                                                |
 
 ### Tables and domain relationships actually established
 
@@ -354,35 +364,45 @@ STATUS:
 Repository implementation and local schema verification complete; not deployed. Stop at Phase 1 boundary.
 
 IMPLEMENTED:
+
 - All required Phase 1 entity relationships through 34 additive tables, compatibility columns/FKs, integrity/history guards and conservative legacy identity backfill/reconciliation.
 - Executable schema replay tests and complete domain contract documentation.
 
 MODIFIED:
+
 - New migration and mirror, appended migration journal, migration README and this history entry. No application/old migration/seed/configuration changes.
 
 REUSED:
+
 - Existing users/roles/fabrics/batches/internal Thans/materials/customers, legacy ledger/history and operation RPCs.
 
 DATABASE CHANGES:
+
 - One logical migration: `20261003000000_phase1_domain_model.sql`, mirrored as `0010_phase1_domain_model.sql`; applied only to disposable test databases. Production unchanged.
 
 SECURITY / PERMISSIONS:
+
 - New tables sealed with RLS and browser grants revoked. Existing authorization unchanged; Phase 2 security matrix remains unimplemented.
 
 TESTS:
+
 - 278 local PostgreSQL replay/schema/backfill/constraint/regression checks passed; TypeScript passed; lint passed with eight existing warnings. Live/concurrent/role-workflow tests remain unverified.
 
 BUILD:
+
 - Passed production client/SSR/Nitro compilation in an isolated source copy, with existing warnings. No deployment performed.
 
 BUSINESS RULES VERIFIED:
+
 - Model-level Fabric + Batch identity, internal barcode-optional Thans/SP-optional stock, distinct customer/production jobs, valid hierarchy, CP + charge without SP, typed individual Product Barcodes, Workshop-first creation, versioned finance, same-job genealogy and traceable append-only records.
 - Legacy business workflows intentionally not claimed compliant until their phases.
 
 REMAINING:
+
 - Live deployment/parity and legacy reconciliation; later operational authorization/ledger/API/UI/workflows. No Phase 2 or later work started.
 
 NEXT PHASE:
+
 - PHASE 2 — Authentication + Authorization, only after explicit approval. Stop and wait.
 
 ---
@@ -437,10 +457,10 @@ No dependency installation or package/lockfile change was made for Phase 2.
 
 ### Migration ledger and database changes
 
-| Migration | Purpose | Applied/verified |
-| --- | --- | --- |
+| Migration                                                     | Purpose                                                                                                                                                     | Applied/verified                                                                                           |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `supabase/migrations/20261003000100_phase2_authorization.sql` | Active-role/assignment authorization; Owner financial boundaries; workflow CP endpoints; SP/receiving guards; restricted definer execution; safe stock view | Full canonical chain replay in disposable PostgreSQL; security matrix passed. Not applied to live Supabase |
-| `drizzle/migrations/0011_phase2_authorization.sql` | Identical mirror for the existing Drizzle/Lovable path; journal index 11 | Full mirror chain replay passed; identical SHA256. Apply one chain only |
+| `drizzle/migrations/0011_phase2_authorization.sql`            | Identical mirror for the existing Drizzle/Lovable path; journal index 11                                                                                    | Full mirror chain replay passed; identical SHA256. Apply one chain only                                    |
 
 Both copies SHA256:
 `f9e4f044abb0fe652a5ad533eac45d02d41fedee04e563555e9890f9e370a5ea`.
@@ -558,47 +578,59 @@ manual database changes, old SQL rewrites, seed modifications, commits or pushes
 ### Section 31 report
 
 PHASE:
+
 - PHASE 2 — Authentication + Authorization only.
 
 STATUS:
+
 - Implemented and locally verified; live application and browser validation pending.
 
 IMPLEMENTED:
+
 - Owner/Stock Entry/Counter/Tailor backend role/financial boundaries, scoped CP
   workflow authorization, assigned-job RLS, safe final-price reader and Auth/cache guards.
 
 MODIFIED:
+
 - New migration/mirror and appended journal; limited existing auth/receiving/tailoring
   access/display code; test/contract/history/README documentation.
 
 REUSED:
+
 - Existing Auth/profiles/roles/overrides, last-Owner protection, transaction RPCs,
   legacy data and all Phase 1 relationships/versioned financial tables.
 
 DATABASE CHANGES:
+
 - One new logical authorization migration with mirror; policies/grants/functions/
   triggers/view security only. Disposable test application; production unchanged.
 
 SECURITY / PERMISSIONS:
+
 - Owner finance; Stock Entry current CP of own open workflow only; no Counter/Tailor
   CP or production costs; assigned Tailor reads; Owner SP; anonymous definer denial.
 
 TESTS:
+
 - 164 database security checks and 278 Phase 1 regression checks passed; TypeScript
   and lint passed (8 existing warnings). Live/browser/concurrent tests pending.
 
 BUILD:
+
 - Production build passed in isolated source copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - All seven Phase 2 minimum security cases; SP controlled by Owner; scoped active
   roles/assignments; Counter final Customer Tailoring price without internal breakdown.
 
 REMAINING:
+
 - Live migration/PostgREST/browser/concurrency validation, legacy reconciliation,
   and explicitly deferred operational workflows; see limitations above.
 
 NEXT PHASE:
+
 - PHASE 3 — Locations + Inventory Ledger, only after approval. Stop and wait.
 
 ## 3 October 2026 — PHASE 3: Locations + Inventory Ledger
@@ -714,43 +746,55 @@ costing remain intentionally unimplemented. Stop after Phase 3 for user approval
 ### Section 31 report
 
 PHASE:
+
 - PHASE 3 — Locations + Inventory Ledger only.
 
 STATUS:
+
 - Implemented and locally verified; live rollout remains pending.
 
 IMPLEMENTED:
+
 - Locations, explicit stock reconciliation, canonical balances, atomic transfers,
   corrections, history and operational inventory controls.
 
 MODIFIED:
+
 - New migration/mirror, appended journal, inventory tab, consumable quantity reader,
   RPC types, validation scripts and documentation/history.
 
 REUSED:
+
 - Phase 1 identities/locations/transfers, Phase 2 authorization, existing Auth and legacy history.
 
 DATABASE CHANGES:
+
 - One new logical migration with identical mirror; table/columns/index/constraints,
   functions/triggers/views/RLS/grants as recorded above. No production/manual changes.
 
 SECURITY / PERMISSIONS:
+
 - Owner mutations; scoped operational reads; CP/production costs remain protected.
 
 TESTS:
+
 - 230 Phase 3, 164 security and 278 Phase 1 checks passed; TypeScript/lint passed.
 
 BUILD:
+
 - Production build passed in isolated source copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - Exact location/global arithmetic, no negative stock/automatic wastage, atomic transfers,
   immutable traceable history, unit/piece integrity and financial access boundaries.
 
 REMAINING:
+
 - Live/browser/concurrency verification, explicit reconciliation and deferred workflow cutovers.
 
 NEXT PHASE:
+
 - PHASE 4 only after approval. Stopped; no Phase 4 implementation.
 
 ## 3 October 2026 — PHASE 4: Fabric Stock Entry + One Barcode
@@ -897,47 +941,59 @@ no sales phase was implemented by that earlier shorthand or by Phase 4.
 ### Section 31 report
 
 PHASE:
+
 - PHASE 4 — Fabric Stock Entry + One Barcode only.
 
 STATUS:
+
 - Implemented and locally verified; live rollout pending.
 
 IMPLEMENTED:
+
 - Fabric/Batch internal Than receiving, CP workflow, stable single barcode, label,
   scanning, SP-optional Workshop receipt and Owner SP revisions.
 
 MODIFIED:
+
 - Receiving/Inventory/Counter lookup UI, API types, new migration/mirror/journal,
   barcode dependency, validation scripts and documentation/history.
 
 REUSED:
+
 - Existing catalogue/batches, domain identities/financial versions, Auth/RLS, scoped
   CP endpoint, Phase 3 ledger and session isolation.
 
 DATABASE CHANGES:
+
 - One new logical migration; private request table/keys/RLS, nine functions,
   three triggers and canonical overview replacement. No migration backfill/live writes.
 
 SECURITY / PERMISSIONS:
+
 - Active Owner/Stock Entry receiving scope, closed CP denial, Owner SP/correction
   opening, Counter safe scan, CP-bearing retry payload restricted, anon APIs revoked.
 
 TESTS:
+
 - 228 Phase 4, 25 barcode/money, 164 security, 230 ledger and 278 schema checks passed;
   TypeScript/lint passed (eight existing warnings).
 
 BUILD:
+
 - Production build passed in isolated copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - Stock Entry creates one barcode; Workshop receipt can omit SP; Owner sets SP;
   Counter scans same unchanged barcode, sees SP and cannot retrieve CP.
 
 REMAINING:
+
 - Live/browser/hardware/concurrency validation and explicit legacy reconciliation;
   scheduled location-aware sales remain pending.
 
 NEXT PHASE:
+
 - PHASE 5 — Workshop ↔ Showroom Transfer, only after approval. Stopped.
 
 ## 3 October 2026 — PHASE 5: Workshop ↔ Showroom Transfer
@@ -1052,44 +1108,56 @@ Stopped after Phase 5; wait for approval before Phase 6.
 ### Section 31 report
 
 PHASE:
+
 - PHASE 5 — Workshop ↔ Showroom Transfer only.
 
 STATUS:
+
 - Implemented and locally verified; live rollout pending.
 
 IMPLEMENTED:
+
 - Fabric Barcode transfer flow, explicit internal Than quantities, named directions,
   balance preview/refreshed results, safe retries and grouped transfer-document history.
 
 MODIFIED:
+
 - Location Ledger UI/cache refresh, API type, new history migration/mirror/journal,
   acceptance/regression scripts and documentation/history.
 
 REUSED:
+
 - Existing Phase 3 atomic posting/ledger/guards and Phase 4 Fabric + Batch receiving identity.
 
 DATABASE CHANGES:
+
 - One new logical migration adding Owner-guarded invoker history reader and EXECUTE
   privileges only; no schema/data backfill, old SQL rewrite or live/manual DB changes.
 
 SECURITY / PERMISSIONS:
+
 - Owner mutation/document access, existing operational reads, CP/SP/cost boundaries retained.
 
 TESTS:
+
 - 171 Phase 5, 164 security, 230 ledger, 228 receiving and 278 schema checks passed;
   TypeScript/lint passed (eight existing warnings).
 
 BUILD:
+
 - Production build passed in isolated copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - Workshop ↔ Showroom/sublocation transfers, exact balances/conserved total,
   no negative stock/automatic wastage, atomic rollback/idempotency and immutable traceability.
 
 REMAINING:
+
 - Live/browser/hardware/concurrency verification and explicit legacy reconciliation.
 
 NEXT PHASE:
+
 - PHASE 6 — Direct Fabric Sale, only after approval. Stopped.
 
 ## 2026-10-03 — PHASE 6: Direct Fabric Sale
@@ -1239,42 +1307,54 @@ in force. Legacy POS/tailoring stays available separately; no future-phase rewri
 ### Section 31 report
 
 PHASE:
+
 - PHASE 6 — Direct Fabric Sale only.
 
 STATUS:
+
 - Implemented and locally verified; live rollout pending.
 
 IMPLEMENTED:
+
 - Fabric Barcode scan, current SP, explicit located Than cuts, customer sale,
   atomic Order/SALE posting, safe retries/history and Owner CP snapshots.
 
 MODIFIED:
+
 - Counter route, RPC types, new migration/mirror/journal, regression scripts and documentation.
 
 REUSED:
+
 - Phase 1 Order tables, Phase 2 roles/RLS, Phase 3 ledger/locations and Phase 4 barcode/prices.
 
 DATABASE CHANGES:
+
 - One new logical migration, five Order columns, unique request identity, two indexes,
   guarded APIs/history triggers and two Counter read policies; no data backfill/live change.
 
 SECURITY / PERMISSIONS:
+
 - Owner/authorized Counter checkout; CP history Owner-only, all other roles denied.
 
 TESTS:
+
 - 238 Phase 6 plus 1,071 regression/schema checks passed; TypeScript/lint passed.
 
 BUILD:
+
 - Production build passed in isolated copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - One Fabric + Batch barcode, exact location deductions/SP prices, no negative stock,
   automatic wastage or double posting, permanent CP/SP snapshots and role boundaries.
 
 REMAINING:
+
 - Live/browser/hardware/concurrency validation and explicit legacy reconciliation.
 
 NEXT PHASE:
+
 - PHASE 7 — Customer + Customer Tailoring, only after approval. Stopped after Phase 6.
 
 ## 2026-10-03 — PHASE 7: Customer + Customer Tailoring
@@ -1481,47 +1561,59 @@ Owner Production, finished products, production costing or later work was implem
 ### Section 31 report
 
 PHASE:
+
 - PHASE 7 — Customer + Customer Tailoring only.
 
 STATUS:
+
 - Implemented and locally verified; live rollout pending.
 
 IMPLEMENTED:
+
 - Customer/WhatsApp selection/creation, Customer Tailoring Job, Factory/Section/Tailor,
   required fabric quantities/issues, applicable charge, CP-plus-charge final price,
   audited status, Order/history and safe printable bill.
 
 MODIFIED:
+
 - Counter/Tailoring routes, RPC types, migration/mirror/journal, tests and documentation.
 
 REUSED:
+
 - Customer RPCs, Phase 1 domain/assignments/prices, Phase 2 roles/RLS/session isolation,
   canonical ledger/barcode identity and existing job-status semantics.
 
 DATABASE CHANGES:
+
 - One new logical migration: private quote table, four nullable existing-table columns,
   three unique constraints, two indexes, eight public/two private functions, six triggers
   and scoped RLS/read policies. No backfill or live/manual database change.
 
 SECURITY / PERMISSIONS:
+
 - Owner configuration/costs; authorized Counter final-price-only booking/bills;
   Tailor assigned work/statuses only. Financial permissions remain server-enforced.
 
 TESTS:
+
 - 290 Phase 7 plus 1,309 regression/schema checks; TypeScript/lint passed.
 
 BUILD:
+
 - Production build passed in isolated copy; not deployed.
 
 BUSINESS RULES VERIFIED:
+
 - CP + applicable charge, no SP pricing/leaks, stable Fabric Barcode, exact required
   source deductions, atomic/idempotent posting, permanent costs/issues/Orders and roles.
 
 REMAINING:
+
 - Live/browser/hardware/concurrency validation, explicit legacy reconciliation and
   future general issues/returns/repricing/full hierarchy management.
 
 NEXT PHASE:
+
 - PHASE 8 — Consumables + Material Issues, only after approval. Stopped after Phase 7.
 
 ## 2026-10-03 — Phase 1–7 live rollout: initial connection attempt
@@ -1608,17 +1700,17 @@ Each executed file committed in its own transaction with migration provenance.
 Schema/permission verification ran inside each Phase transaction before commit;
 pre-existing public row fingerprints were checked after every committed file.
 
-| Actual order | Canonical filename | Actual result / purpose |
-| --- | --- | --- |
-| 1 | `20261003000700_live_migration_tracking.sql` | NEW, applied/verified. Restricted administrative migration ledger; records adopted baseline and skipped seed; removes surplus anonymous table and authenticated TRUNCATE/REFERENCES/TRIGGER grants and future direct browser table defaults. |
-| 2 | `20260927000100_customer_multi_fabric_sale.sql` | Existing unchanged migration, applied/verified. Restores missing historical sale RPC/grants without executing any sale; completes verified Phase 1 prerequisite parity. |
-| 3 | `20261003000800_live_function_grants_reconciliation.sql` | NEW, applied/verified. Removes surplus direct browser grants on three legacy trigger helpers and future public function defaults. |
-| 4 | `20261003000100_phase2_authorization.sql` | Applied/verified after one rolled-back verification failure. Active-role ceilings, Owner CP/cost access, owned receiving CP scope, domain read RLS and protected RPCs. |
-| 5 | `20261003000200_phase3_locations_ledger.sql` | Applied/verified. Canonical inventory items, movement identities/constraints, location ledger/balances and atomic transfers/corrections; no opening stock invented. |
-| 6 | `20261003000300_phase4_fabric_receiving_barcode.sql` | Applied/verified. Private receiving request identity, draft/completion/Workshop inward, one Fabric + Batch barcode, CP/SP revisions and safe readers/guards. |
-| 7 | `20261003000400_phase5_transfer_history.sql` | Applied/verified. Owner transfer document reader and execution permissions; reuses existing Phase 3 transfer posting. |
-| 8 | `20261003000500_phase6_direct_fabric_sale.sql` | Applied/verified. Order sale/request/customer/payment columns and indexes, atomic SP sale RPC, append-only order/ledger guards and safe/customer versus Owner financial readers. |
-| 9 | `20261003000600_phase7_customer_tailoring.sql` | Applied/verified. Private CP-plus-charge quotes; job/order request identity columns, unique constraints/indexes; booking, required fabric issues, status/history/cost APIs, guards and scoped RLS. |
+| Actual order | Canonical filename                                       | Actual result / purpose                                                                                                                                                                                                                      |
+| ------------ | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1            | `20261003000700_live_migration_tracking.sql`             | NEW, applied/verified. Restricted administrative migration ledger; records adopted baseline and skipped seed; removes surplus anonymous table and authenticated TRUNCATE/REFERENCES/TRIGGER grants and future direct browser table defaults. |
+| 2            | `20260927000100_customer_multi_fabric_sale.sql`          | Existing unchanged migration, applied/verified. Restores missing historical sale RPC/grants without executing any sale; completes verified Phase 1 prerequisite parity.                                                                      |
+| 3            | `20261003000800_live_function_grants_reconciliation.sql` | NEW, applied/verified. Removes surplus direct browser grants on three legacy trigger helpers and future public function defaults.                                                                                                            |
+| 4            | `20261003000100_phase2_authorization.sql`                | Applied/verified after one rolled-back verification failure. Active-role ceilings, Owner CP/cost access, owned receiving CP scope, domain read RLS and protected RPCs.                                                                       |
+| 5            | `20261003000200_phase3_locations_ledger.sql`             | Applied/verified. Canonical inventory items, movement identities/constraints, location ledger/balances and atomic transfers/corrections; no opening stock invented.                                                                          |
+| 6            | `20261003000300_phase4_fabric_receiving_barcode.sql`     | Applied/verified. Private receiving request identity, draft/completion/Workshop inward, one Fabric + Batch barcode, CP/SP revisions and safe readers/guards.                                                                                 |
+| 7            | `20261003000400_phase5_transfer_history.sql`             | Applied/verified. Owner transfer document reader and execution permissions; reuses existing Phase 3 transfer posting.                                                                                                                        |
+| 8            | `20261003000500_phase6_direct_fabric_sale.sql`           | Applied/verified. Order sale/request/customer/payment columns and indexes, atomic SP sale RPC, append-only order/ledger guards and safe/customer versus Owner financial readers.                                                             |
+| 9            | `20261003000600_phase7_customer_tailoring.sql`           | Applied/verified. Private CP-plus-charge quotes; job/order request identity columns, unique constraints/indexes; booking, required fabric issues, status/history/cost APIs, guards and scoped RLS.                                           |
 
 - `20261003000000_phase1_domain_model.sql`: **adopted existing verified schema**;
   original SQL was not rerun. Its 34 domain tables, relationships, guards and
@@ -1739,48 +1831,60 @@ pre-existing public row fingerprints were checked after every committed file.
 ### Section 31 report
 
 PHASE:
+
 - Authorized Phase 1–7 live database rollout and safe existing-state reconciliation.
 
 STATUS:
+
 - Completed. Phase 1 adopted/verified; missing prerequisite restored; Phases 2–7
   applied sequentially and verified against the canonical reference.
 
 IMPLEMENTED:
+
 - Live approved domain/workflow schema through Phase 7, restricted migration ledger
   and documented Supabase deployment-grant reconciliation.
 
 MODIFIED:
+
 - New repair migrations/mirrors, appended journal, deployment scripts, test selectors,
   rollout evidence/docs, migration README and Implementation History.
 
 REUSED:
+
 - Existing Phase 1 schema/backfill/business records and unchanged historical/Phase
   2–7 SQL; actual existing user identities for read-only role verification.
 
 DATABASE CHANGES:
+
 - Nine files actually applied (two new repairs, one historical missing prerequisite,
   six Phase 2–7 migrations). Phase 1 not replayed; demo seed skipped. No data reset.
 
 SECURITY / PERMISSIONS:
+
 - Canonical RLS/grants verified; default browser grants corrected; live Owner CP
   access and non-Owner/anonymous restrictions verified.
 
 TESTS:
+
 - 42 read-only live checks, per-phase cumulative schema/permission gates, 60-table
   row preservation, repeat rollout skips, and 1,599 disposable regression checks passed.
 
 BUILD:
+
 - No new build/deployment; database-only rollout.
 
 BUSINESS RULES VERIFIED:
+
 - Deployed canonical barcode, ledger, SP-sale and CP-plus-charge schema/functions
   match approved migrations; existing data preserved and CP role checks pass.
   Production business mutation acceptance tests were not executed live.
 
 REMAINING:
+
 - Explicit Owner legacy reconciliation and browser/hardware/concurrency verification.
 
 NEXT PHASE:
+
 - Stopped after authorized Phase 1–7 rollout. No Phase 8 work without approval.
 
 ## 2026-10-03 — Complete legacy reconciliation analysis and safe targeted migration
@@ -1808,13 +1912,13 @@ NEXT PHASE:
 
 ### Analysis outcome for every category
 
-| Original category | Reviewed | Safely closed | Still needs Owner facts |
-| --- | --- | --- | --- |
-| Than location | 17 | 1 | 16 |
-| Material opening location | 4 | 0 | 4 |
-| Job domain/assignment | 4 | 0 | 4 |
-| Fabric Stock CP | 1 | 0 | 1 |
-| Total | 26 | 1 | 25 |
+| Original category         | Reviewed | Safely closed | Still needs Owner facts |
+| ------------------------- | -------- | ------------- | ----------------------- |
+| Than location             | 17       | 1             | 16                      |
+| Material opening location | 4        | 0             | 4                       |
+| Job domain/assignment     | 4        | 0             | 4                       |
+| Fabric Stock CP           | 1        | 0             | 1                       |
+| Total                     | 26       | 1             | 25                      |
 
 - **TH-0003**, Than `d7bc14e3-a672-4277-8b88-be1d751b767b`, issue
   `5b35b172-0d1a-4ca3-834a-c3f61279b4fe`: status depleted; exactly one 26,000 mm
@@ -1902,8 +2006,8 @@ NEXT PHASE:
   ledger quantity, active hold, billed-sale quantity or full issue set differs.
   Fixtures were created only in disposable PostgreSQL, never in production.
 - **1,599 Phase 1–7 regression checks passed again** (278 + 164 + 230 + 228 + 171
-  + 238 + 290), both business migration chains and clean/no-demo paths.
-  Combined disposable total: **1,806 checks**.
+  - 238 + 290), both business migration chains and clean/no-demo paths.
+    Combined disposable total: **1,806 checks**.
 - Live apply transaction checked all existing public-row count/sorted row digests,
   excluding only the intentionally changed issue row and the explicitly appended
   audit event. The target issue's original identity/details/date fields were checked
@@ -1941,47 +2045,59 @@ NEXT PHASE:
 ### Section 31 report
 
 PHASE:
+
 - Post-Phase 7 legacy reconciliation only.
 
 STATUS:
+
 - All 26 analyzed; one objectively resolved; 25 explicitly pending Owner facts.
 
 IMPLEMENTED:
+
 - Immutable complete-set assessments, guarded depleted-stock issue closure and audit.
 
 MODIFIED:
+
 - New migration/mirror/journal, verification/test scripts, analysis/decision/evidence
   documents, migration README and Implementation History.
 
 REUSED:
+
 - Canonical ledger/sale evidence, existing issue IDs, append-only history helper,
   actual live migration ledger and unchanged Phase 1–7 role/model rules.
 
 DATABASE CHANGES:
+
 - One metadata table/relationship/index/immutable trigger; 26 append-only assessments;
   one issue resolution; one appended audit event. No stock/price/job/hierarchy backfill.
 
 SECURITY / PERMISSIONS:
+
 - Administrative analysis stays browser-inaccessible; role/RLS ceilings unchanged;
   automated attribution uses NULL actor rather than impersonating an Owner.
 
 TESTS:
+
 - 1,806 disposable checks, 62 live read-only checks, exact preservation checks,
   Phase 7 schema comparison and matching-hash retry skip passed.
 
 BUILD:
+
 - Not required/rerun; no app changes/deployment.
 
 BUSINESS RULES VERIFIED:
+
 - No stock allocation for depleted zero balance; no rack/location or CP/SP guesses;
   draft absence from ledger is not proof of physical absence; existing deductions
   and genealogy/prices retained without double issues or repricing.
 
 REMAINING:
+
 - Owner inputs for 16 Than locations/receipt dispositions, four material allocations,
   four job hierarchy/domain/disposition decisions and one documented batch CP.
 
 NEXT PHASE:
+
 - Stopped for Owner facts; no Phase 8 work.
 
 ## 2026-10-03 — Owner-authorized test-stock scenario distribution
@@ -2014,28 +2130,28 @@ NEXT PHASE:
   not added to openings a second time. Original material `qty_on_hand` remains unchanged.
 - Scenario matrix:
 
-| Stock record | Deliberate allocation/scenario |
-| --- | --- |
-| TH-0001 | Workshop 23,500 mm |
-| TH-0002 | Showroom 25,750 mm; same Fabric + Batch barcode as TH-0001, separate internal Than |
-| TH-0003 | Depleted zero quantity, no movement/location allocation |
-| TH-0004 | Workshop 11,500 mm + Showroom 10,000 mm |
-| TH-0005 | Test Display A 29,250 mm |
-| TH-0006 | Workshop 16,500 mm |
-| TH-0007 | Workshop 15,800 mm + Showroom 10,000 mm; audited +300 mm remains included |
-| TH-0008 | Workshop 16,000 mm + Showroom 10,000 mm + Test Display B 10,000 mm |
-| TH-0009 | Showroom 18,000 mm |
-| TH-0010 | Test Display A 16,500 mm |
-| TH-0011 | Workshop 18,500 mm |
-| TH-0012 | Test Display B 26,600 mm |
-| TH-0013 | Workshop 17,000 mm + Test Display A 10,000 mm |
-| TH-0014 | Workshop 30,500 mm |
-| TH-0015 / TH-0016 | Deliberately unreceived legacy draft fixtures; no opening stock |
-| TH-0017 | Deliberately unreceived draft with missing CP/SP for negative validation; no opening/price |
-| Canvas Padding | Workshop 30 m + Showroom 12 m |
-| Suit Lining Silk | Workshop 50 m + Test Display B 30 m |
-| Horn Buttons (set) | Workshop 40 sets + Test Display A 20 sets |
-| Shoulder Pads | Workshop 20 pairs + Showroom 10 pairs + Test Display B 5 pairs |
+| Stock record       | Deliberate allocation/scenario                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------ |
+| TH-0001            | Workshop 23,500 mm                                                                         |
+| TH-0002            | Showroom 25,750 mm; same Fabric + Batch barcode as TH-0001, separate internal Than         |
+| TH-0003            | Depleted zero quantity, no movement/location allocation                                    |
+| TH-0004            | Workshop 11,500 mm + Showroom 10,000 mm                                                    |
+| TH-0005            | Test Display A 29,250 mm                                                                   |
+| TH-0006            | Workshop 16,500 mm                                                                         |
+| TH-0007            | Workshop 15,800 mm + Showroom 10,000 mm; audited +300 mm remains included                  |
+| TH-0008            | Workshop 16,000 mm + Showroom 10,000 mm + Test Display B 10,000 mm                         |
+| TH-0009            | Showroom 18,000 mm                                                                         |
+| TH-0010            | Test Display A 16,500 mm                                                                   |
+| TH-0011            | Workshop 18,500 mm                                                                         |
+| TH-0012            | Test Display B 26,600 mm                                                                   |
+| TH-0013            | Workshop 17,000 mm + Test Display A 10,000 mm                                              |
+| TH-0014            | Workshop 30,500 mm                                                                         |
+| TH-0015 / TH-0016  | Deliberately unreceived legacy draft fixtures; no opening stock                            |
+| TH-0017            | Deliberately unreceived draft with missing CP/SP for negative validation; no opening/price |
+| Canvas Padding     | Workshop 30 m + Showroom 12 m                                                              |
+| Suit Lining Silk   | Workshop 50 m + Test Display B 30 m                                                        |
+| Horn Buttons (set) | Workshop 40 sets + Test Display A 20 sets                                                  |
+| Shoulder Pads      | Workshop 20 pairs + Showroom 10 pairs + Test Display B 5 pairs                             |
 
 - Three draft rows retain their original lengths/status and are not admitted as stock.
   No receipt or CP/SP was fabricated. The missing CP issue is dispositioned as an
@@ -2133,46 +2249,58 @@ NEXT PHASE:
 ### Section 31 report
 
 PHASE:
+
 - Post-Phase 7, Owner-authorized test-stock scenario setup only.
 
 STATUS:
+
 - Implemented/live verified. All stock issues dispositioned as explicit test fixtures.
 
 IMPLEMENTED:
+
 - Multi-location/sublocation/split-Than/material-unit/depleted/incomplete receipt scenarios.
 
 MODIFIED:
+
 - New migration/mirror/journal, minimum automated provenance/guard overlay, scripts,
   scenario/evidence documents, migration README and Implementation History.
 
 REUSED:
+
 - Original stock IDs/CP/SP/barcodes, exact recorded quantities, canonical ledger and roles.
 
 DATABASE CHANGES:
+
 - 18 canonical items, 27 opening allocations, two named test locations, 21 immutable
   fixture records, 21 issue dispositions, 42 append-only audit events; narrow provenance
   column/FK/CHECK/guard changes. No original stock or historical ledger mutation.
 
 SECURITY / PERMISSIONS:
+
 - Role/RLS/CP ceilings preserved. Automated provenance avoids staff impersonation;
   actorless opening exception is closed by the recorded migration version.
 
 TESTS:
+
 - 1,695 local checks, 63 live checks, exact preservation/balance checks, cumulative
   schema comparison and repeat migration skip passed.
 
 BUILD:
+
 - No app build/deployment; database-only test setup.
 
 BUSINESS RULES VERIFIED:
+
 - Exact quantity conservation, single inventory authority, one Fabric + Batch barcode,
   separate internal Thaans, actor/CP protection, no double openings or fake receipt/price.
 
 REMAINING:
+
 - Four tailoring jobs unchanged pending confirmation that jobs are also testing data.
   Draft fixtures intentionally remain unreceived/missing CP where specified.
 
 NEXT PHASE:
+
 - Stopped after test-stock setup; no Phase 8 work.
 
 ---
@@ -2336,48 +2464,60 @@ SHA256: `6dc6283c4a8a623b14c8773d17c9ef6e54abc36549c0ad982e3da2f45aeaba37`.
 ### Section 31 report
 
 PHASE:
+
 - 8 — Consumables + Material Issues.
 
 STATUS:
+
 - Implemented and live verified; phase boundary reached.
 
 IMPLEMENTED:
+
 - Consumable receiving/inventory, required/additional job issues and linked history.
 
 MODIFIED:
+
 - New migration/mirror/journal, screens/routes/types/cache integration, verification
   scripts, migration README, detailed evidence and Implementation History.
 
 REUSED:
+
 - Existing materials, native units, location ledger, canonical jobs/assignments,
   Fabric + Batch barcode/internal Thans, booking/pricing snapshots and role ceilings.
 
 DATABASE CHANGES:
+
 - `20261003001100_phase8_consumables_material_issues.sql` applied; immutable
   receipts/private CP, category metadata, request/receipt/requirement references,
   indexes, checked RPCs/guards/RLS. All existing original columns/rows preserved.
 
 SECURITY / PERMISSIONS:
+
 - Owner/authorized Stock Entry receiving; Owner/authorized Counter issuing;
   assigned Tailor history; CP Owner only after receipt posting; raw writes denied.
 
 TESTS:
+
 - 2,271 local checks, 92 live checks, PostgREST registration/anonymous denial,
   cumulative schema/preservation/hash checks and recorded-migration retry passed.
 
 BUILD:
+
 - TypeScript, scoped lint and isolated production build passed. Eight existing
   fast-refresh warnings; 217 untouched repository script-formatting errors remain.
 
 BUSINESS RULES VERIFIED:
+
 - Explicit actual quantities, same-job genealogy, no negative stock/double posting,
   one Fabric + Batch barcode, no automatic wastage or booked-order repricing, CP secrecy.
 
 REMAINING:
+
 - Browser/concurrency acceptance, pre-existing formatting debt and four historical
   job decisions. Later production creation/valuation remain in their planned phases.
 
 NEXT PHASE:
+
 - Stopped after Phase 8. Await Owner approval before Phase 9.
 
 ### 2026-10-04 — Phase 8 final review: repeat-required guard
@@ -2424,46 +2564,58 @@ The Master Plan requires genuine later quantities to use Additional Material Iss
 Final Section 31 update:
 
 PHASE:
+
 - 8 — Consumables + Material Issues (including final-review guard).
 
 STATUS:
+
 - Implemented and live verified.
 
 IMPLEMENTED:
+
 - Receiving, consumable inventory, explicit required/additional issues and history;
   later quantities of declared materials require Additional Material Issue.
 
 MODIFIED:
+
 - New guard migration/mirror/journal and final verification/evidence; main applied
   Phase 8 migration preserved.
 
 REUSED:
+
 - Phase 8 workflow, existing job/item/location locks and immutable requirements.
 
 DATABASE CHANGES:
+
 - Both `20261003001100_phase8_consumables_material_issues.sql` and
   `20261003001200_phase8_required_issue_guard.sql` applied and recorded; no existing
   original-column value or row changed.
 
 SECURITY / PERMISSIONS:
+
 - Existing checked RPCs/CP ceilings preserved; new guard helper is private.
 
 TESTS:
+
 - 2,274 local checks and 93 live checks passed; cumulative schema, preservation,
   recorded-hash retry and new API registration/anonymous denial verified.
 
 BUILD:
+
 - Production build/TypeScript/scoped lint passed; unchanged full-repository
   formatting debt and existing warnings remain as recorded above.
 
 BUSINESS RULES VERIFIED:
+
 - Exact actual quantities, Additional Material Issue for later quantities, one
   debit per line, genealogy, cost secrecy, no automatic wastage or order repricing.
 
 REMAINING:
+
 - Browser/concurrency acceptance, existing formatting debt and four historical jobs.
 
 NEXT PHASE:
+
 - Stopped at Phase 8. Await approval for Phase 9.
 
 ---
@@ -2631,47 +2783,59 @@ No already-applied migration or prior journal entry modified/deleted/renamed.
 ### Section 31 report
 
 PHASE:
+
 - 9 — Factory / Section / Tailor Management.
 
 STATUS:
+
 - Implemented and live verified.
 
 IMPLEMENTED:
+
 - Dynamic Owner hierarchy management, active/disabled states, optional login/Section,
   assignment/reassignment history and relevant Counter/assigned Tailor filtering.
 
 MODIFIED:
+
 - New migration/mirror/journal, hierarchy/setup/booking integration/types, verification
   scripts, migration README, exact evidence and Implementation History.
 
 REUSED:
+
 - Existing domain IDs/FKs/current uniqueness, booking/pricing/ledger/roles/RLS/audit.
 
 DATABASE CHANGES:
+
 - `20261004000000_phase9_tailoring_management.sql` applied; immutable request registry,
   hierarchy history guards, checked management/filtering RPCs and minimal existing-job
   Material Issue predicate extension; all existing original columns/rows preserved.
 
 SECURITY / PERMISSIONS:
+
 - Owner mutations/full catalogue; relevant Counter/own Tailor options; private
   request RLS/helpers; no new role/raw-write/financial privilege.
 
 TESTS:
+
 - 2,571 local checks, 115 live checks, schema/data/hash/retry verification and real
   PostgREST registration/anonymous denial passed.
 
 BUILD:
+
 - TypeScript/scoped lint/production client-server build passed; eight existing
   warnings and unrelated 217 script-formatting errors remain documented.
 
 BUSINESS RULES VERIFIED:
+
 - Dynamic matching hierarchy, one current assignment, retained job/issue genealogy,
   active filtering, explicit Owner changes, no repricing/stock guesses/Factory role.
 
 REMAINING:
+
 - Browser/concurrency acceptance, existing formatting debt and four legacy job decisions.
 
 NEXT PHASE:
+
 - Stopped at Phase 9. Await Owner approval before Phase 10.
 
 ## Phase 10 — Owner Production — 4 October 2026 (Asia/Calcutta)
@@ -2798,48 +2962,60 @@ and historical SQL were preserved. No commit, push or app deployment performed.
 ### Section 31 report
 
 PHASE:
+
 - 10 — Owner Production.
 
 STATUS:
+
 - Implemented and live verified.
 
 IMPLEMENTED:
+
 - Separate Product/Design/Quantity Production Job, exact required Fabric/Materials,
   dynamic hierarchy, atomic issue, assigned status/work/completion and retained history.
 
 MODIFIED:
+
 - New migration/mirror, append-only journal, separate production UI/route/types,
   issue invalidation, current/old verification runners, README/docs and permanent history.
 
 REUSED:
+
 - Phase 1 production domain, Phase 8 requirements/issues/ledger, Phase 9 hierarchy,
   existing roles/RLS/audit, exact quantities and immutable Design charge versions.
 
 DATABASE CHANGES:
+
 - `20261004000100_phase10_owner_production.sql` applied/verified; two immutable
   request/status tables, history guards, five checked RPCs; all existing data preserved.
 
 SECURITY / PERMISSIONS:
+
 - Owner catalogue/create/internal charge; Owner/assigned Tailor operational history
   and work; existing Counter issue controls; raw writes/anon/financial leakage denied.
 
 TESTS:
+
 - 2,995 local assertions, 157 live checks, five PostgREST registration/anon denials,
   schema/hash/mirror/old-row preservation and rollback verification passed.
 
 BUILD:
+
 - TypeScript, scoped lint and production build passed. Existing eight warnings and
   217 unrelated formatting errors remain documented.
 
 BUSINESS RULES VERIFIED:
+
 - No customer; one Product/Design per job; explicit total quantities; separate Designs;
   exact issued genealogy; retained charge/assignment; assigned work; terminal completion.
 
 REMAINING:
+
 - Browser/concurrent acceptance and four existing legacy job decisions. Finished
   pieces/barcodes/Workshop returns and costing/SP remain their approved future phases.
 
 NEXT PHASE:
+
 - Phase 11 — Finished Products + Product Barcodes. Stopped; await Owner approval.
 
 ## Phase 11 — Finished Products + Product Barcodes — 4 October 2026 (Asia/Calcutta)
@@ -2986,51 +3162,63 @@ work were preserved. Stop at Phase 11; no Phase 12–16 implementation.
 ### Section 31 report
 
 PHASE:
+
 - 11 — Finished Products + Product Barcodes.
 
 STATUS:
+
 - Implemented and live verified.
 
 IMPLEMENTED:
+
 - Individual numbered pieces, unique Product Barcodes, explicit material genealogy,
   completed-job Workshop receipt/stock, current location/status, role-filtered scan
   and printable labels. One-job/ten-piece/ten-barcode bulk test passed.
 
 MODIFIED:
+
 - New migration/mirror/journal entry, Finished Products UI/route/types, optional print
   title, new/regression/live verification runners, README/docs and permanent history.
 
 REUSED:
+
 - Existing piece/barcode/material FKs, Production Job/hierarchy/history, material
   issues, immutable quantity guards, ledger authority, roles/RLS/audit and Code 128.
 
 DATABASE CHANGES:
+
 - `20261004000200_phase11_finished_products.sql` applied/verified: two immutable
   receipt tables, unique production-event index, identity/receipt guards and two
   checked RPCs. All 68 old tables / 366 rows preserved; no seed/backfill.
 
 SECURITY / PERMISSIONS:
+
 - Owner confirms receipt; Owner/Counter scan; Tailor assigned-only; internal cost
   hidden, permitted existing SP read only. Raw writes/anon/private payload denied.
 
 TESTS:
+
 - 3,361 local assertions, 188 live checks and two PostgREST registration/anonymous
   denial checks passed; schema/data/hash/mirror and late-failure atomicity verified.
 
 BUILD:
+
 - TypeScript, scoped lint and production build passed. Existing eight warnings and
   217 unrelated formatting errors remain documented.
 
 BUSINESS RULES VERIFIED:
+
 - One barcode per physical piece, exact actual usage, retained job/material/hierarchy
   genealogy, Workshop first, one stock event per piece, immutable duplicate-safe receipt,
   no price/cost/waste/location guesses or customer tailoring coupling.
 
 REMAINING:
+
 - Browser/printer/concurrency acceptance, four legacy job decisions and later-phase
   costing/SP configuration, dedicated transfers/sales.
 
 NEXT PHASE:
+
 - Phase 12 — Production Costing. Stopped; await explicit Owner approval.
 
 ## Phase 12 — Production Costing + Owner Finished Product SP — 4 October 2026 (Asia/Calcutta)
@@ -3193,50 +3381,62 @@ no Phase 13–16 implementation.
 ### Section 31 report
 
 PHASE:
+
 - 12 — Production Costing + Owner Finished Product SP.
 
 STATUS:
+
 - Implemented and live verified.
 
 IMPLEMENTED:
+
 - Complete fabric/tailoring/Design/consumable/other cost components, immutable totals/
   exact per-piece allocations, explicit sources/basis, reviewed Owner SP and history.
 
 MODIFIED:
+
 - New migration/mirror/journal entry, costing/Owner scan UI/types, verification
   runners, migration README, evidence/documentation and permanent history.
 
 REUSED:
+
 - Immutable cost/component/allocation/price domain, job Design snapshot, receipt CP,
   material issue/piece genealogy, original financial RLS/audit/session cache clearing.
 
 DATABASE CHANGES:
+
 - `20261004000300_phase12_production_costing.sql` applied/verified: three provenance/
   request/review tables, indexes/immutable triggers, three checked financial RPCs and
   Owner-only scan extension; all 70 old tables / 366 rows preserved, no backfill.
 
 SECURITY / PERMISSIONS:
+
 - Owner alone costs/reviews/prices; Counter SP only; assigned Tailor operational
   only; CP/internal cost/financial history/raw writes/anonymous access protected.
 
 TESTS:
+
 - 3,877 local assertions, 232 live checks and three PostgREST registration/anonymous
   denial checks passed; exact sums/Design/remainders/rollback/history/security verified.
 
 BUILD:
+
 - TypeScript, scoped lint and production build passed; existing eight warnings and
   217 unrelated formatting errors remain documented.
 
 BUSINESS RULES VERIFIED:
+
 - Design charge included, total/quantity average, exact conserved allocations,
   explicit real cost sources/quantities, immutable revisions and reviewed SP,
   no automatic markup/repricing/stock changes or customer-tailoring coupling.
 
 REMAINING:
+
 - Browser/concurrency acceptance, four legacy job decisions, actual Owner cost
   confirmations during use; dedicated Finished Product transfers/sales remain later.
 
 NEXT PHASE:
+
 - Phase 13 — Finished Product Inventory + Transfer. Stopped; await Owner approval.
 
 ## 2026-10-04 — Phase 13: Finished Product Inventory + Transfer
@@ -3274,7 +3474,7 @@ opening balances were necessary.
   also prevents generic Owner transfers from bypassing the Finished Product path;
   no existing function definition or Fabric/consumable movement rule is rewritten.
 - New `transfer_finished_products(request, source, destination, pieces JSONB,
-  reason)` checked Owner RPC: 1–200 distinct explicit piece IDs, canonicalized
+reason)` checked Owner RPC: 1–200 distinct explicit piece IDs, canonicalized
   order and actor-bound payload, same stable inventory lock order, canonical
   stock_transfer posting, request registry insertion in the same transaction.
   Retry returns original transfer; changed payload/actor and collision with an
@@ -3367,48 +3567,60 @@ commit or push. Phase 14 Counter sale/order/location-count workflow is not start
 ### Section 31 report
 
 PHASE:
+
 - 13 — Finished Product Inventory + Transfer.
 
 STATUS:
+
 - Implemented and applied/verified live.
 
 IMPLEMENTED:
+
 - Whole-piece Owner inventory/transfers through Workshop/Showroom/sublocation,
   actor-bound retry, checked hierarchy and linked immutable movement history.
 
 MODIFIED:
+
 - New migration/mirror/journal; Owner UI/routes/RPC types/cache refresh;
   cumulative tests/live verification; migration README, evidence and history.
 
 REUSED:
+
 - Workshop receipt/ProductBarcode, canonical ledger/locks/transfer documents,
   location hierarchy, audit, immutable genealogy and existing financial RLS.
 
 DATABASE CHANGES:
+
 - `20261004000400_phase13_finished_product_inventory.sql`: one request table,
   two indexes, immutable/path triggers and three checked operational RPCs;
   all 73 old tables / 366 rows preserved; no backfill.
 
 SECURITY / PERMISSIONS:
+
 - Active Owner only new APIs; anonymous/non-Owner denied, browser raw writes
   sealed, no CP/SP/cost projection or existing role-permission expansion.
 
 TESTS:
+
 - 4,186 local assertions, 257 live read-only checks and three API checks passed.
 
 BUILD:
+
 - TypeScript, scoped lint and production build passed; unchanged baseline lint
   debt of 217 errors / eight warnings documented.
 
 BUSINESS RULES VERIFIED:
+
 - Workshop-first receipt, dynamic sublocations, exact piece balances/stock
   conservation, safe atomic retries/rollback, traceable locations/user/time,
   unchanged ProductBarcode/genealogy/cost/SP.
 
 REMAINING:
+
 - Browser/concurrency acceptance and four legacy job decisions; Phase 14 sales.
 
 NEXT PHASE:
+
 - Phase 14 — Finished Product Counter + Sales. Stopped; await Owner approval.
 
 ## 2026-10-04 — Phase 14: Finished Product Counter + Sales
@@ -3563,48 +3775,60 @@ configuration/environment changes, deployment, commit or push. Stopped at Phase 
 ### Section 31 report
 
 PHASE:
+
 - 14 — Finished Product Counter + Sales.
 
 STATUS:
+
 - Implemented and applied/verified live.
 
 IMPLEMENTED:
+
 - ProductBarcode/SP/availability, direct/subtree/identical counts, atomic paid
   physical-piece sales and immutable authorized order history with Owner costs.
 
 MODIFIED:
+
 - New migration/mirror/journal, Counter UI/types/cache refresh, cumulative tests/
   live checks, migration README, evidence and permanent Implementation History.
 
 REUSED:
+
 - Piece genealogy/Workshop receipt, Owner cost/SP review, canonical stock ledger,
   transfer locks, existing orders/private financials, customers, audit/history guards.
 
 DATABASE CHANGES:
+
 - `20261004000500_phase14_finished_product_sales.sql`: private immutable sale
   snapshot table, two indexes and three checked APIs; 74 old tables / 366 rows
   preserved, no backfill or historical migration edits.
 
 SECURITY / PERMISSIONS:
+
 - Active Owner/Counter APIs; checkout also pos.sell. Counter no internal costs;
   snapshot RLS Owner-only, raw writes/anonymous access sealed, no existing RLS change.
 
 TESTS:
+
 - 4,621 local assertions, 280 live checks and three API checks passed.
 
 BUILD:
+
 - TypeScript, scoped lint and production build pass; unchanged 217 baseline lint
   errors / eight warnings remain documented.
 
 BUSINESS RULES VERIFIED:
+
 - Exact current Owner SP/whole-piece stock deduction, no oversell/double post,
   dynamic direct/subtree counts, conserved history, original price/customer/
   item/location/cost evidence and Owner-only internal financial access.
 
 REMAINING:
+
 - Browser/concurrency acceptance, four legacy job decisions; Phase 15 reporting.
 
 NEXT PHASE:
+
 - Phase 15 — Reporting + Audit + Owner Controls. Stopped; await Owner approval.
 
 ## 2026-10-04 — Phase 15: Reporting + Audit + Owner Controls
@@ -3628,8 +3852,7 @@ tailoring revenue is guessed. Current snapshots ignore transaction date windows.
 
 **Database migration:** new version-controlled
 `supabase/migrations/20261004000600_phase15_owner_reporting_audit.sql`, byte-identical
-`drizzle/migrations/0029_phase15_owner_reporting_audit.sql`, appended journal index
-29. SHA256 `479aa0ad31bc4e041476e0d0b62b1b35434750692056dfe4b236be0a2b72b2b8`.
+`drizzle/migrations/0029_phase15_owner_reporting_audit.sql`, appended journal index 29. SHA256 `479aa0ad31bc4e041476e0d0b62b1b35434750692056dfe4b236be0a2b72b2b8`.
 
 - No tables/columns/relationships/FK/check constraints or business data/backfill
   changes. Two indexes: `phase15_audit_time_idx` on ERP audit occurred_at/id;
@@ -3709,47 +3932,59 @@ Phase 16 dashboard/navigation/performance/polish work. Stopped after Phase 15.
 ### Section 31 report
 
 PHASE:
+
 - 15 — Reporting + Audit + Owner Controls.
 
 STATUS:
+
 - Implemented and applied/verified live.
 
 IMPLEMENTED:
+
 - 24 Owner datasets, canonical totals, complete paginated audit with prospective
   before/after evidence, and exact read-only Owner review records.
 
 MODIFIED:
+
 - Reports/Audit routes, RPC types, cumulative tests/live checks, migration
   mirror/journal/README, verification evidence and permanent history.
 
 REUSED:
+
 - Canonical transactions/ledger, genealogy/cost/price versions, immutable order
   snapshots, active Owner checks, private RLS and controlled administration.
 
 DATABASE CHANGES:
+
 - `20261004000600_phase15_owner_reporting_audit.sql`: three functions, two
   indexes, 52 domain audit triggers and legacy audit guard/grants; no data backfill.
 
 SECURITY / PERMISSIONS:
+
 - Active Owner-only reports; non-Owner financial protections and immutable
   history retained; browser raw audit writes and anonymous APIs denied.
 
 TESTS:
+
 - 5,311 local assertions, 331 live checks and two API checks passed.
 
 BUILD:
+
 - TypeScript, scoped lint and production build pass; unchanged full-lint
   baseline of 217 formatting errors / eight warnings documented.
 
 BUSINESS RULES VERIFIED:
+
 - Exact canonical stock/paid sales, separately labelled tailoring bookings and
   legacy history, issued-versus-recorded usage, all cost revisions, protected CP/SP
   evidence and conserved records.
 
 REMAINING:
+
 - Browser/concurrency acceptance and four prior legacy job Owner decisions.
 
 NEXT PHASE:
+
 - Phase 16 — UI / UX / Performance / Final Polish. Await Owner approval.
 
 ## 2026-10-04 — Phase 16: UI / UX / Performance / Final Polish
@@ -3837,7 +4072,7 @@ business permission. Both old and canonical history remain intact.
   overview. Client route chunk measured **6.80 kB → 3.42 kB**, gzip **2.17 kB →
   1.56 kB**, compared with Phase 15 build. This is route-chunk evidence, not total
   app transfer, measured production latency or a Core Web Vitals guarantee. Existing
-  >500 kB shared-chunk warning remains.
+  > 500 kB shared-chunk warning remains.
 - Read-only live Session Pooler connection verifies cumulative Phase 15 catalog
   and all **30 migration hashes**. All **75 public table / 366 row fingerprints**
   equal the preserved Phase 15 result. **331 live security/integrity checks** pass
@@ -3856,44 +4091,56 @@ This is the last specified implementation phase. Stop for Owner acceptance.
 ### Section 31 report
 
 PHASE:
+
 - 16 — UI / UX / Performance / Final Polish.
 
 STATUS:
+
 - Implemented; local UI/build/regressions verified; live database verified read-only.
 
 IMPLEMENTED:
+
 - Canonical dashboard, retained/lazy workflow tabs, report/filter/retry refinement,
   scanner/print/mobile/accessibility feedback and report refresh after writes.
 
 MODIFIED:
+
 - Dashboard/Counter/Tailoring routes, shared shell/UI/query client, Reports/Audit,
   scan/print styling, browser fixtures, evidence and permanent history.
 
 REUSED:
+
 - Existing transactions, financial math, role checks/RLS, canonical overview,
   ledger/genealogy, forms, validation, pagination and safe print projection.
 
 DATABASE CHANGES:
+
 - None; no new migration. All 30 prior migration hashes and business rows intact.
 
 SECURITY / PERMISSIONS:
+
 - No broadened access; active Owner reporting and private CP/cost RLS retained.
 
 TESTS:
+
 - 5,335 local assertions including 24 browser fixture checks; 331 live checks pass.
 
 BUILD:
+
 - TypeScript, scoped lint and production build pass; documented unchanged lint
   baseline / large shared-chunk warning.
 
 BUSINESS RULES VERIFIED:
+
 - Canonical quantities/paid totals, separate workflows, retained drafts/retries,
   protected financial data, stable barcodes and customer-safe print content.
 
 REMAINING:
+
 - Real staff/hardware/concurrency/deployed acceptance; four legacy Owner decisions.
 
 NEXT PHASE:
+
 - None in the 16-phase plan. Stopped; await Owner acceptance/deployment instructions.
 
 ## 2026-10-10 — Post-Phase 16 maintenance: Vercel TanStack Start security block
@@ -3960,13 +4207,16 @@ staff/hardware/concurrency acceptance and other Phase 16 limits remain unchanged
 ## 2026-10-11 — Owner-approved Stock Entry / individual Than barcode revision
 
 PHASE:
+
 - Post-Phase 16 business revision expressly approved by the Owner; no Phase 17.
 
 STATUS:
+
 - Implemented, tested, and new migration applied/verified in the live database.
 - Application publishing/deployment and real staff/hardware acceptance pending.
 
 IMPLEMENTED:
+
 - Dedicated Stock Entry navigation and receiving screen: provider history or typed
   name, separate delivery batches, multiple named Fabric Types, individually sized
   physical Thans, optional CP, later append and barcode-specific missing-CP fill.
@@ -3982,6 +4232,7 @@ IMPLEMENTED:
   retain their original identities and meaning.
 
 MODIFIED:
+
 - New `src/features/inventory/StockRegistration.tsx`; receiving route uses it.
 - `src/app/access/modules.ts`, `src/app/layouts/AppShell.tsx`,
   `src/routes/index.tsx`, `src/routes/_authenticated/route.tsx`: permission-aware
@@ -4007,11 +4258,13 @@ MODIFIED:
   API_VERIFICATION and VERIFICATION JSON evidence files in docs.
 
 REUSED:
+
 - Existing authentication, inventory.receive permission, Workshop location,
   transaction/catalog/scan APIs, stock ledger, CP versioning, Owner audits,
   printing, transfer, direct sale, Customer Tailoring and cost/report protections.
 
 DATABASE CHANGES:
+
 - New version-controlled `supabase/migrations/20261011000000_stock_registration.sql`
   and byte-identical `drizzle/migrations/0030_stock_registration.sql`; appended
   journal index 30. SHA256 for both:
@@ -4055,6 +4308,7 @@ DATABASE CHANGES:
   independent read-only recheck confirmed stock_registration_verified=true.
 
 SECURITY / PERMISSIONS:
+
 - Active Owner or authorized Stock Entry can register; Stock Entry scope is own
   deliveries/Thans. Requests bind actor/action/payload; exact retries return the
   original result. Private CP payloads and completed CP remain inaccessible.
@@ -4062,6 +4316,7 @@ SECURITY / PERMISSIONS:
   Existing transactions preserve prior CP/SP restrictions and costing behavior.
 
 TESTS:
+
 - 5,611 local assertions pass: historical cumulative DB regressions 5,262, new DB
   assertions 231, navigation 11, independent barcode decoding 18, new component UI
   16, historical barcode/money 40, report values 9, existing Phase 16 UI 24.
@@ -4080,18 +4335,21 @@ TESTS:
   documents preserved; current evidence saved separately.
 
 BUILD:
+
 - Final Vercel-preset production build passes from the earlier clean patched
   installation; server-core 1.169.39 and generated Vercel output verified.
 - Eight existing fast-refresh warnings and existing shared chunk size warning
   remain. No dependency, deployment configuration, .env, commit or push change.
 
 BUSINESS RULES VERIFIED:
+
 - Distinct delivery batch per provider arrival, fresh type codes, sequential
   individual Than suffixes, exact individual lengths, unique printed barcodes,
   immediate known stock receipt, optional initial/later own CP, Owner-only CP
   reporting, historical barcode/data preservation and compatible stock usage.
 
 REMAINING:
+
 - Publish/deploy application; actual staff/physical printer/scanner acceptance,
   large history benchmark and multi-connection concurrency verification.
 - Provider first word requires three English letters; one submission supports up
@@ -4102,19 +4360,23 @@ REMAINING:
   intentionally not changed by this registration approval.
 
 NEXT PHASE:
+
 - None. This approved revision is complete; await Owner review/deployment direction.
 
 ## 2026-10-11 — Immediate Workshop transfer and Counter fabric sale pricing
 
 PHASE:
+
 - Owner-approved post-Phase 16 workflow revision; Master Plan Section 34 records
   the subsequent business-rule override. No later implementation phase invented.
 
 STATUS:
+
 - Implemented and verified locally; new migration applied and schema rechecked live.
 - Application push/deployment and real staff/hardware acceptance remain pending.
 
 IMPLEMENTED:
+
 - Stock Transfer sidebar for authorized Stock Entry: same original barcode scan,
   automatic Workshop source, individual metre selection or all-available shortcut,
   active Showroom floor destination, immediate atomic posting and same-barcode
@@ -4132,6 +4394,7 @@ IMPLEMENTED:
   still define eligible workflows; internal costs and administration stay private.
 
 MODIFIED:
+
 - `src/features/inventory/FabricTransfer.tsx`: staff access, Workshop/floor choices,
   live balances, exact retry freeze, original-code outgoing labels, cache refresh.
 - New `src/routes/_authenticated/inventory.transfers.tsx`; generated route tree.
@@ -4156,11 +4419,13 @@ MODIFIED:
   STOCK_TRANSFER_PRICING verification JSON files. Older evidence files preserved.
 
 REUSED:
+
 - Canonical stock authority, location ledger locks/balance guards, transfer
   documents/history, Code128 generation/print helper, existing orders/items,
   payment confirmation, CP snapshots, permanent history/audits and exact retries.
 
 DATABASE CHANGES:
+
 - New `supabase/migrations/20261011000100_stock_transfer_counter_pricing.sql`;
   identical `drizzle/migrations/0031_stock_transfer_counter_pricing.sql`, journal
   index 31. SHA256 both:
@@ -4200,6 +4465,7 @@ DATABASE CHANGES:
   and no earlier applied migration modified, renamed or deleted.
 
 SECURITY / PERMISSIONS:
+
 - Database validates current permissions on every write, independent of stale UI.
   Owner can change per-user permissions; staff refresh displayed access afterward.
 - Counter/Tailor/e-commerce unauthorized transfer denied; Counter rate-entry
@@ -4208,6 +4474,7 @@ SECURITY / PERMISSIONS:
 - Existing eligible-role and Owner-only financial safeguards deliberately retained.
 
 TESTS:
+
 - 132 new full-chain database assertions pass across Supabase demo, mirrored demo
   and clean replay: 50=20+10+10+10 split, unchanged barcode, immediate posted state,
   exact/cross-actor retries, another user's stock, excess/reverse transfer denial,
@@ -4230,16 +4497,19 @@ TESTS:
 - No live business transaction/auth fixture executed by this implementation.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Eight existing
   fast-refresh warnings remain. Standard and Vercel-preset builds pass; patched
   TanStack core 1.169.39 and Vercel output verified. No dependency/.env changes.
 
 BUSINESS RULES VERIFIED:
+
 - Immediate Workshop floor transfer, partial/full length control, same code on all
   pieces, location-specific quantities, source-balance protection, unrestricted
   Counter floor selection, sale-time per-metre SP and Owner per-user action control.
 
 REMAINING:
+
 - Publish/deploy application; actual staff/printer/scanner acceptance, large-history
   performance and multi-connection concurrency tests. Four previous legacy job
   domain/assignment Owner decisions remain.
@@ -4248,20 +4518,24 @@ REMAINING:
   fabric POS does not depend on or write fixed stock prices.
 
 NEXT PHASE:
+
 - None started. Await Owner review or deployment direction.
 
 ## 2026-10-11 — Salesperson role, bill attribution and Counter tailoring totals
 
 PHASE:
+
 - Owner-approved revision after Phase 16; Master Plan Section 35 records the new
   role and manual Customer Tailoring total in place of CP + charge billing.
 
 STATUS:
+
 - Implemented and verified. Migration is committed live, its original hash recorded,
   and independent cumulative schema, live permissions and public API checks pass.
 - Frontend publishing and assignment of real staff to Salesperson remain required.
 
 IMPLEMENTED:
+
 - Sixth role `salesperson`, reusing profiles/authentication/user_roles. A staff
   member may also hold Counter; no separate login or salesperson identity table.
 - Mandatory one active Salesperson ID per new canonical bill, separate from POS
@@ -4279,6 +4553,7 @@ IMPLEMENTED:
   next bill. Direct fabric price-per-metre rules and Finished Product SP retained.
 
 MODIFIED:
+
 - New `src/features/salesperson/SalespersonPicker.tsx`, `use-salespeople.ts`,
   `SalespersonWork.tsx`, and `src/routes/_authenticated/my-work.tsx`.
 - `src/app/access/modules.ts`, `src/app/layouts/AppShell.tsx`,
@@ -4307,11 +4582,13 @@ MODIFIED:
   older phase/revision reports instead of overwriting historical evidence.
 
 REUSED:
+
 - Existing staff login, role assignment, action overrides, canonical orders/jobs,
   location authority, Factory/Section/Tailor assignments, material issue/ledger
   safeguards, immutable history, status management, audits and customer-safe print.
 
 DATABASE CHANGES:
+
 - New `supabase/migrations/20261011000200_salesperson_tailoring_pricing.sql`;
   identical `drizzle/migrations/0032_salesperson_tailoring_pricing.sql`, journal
   index 32. SHA256 both:
@@ -4359,6 +4636,7 @@ DATABASE CHANGES:
   schema recheck confirms salesperson_tailoring_verified=true.
 
 SECURITY / PERMISSIONS:
+
 - Pure Salesperson can only view own work/Settings; cannot bill, transfer, alter
   jobs, list other staff or retrieve internal CP/cost/retry payloads. Owner sees all.
 - Counter operator and credited Salesperson remain distinct. Owner assigns roles
@@ -4367,6 +4645,7 @@ SECURITY / PERMISSIONS:
   cannot be selected for new bills. No new real staff account/role was assigned.
 
 TESTS:
+
 - 153 new database assertions pass across Supabase demo, Drizzle demo and clean
   replay: historical preservation, eligible IDs, actor/credit separation, manual
   total/no charge formula, unknown CP and later fill, exact/changed retries, stock
@@ -4385,6 +4664,7 @@ TESTS:
   original phase/revision documents restored as historical evidence.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Eight existing
   fast-refresh warnings remain; the new hook is separated to avoid adding one.
 - Final Vercel-preset production build passes from the earlier clean patched
@@ -4392,11 +4672,13 @@ BUILD:
   deployment configuration, commit/push or published history rewrite performed.
 
 BUSINESS RULES VERIFIED:
+
 - Six separate roles, optional dual-role staffing, one Salesperson per entire bill,
   same attribution on linked job, separate authenticated operator, own/Owner work
   access, entered final tailoring total, private CP and one fabric deduction.
 
 REMAINING:
+
 - Publish compatible frontend and Owner-assign Salesperson to appropriate active
   accounts before new billing. Older clients cannot create uncredited canonical
   bills; no default Salesperson is guessed. Existing historical records remain
@@ -4409,19 +4691,22 @@ REMAINING:
   SP/production costs and direct fabric rate calculations remain unchanged.
 
 NEXT PHASE:
-- None started. Await Owner review/publishing direction.
 
+- None started. Await Owner review/publishing direction.
 
 ## 2026-10-11 — Approved Owner Production workflow revision
 
 PHASE:
+
 - Post-Phase-16 Owner-approved Production workflow update. Explicit comparison,
   five decisions and implementation authorization; Sections 30/31 followed.
 
 STATUS:
+
 - Implemented, tested and migrated live. Stopped at this approved workflow boundary.
 
 IMPLEMENTED:
+
 - Existing Thaan barcode scan/location availability and explicit material selection
   in Owner Production; shared same-Factory/Section Tailor assignment per Production ID.
 - Job-specific sharing/access and complete participant names in production/material/
@@ -4431,6 +4716,7 @@ IMPLEMENTED:
 - Owner barcode scan planned/actual produced/sold/remaining/archived totals.
 
 MODIFIED:
+
 - src/features/tailoring/OwnerProduction.tsx, FinishedProducts.tsx, MaterialIssues.tsx;
   src/features/inventory/FinishedProductInventory.tsx; src/features/pos/FinishedProductSale.tsx;
   src/app/access/modules.ts; src/routes/_authenticated/inventory.transfers.tsx;
@@ -4445,12 +4731,14 @@ MODIFIED:
   OWNER_PRODUCTION_WORKFLOW_* verification JSONs and this permanent history.
 
 REUSED:
+
 - Existing Product/Design catalogues, unique Production IDs, source-location ledger,
   additional material issues, whole-job completion/full Workshop receipt, per-piece
   material traceability/unique Product Barcodes, complete costing/equal CP allocation,
   Owner SP, finished-product sale/Salesperson attribution and immutable audit/history.
 
 DATABASE CHANGES:
+
 - New canonical 20261011000300_owner_production_workflow.sql and identical
   drizzle/migrations/0033_owner_production_workflow.sql; journal idx 33.
   SHA256: 4d3094ce572b83ae665f43d16a7d9705b00605e4f88dcbb54a2c00c215089902.
@@ -4485,6 +4773,7 @@ DATABASE CHANGES:
   Application proof and separate schema recheck saved under revision filenames.
 
 SECURITY / PERMISSIONS:
+
 - Owner controls finished transfer separately from fabric transfer and label printing.
   Only Owner or permitted active Stock Entry can use operational transfer APIs; staff
   may only move available whole Workshop pieces to an active Showroom floor.
@@ -4495,6 +4784,7 @@ SECURITY / PERMISSIONS:
   CP/SP/costs; Counter gets Owner SP/availability; raw shared-link writes sealed.
 
 TESTS:
+
 - 222 new DB checks pass on canonical demo, mirror demo and clean replay, covering
   preservation, exact remainder/additional quantities, shared access/isolation,
   complete receipt/unique piece identity, costing/paise equality, safe direct transfer,
@@ -4509,11 +4799,13 @@ TESTS:
   PostgREST registration/denial checks pass. No live business fixture created.
 
 BUILD:
+
 - TypeScript noEmit, scoped lint (zero errors), final Vercel-preset production build
   and git diff --check pass. Patched TanStack core 1.169.39 retained. No dependency,
   environment or deployment configuration edits; no commit, push or publication.
 
 BUSINESS RULES VERIFIED:
+
 - Original fabric barcode -> explicit issued metres -> shared Production ID -> actual
   Workshop pieces -> unique individual Product Barcodes -> equal actual CP -> manual
   Owner SP -> immediate staff floor transfer -> exact-piece attributed POS sale.
@@ -4521,6 +4813,7 @@ BUSINESS RULES VERIFIED:
   received/available pieces and financial history remains protected.
 
 REMAINING:
+
 - Publish compatible frontend; review staff transfer permission in Manage Access.
 - Real staff/scanner/printer/live populated-job and concurrent-session acceptance;
   four prior legacy job classification/assignment decisions remain untouched.
@@ -4529,20 +4822,23 @@ REMAINING:
   return, variable per-piece CP, auto SP or multi-Factory production inferred.
 
 NEXT PHASE:
-- None started. Await Owner review and next instructions.
 
+- None started. Await Owner review and next instructions.
 
 ## 2026-10-11 — Grouped sidebar and direct workflow navigation
 
 PHASE:
+
 - Owner-approved UI navigation revision after Production workflow. Reviewed current
   AppShell, route/module access, workflow tabs, Inventory/POS/Tailoring routes and
   permanent history; followed Sections 30/31. No later business phase started.
 
 STATUS:
+
 - Implemented and verified locally. Frontend publication remains pending.
 
 IMPLEMENTED:
+
 - Clickable Overview, Stock & Inventory, Sales & Customers, Production, Commerce,
   Reports & Tracking and Administration groups. Overview remains open when permitted;
   at most one other group expands. Open group may be collapsed. Empty groups hidden.
@@ -4556,6 +4852,7 @@ IMPLEMENTED:
   order APIs and links customer tailoring context to its separate booking workflow.
 
 MODIFIED:
+
 - src/app/layouts/AppShell.tsx: accordion groups, role-filtered workflow search/links,
   active destination and automatic route-group opening. New src/app/access/sidebar.ts
   supplies group metadata and exact path/hash selection using existing access checks.
@@ -4574,15 +4871,18 @@ MODIFIED:
   SIDEBAR_GROUPS_* evidence files. Master Plan Section 37, this history and README.
 
 REUSED:
+
 - Existing role/module/action checks, authentication/RouteGuard, URL paths, business
   components, query keys, catalogue/hierarchy/locations, pricing and history APIs.
   Existing workflow transaction logic and retry payloads remain unchanged.
 
 DATABASE CHANGES:
+
 - None. No migration, schema, SQL function/trigger/policy/grant, stock, cost, price,
   seed, configuration or production data change. No live database writes performed.
 
 SECURITY / PERMISSIONS:
+
 - Sidebar filters through existing allowedModules/canAccessPath plus existing Owner
   and finished-transfer restrictions. No role or permission expanded. Owner-only
   administration/costing links hidden from other roles; inaccessible tab hashes fall
@@ -4590,6 +4890,7 @@ SECURITY / PERMISSIONS:
   isolation remain enforced independently of navigation.
 
 TESTS:
+
 - 42 actual-component browser checks pass: pinned Overview, exclusive open group,
   collapse/reopen/keyboard behavior, exact active deep link, actual catalogue-only
   editing view, same-page draft preservation, inventory workflow/search navigation,
@@ -4601,36 +4902,42 @@ TESTS:
   new run evidence saved under SIDEBAR_GROUPS names.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Final isolated
   Vercel-preset production build passes (2026-10-11 10:17:39.790 UTC), preserving
   patched TanStack server-core 1.169.39. No package/environment/deployment edits.
 
 BUSINESS RULES VERIFIED:
+
 - Existing workflow selection retains drafts and frozen retries; grouping changes
   navigation only. No fabric/barcode/production/costing/sale rules modified.
 
 REMAINING:
+
 - Publish updated frontend; real staff acceptance of desktop/mobile navigation.
 - Dashboard stock cards/text, legacy records, four prior legacy job decisions and
   data reconciliation intentionally not changed in this sidebar-only request.
 - No commit, push or deployment performed.
 
 NEXT PHASE:
-- None started. Await Owner's next instructions.
 
+- None started. Await Owner's next instructions.
 
 ## 12 October 2026 — Owner-approved labels-first Stock Entry
 
 PHASE:
+
 - Post-Phase-16 Stock Entry revision, Master Plan Section 38. Objective: two entry
   cards, batch creation by fabric/physical Thaan counts, grouped printing, then
   barcode-scanned actual colour/length/optional CP. Explicit Owner authorization.
 
 STATUS:
+
 - Implemented; migration applied and independently verified live. Frontend awaits
   publication. No later phase or unrelated workflow started.
 
 IMPLEMENTED:
+
 - Scanner and Create Batch cards; safe scanned details below scanner. Batch captures
   supplier history/new name, arrival date, remarks, fabric types and physical counts.
 - Atomic generation of permanent unique physical Thaan codes before measurements.
@@ -4645,6 +4952,7 @@ IMPLEMENTED:
   entered, never derived from illustrative screenshots.
 
 MODIFIED:
+
 - src/features/inventory/StockRegistration.tsx, inventory.receiving.tsx route and
   src/integrations/supabase/types.ts: workflow, RPC contracts and safe scanner fallback.
 - New canonical/mirror SQL and drizzle/migrations/meta/_journal.json entry 34.
@@ -4657,11 +4965,13 @@ MODIFIED:
   files and guide under docs; README, Master Plan Section 38 and this history.
 
 REUSED:
+
 - Existing registrations, suppliers/batches/fabric groups/Thaans, fabrics.colour,
   barcode printing, request receipts, inventory ledger, cost versions, audit triggers,
   role overrides and catalogue APIs. Legacy nonregistered scans are read-only.
 
 DATABASE CHANGES:
+
 - One logical migration, canonical
   supabase/migrations/20261012000000_labels_first_stock_entry.sql, identical mirror
   drizzle/migrations/0034_labels_first_stock_entry.sql; journal entry 34.
@@ -4687,6 +4997,7 @@ DATABASE CHANGES:
   No reset/delete/manual undocumented data operation; prior migration hashes retained.
 
 SECURITY / PERMISSIONS:
+
 - New independently Owner-managed actions stock.generate_labels, stock.measure_thaan
   and inventory.view_registered_cp with Stock Entry defaults; existing receive,
   print and missing-CP permissions still apply. Individual overrides enforced.
@@ -4700,6 +5011,7 @@ SECURITY / PERMISSIONS:
   transferred or activated through raw writes.
 
 TESTS:
+
 - 201 database checks pass across demo Supabase, demo Drizzle and clean full replay:
   data preservation, code/count/order, pending stock exclusion, immutable measurement,
   retry idempotency, delayed CP, split transfers/same barcode, append z→aa→ab,
@@ -4716,17 +5028,20 @@ TESTS:
   SECURITY,API}_VERIFICATION.json and LABELS_FIRST_STOCK_ENTRY_REGRESSION_DATABASE.json.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Isolated Vercel-preset
   production build passes at 2026-10-12T08:56:02.035Z, with patched TanStack server-core
   1.169.39. No package/configuration or deployment change.
 
 BUSINESS RULES VERIFIED:
+
 - Counts create labels, actual measured metres create stock. No guessed original
   lengths/opening balance. One immutable identity and one inward per measured Thaan.
 - CP optional/delayed and restricted; no stock-entry SP. Partial transfer keeps the
   same barcode with location balances. Production/Counter pricing rules unchanged.
 
 REMAINING:
+
 - Publish compatible frontend and perform physical printer/scanner acceptance;
   live concurrency/load behavior not tested. Print Again tracks an attempt only.
 - Initial batch caps: 100 fabric types, 500 Thaans/type, 5,000 total; append supports
@@ -4737,21 +5052,24 @@ REMAINING:
 - No commit, push or frontend deployment performed.
 
 NEXT PHASE:
-- None started. Await Owner instructions after this Stock Entry revision.
 
+- None started. Await Owner instructions after this Stock Entry revision.
 
 ## 12 October 2026 — Optional per-Thaan details before printing
 
 PHASE:
+
 - Owner-approved post-Phase-16 extension, Master Plan Section 39. Objective: match
   optional expandable fabric/Thaan rows in panel 5, and independently complete
   missing colour/length/CP through the scanner. Authorized by "do it then".
 
 STATUS:
+
 - Implemented and verified; additional migration applied live. Frontend publication
   remains. Previous chronological entries describe their original implementation.
 
 IMPLEMENTED:
+
 - Expand each fabric type to its physical Thaan rows during creation. Enter actual
   colour, length and/or CP per metre independently, or leave any/all blank. Collapsing
   retains entries. Count reductions that would discard filled rows are blocked.
@@ -4764,6 +5082,7 @@ IMPLEMENTED:
   changed requests fail, matching fresh completions never duplicate stock.
 
 MODIFIED:
+
 - src/features/inventory/StockRegistration.tsx: expandable rows, draft retention,
   payload conversion/validation, new APIs and missing-only scanner completion.
 - src/integrations/supabase/types.ts: two new typed RPC contracts.
@@ -4777,11 +5096,13 @@ MODIFIED:
 - New OPTIONAL_THAAN_DETAILS evidence/guide, README, Master Plan Section 39 and history.
 
 REUSED:
+
 - Supplier/batch/fabric/Thaan identities, unique barcodes/suffixes, printing, receiving,
   cost versions, stock ledger, audit triggers, request receipts, ownership and all
   existing action permissions. Sidebar, legacy catalogue and other workflows retained.
 
 DATABASE CHANGES:
+
 - New canonical supabase/migrations/20261012000100_optional_thaan_details.sql;
   identical mirror drizzle/migrations/0035_optional_thaan_details.sql, journal entry35.
 - SHA256 f19cbc59b968e74a481b124ab97b3c767793336823c2226d6faed6500c01d683.
@@ -4806,6 +5127,7 @@ DATABASE CHANGES:
   36 versions, still 81 public tables. No manual undocumented database changes.
 
 SECURITY / PERMISSIONS:
+
 - Reuses generate_labels, measure_thaan, receive, fill_missing_cp, own-registration
   CP-view and print actions; no new permissions or expanded roles. Optional input
   disabled without measurement permission; blank count-only generation still allowed.
@@ -4815,6 +5137,7 @@ SECURITY / PERMISSIONS:
 - CP scanner visibility remains restricted even before measurement. No CP labels.
 
 TESTS:
+
 - 297 cumulative disposable database checks pass across Supabase demo, Drizzle demo
   and clean full Supabase replay. Includes complete/partial/blank creation, independent
   scanner fields, exact/new retries, immutable values, old-API bypass denials,
@@ -4830,16 +5153,19 @@ TESTS:
   remains; that entire historical suite was not rerun for this extension.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Isolated Vercel-preset
   build passes 2026-10-12T09:33:05.347Z; patched server-core stays 1.169.39. No package,
   environment configuration or frontend deployment changes.
 
 BUSINESS RULES VERIFIED:
+
 - Barcode creates permanent identity, not guessed measurements/costs. Saved partial
   fields survive printing/scanning. Only actual colour+length activates exact stock;
   CP optional. One inward receipt, unchanged barcode identity and restricted CP.
 
 REMAINING:
+
 - Publish frontend; real physical scanner/printer acceptance and live concurrency/
   load tests. Existing 100 types / 500 Thaans/type / 5,000 initial labels caps retained.
 - No new general colour/length correction UI; existing Owner corrections remain.
@@ -4847,19 +5173,22 @@ REMAINING:
 - No commit, push or frontend deployment performed.
 
 NEXT PHASE:
-- None started. Await Owner instructions after this workflow extension.
 
+- None started. Await Owner instructions after this workflow extension.
 
 ## 12 October 2026 — Stock Entry fabric/details UI polish
 
 PHASE:
+
 - Owner-requested UI enhancement of the Fabric Types & Quantities and optional
   Thaan rows shown in the two screenshots; no additional business phase.
 
 STATUS:
+
 - Implemented and verified locally; frontend publication remains pending.
 
 IMPLEMENTED:
+
 - Compact numbered fabric headers with a fabric picker, count and small remove
   icon; replaced the oversized full-width removal button. Label-count badges and
   concise optional-details dropdown controls. Dashed Add Another Fabric Type action.
@@ -4871,24 +5200,29 @@ IMPLEMENTED:
   and stock-availability note per group.
 
 MODIFIED:
+
 - src/features/inventory/StockRegistration.tsx and current browser-check labels/
   screenshots in scripts/optional-thaan-details-ui-test.mjs. This history and the
   optional-details guide. New STOCK_ENTRY_UI proof files and desktop/mobile PNGs.
 
 REUSED:
+
 - Existing batch/scanner RPCs, controlled row values, permissions, count protection,
   frozen request retries, barcode generation and grouped printing.
 
 DATABASE CHANGES:
+
 - None. No new migration, schema, seed, configuration or live data change.
   Previously applied migrations and existing business records left unchanged.
 
 SECURITY / PERMISSIONS:
+
 - No role/permission/RLS changes. Existing action gates retained; disabled fields
   and last-fabric removal guard remain. Accessible names, expanded-state controls
   and keyboard-operable buttons retained.
 
 TESTS:
+
 - 34 current actual-component browser checks pass, including optional value
   retention, count-reduction protection, scanner completion, exact retries,
   fabric-group printing and 320/390/768/1440 responsiveness. No browser errors.
@@ -4898,30 +5232,36 @@ TESTS:
 - No database suite rerun for presentation-only changes.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint and git diff --check pass. Vercel-preset production
   build passes; separate proof docs/STOCK_ENTRY_UI_POLISH_BUILD_VERIFICATION.json.
 
 BUSINESS RULES VERIFIED:
+
 - Optional values and permanently assigned barcode identities retain existing
   behaviour. Presentation changes do not alter stock, CP, transfers or sale rules.
 
 REMAINING:
+
 - Frontend publication and physical staff acceptance. No push/deployment performed.
 
 NEXT PHASE:
-- None started. Await Owner instructions.
 
+- None started. Await Owner instructions.
 
 ## 12 October 2026 — Stock Entry latest reference layout
 
 PHASE:
+
 - Owner-approved UI refinement following the latest batch/table screenshot and
   "go ahead and improve the ui". Objective: match its clearer card/table hierarchy.
 
 STATUS:
+
 - Implemented and verified locally. Frontend publication remains pending.
 
 IMPLEMENTED:
+
 - Wide-screen batch information row and one optional-entry notice. Separate white
   fabric cards with heading/icon, compact Remove action, picker and Thaan count.
 - Expandable Thaan table with barcode-status badges, colour, actual length,
@@ -4933,23 +5273,28 @@ IMPLEMENTED:
   with Cancel and prominent Generate All Barcodes.
 
 MODIFIED:
+
 - src/features/inventory/StockRegistration.tsx. New
   scripts/stock-entry-reference-ui-test.mjs and STOCK_ENTRY_REFERENCE proof/captures,
   docs/STOCK_ENTRY_REFERENCE_UI.md and this chronological history entry.
 
 REUSED:
+
 - Existing supplier selection, batch IDs, optional entry data, permissions, scanner
   APIs, ledger/cost rules, exact frozen retries and grouped barcode printing.
 
 DATABASE CHANGES:
+
 - None. No migration/schema/seed/configuration/live data changes. Historical and
   generated records preserved; per-row removal applies to unsaved entry drafts only.
 
 SECURITY / PERMISSIONS:
+
 - No changes. Existing action gates and frozen fieldsets remain enforced; controls
   have accessible names and expansion state. Other ERP navigation unchanged.
 
 TESTS:
+
 - 37 actual-component browser checks pass: draft row removal/count update, retained
   remaining colour/CP, last-row guard, collapse retention, count protection, scanner
   completion, grouped printing/reprinting, frozen retries and responsive widths
@@ -4958,36 +5303,42 @@ TESTS:
   PNGs. No database suite rerun for this presentation/draft interaction change.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint, whitespace checks and Vercel-preset production
   build pass. Proof docs/STOCK_ENTRY_REFERENCE_BUILD_VERIFICATION.json; patched
   TanStack dependency retained. No frontend deployment performed.
 
 BUSINESS RULES VERIFIED:
+
 - Removing an unsaved row does not remove a generated barcode or historical stock.
   Optional values remain explicit; stock activation and CP restrictions unchanged.
 
 REMAINING:
+
 - Frontend publication and physical staff acceptance; no commit/push/deployment.
 - Reference's separate Bill/Invoice No. field not added in this UI-only refinement;
   existing persisted batch fields retained. No unsaved invoice control introduced.
 
 NEXT PHASE:
-- None started. Await Owner instructions.
 
+- None started. Await Owner instructions.
 
 ## 12 October 2026 — Always-open Workshop inventory and audited editing
 
 PHASE:
+
 - Owner-approved Inventory → Fabric Stock revision, Master Plan Section 40. Objective:
   newest batch → fabric type → individual Thaan hierarchy, shared filtering, CP-only
   inventory, missing/zero-CP incompleteness, exact-label printing and edit popup.
   Owner explicitly confirmed push to main, correcting the initial mail spelling.
 
 STATUS:
+
 - Implemented, validated and migrated live. Authorized main push prepared; actual
   Git publication result will be recorded after completion.
 
 IMPLEMENTED:
+
 - Always-open batch/type headings, separate physical Thaan rows and rightmost Barcode
   popup/print action. Newest-created batches first; searches retain contextual headings.
 - Upper search/scanner and Incomplete only now filter the same hierarchy. Removed
@@ -5004,6 +5355,7 @@ IMPLEMENTED:
   completes through the existing first receipt only when actual colour/length exist.
 
 MODIFIED:
+
 - New src/features/inventory/WorkshopFabricStock.tsx: hierarchy/query/filter/editor/
   label popup. FabricStock.tsx routes the main inventory view to it, retaining existing
   legacy receiving and scan-only callers. inventory.index.tsx connects shared filters
@@ -5014,10 +5366,12 @@ MODIFIED:
   WORKSHOP_INVENTORY evidence/captures/guide, README, Master Plan and this history.
 
 REUSED:
+
 - Existing registration identities, inventory ledger, cost versions, immutable request
   receipts, label generation/printing, Owner grants, audit and legacy reconciliation.
 
 DATABASE CHANGES:
+
 - New supabase/migrations/20261012000200_workshop_inventory_hierarchy.sql, identical
   drizzle/migrations/0036_workshop_inventory_hierarchy.sql; journal entry36.
 - SHA256 5ebfce41046f1cc907dfb83861c697bdb01ce730e8d61158d11d0c5ab93760ce.
@@ -5035,6 +5389,7 @@ DATABASE CHANGES:
   grants/RLS and recorded hash match. Initial transient DNS failure resolved on retry.
 
 SECURITY / PERMISSIONS:
+
 - New inventory.correct_cp and inventory.correct_workshop actions: Owner-managed,
   no staff defaults. Existing receive/edit_thaan and original registrant/Owner checks
   apply. Own missing/zero CP can use existing fill_missing_cp action; positive CP and
@@ -5046,6 +5401,7 @@ SECURITY / PERMISSIONS:
   membership. Legacy group reassignment disabled; existing shared labels preserved.
 
 TESTS:
+
 - 360 cumulative disposable database checks pass across demo Supabase, demo Drizzle
   and clean full replay: data preservation, zero/missing CP, permissions, unchanged
   barcode IDs, metadata corrections, stale edits, cost revision history, Workshop
@@ -5060,16 +5416,19 @@ TESTS:
   API}_VERIFICATION.json and desktop/mobile PNGs. Older historical proofs retained.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint (zero errors; one Fast Refresh export-layout
   warning), whitespace checks and isolated Vercel-preset build pass at
   2026-10-12T14:19:34.703Z. Patched TanStack server-core 1.169.39 retained.
 
 BUSINESS RULES VERIFIED:
+
 - Fabric SP remains Counter-entered at billing, absent from the new Workshop response.
   Missing/zero CP is incomplete. No stock/location guesses, barcode regeneration,
   historical received-length/transaction overwrites or legacy identity replacement.
 
 REMAINING:
+
 - Owner must grant new correction actions to staff who should correct positive CP
   or measured Workshop balances. Own metadata/missing or zero CP use existing actions.
 - Unlocated/shared legacy records and four prior job decisions remain; no Showroom
@@ -5078,9 +5437,11 @@ REMAINING:
   automatic deployment outcome not yet verified. Git push outcome follows separately.
 
 NEXT PHASE:
+
 - None started; complete authorized publication to main, then stop.
 
 Git publication result (12 October 2026):
+
 - Implementation commit 31b252e, "Add Workshop inventory hierarchy and audited Thaan
   editing", successfully pushed with git push -u origin main. Remote advanced from
   47ad5b3 to 31b252e; main now tracks origin/main. No force push, rebase, amendment
@@ -5088,17 +5449,19 @@ Git publication result (12 October 2026):
 - Implementation, verified migration and proof files are published on main. The
   automatic hosting deployment outcome remains unverified; no manual deploy run.
 
-
 ## 12 October 2026 — Logout transition and stale-role fix
 
 PHASE:
+
 - Owner-requested authentication bug fix. Objective: logout and switch staff accounts
   without stale role interfaces or reloading Chrome. No new business phase.
 
 STATUS:
+
 - Implemented and verified locally; production build ready for main publication.
 
 IMPLEMENTED:
+
 - Logout immediately clears identity/roles/permissions, cancels and clears caches,
   invalidates pending access requests and deferred auth loads, and hides the shell.
 - Role guard now issues one redirect per destination instead of repeated Navigate
@@ -5113,6 +5476,7 @@ IMPLEMENTED:
   responses cannot replace the next user's identity. Role-aware home routing retained.
 
 MODIFIED:
+
 - src/app/providers/session.tsx, src/app/layouts/AppShell.tsx, src/routes/auth.tsx,
   src/integrations/supabase/client.ts; new authLogoutFetch.ts helper. New
   scripts/session-logout-ui-test.mjs and scripts/fixtures/session-logout files.
@@ -5120,19 +5484,23 @@ MODIFIED:
   proof files restored unchanged; new evidence saved under SESSION_LOGOUT names.
 
 REUSED:
+
 - Supabase public auth APIs/storage, existing bootstrap, role/module home resolver,
   QueryClient, router and access checks. Existing logout scope retained.
 
 DATABASE CHANGES:
+
 - None. No migrations, schema, RLS, seed, permissions, configuration, business data
   or production auth sessions changed. No manual database operations.
 
 SECURITY / PERMISSIONS:
+
 - Existing server-side roles/RLS unchanged. Cleared credentials/roles do not leak into
   the next user's interface/cache. Inputs disabled until local removal is verified;
   failure cannot silently reopen the old workspace. No new credential persistence.
 
 TESTS:
+
 - 23 actual-component browser checks pass: immediate shell/role/cache removal during
   slow logout, local verification/login gating, late bootstrap/query responses,
   old-token events, failed-local retry, handled remote error, Stock Entry → Counter →
@@ -5143,22 +5511,27 @@ TESTS:
 - No database tests or real production account logout performed for this frontend fix.
 
 BUILD:
+
 - TypeScript noEmit, scoped ESLint (zero errors, three warnings), git diff --check and
   isolated Vercel-preset build pass at 2026-10-12T17:40:54.353Z (23:10:54.353 IST).
   Patched server-core 1.169.39 preserved. Proof SESSION_LOGOUT_BUILD_VERIFICATION.json.
 
 BUSINESS RULES VERIFIED:
+
 - Existing role access and home routing retained; no change to ERP quantities,
   costing, barcodes, staff permissions or billing. Account transitions clear old data.
 
 REMAINING:
+
 - Automatic deployment confirmation and live-device acceptance after publication.
   Other-device revocation cannot be claimed if the remote logout request fails.
 
 NEXT PHASE:
+
 - None started. Publish the verified fix to the previously authorized main branch.
 
 Publication and final verification follow-up (12 October 2026):
+
 - Implementation commit 6216e30, "Fix logout redirects and stale account state",
   successfully pushed normally to origin/main with upstream tracking. No force push
   or published-history rewrite. Public GitHub status/check-run APIs provided no
@@ -5174,12 +5547,15 @@ Publication and final verification follow-up (12 October 2026):
 ## 13 October 2026 — Staff permissions popup and clearer access controls
 
 PHASE:
+
 - Owner-approved UI refinement; no new implementation phase started.
 
 STATUS:
+
 - Implemented and locally verified.
 
 IMPLEMENTED:
+
 - Staff Actions → Manage permissions opens a contextual popup for that exact account.
 - Selected name/email/roles, searchable module groups, plain-language role defaults
   and individual Allow/Deny exceptions. Existing overrides load on opening.
@@ -5189,6 +5565,7 @@ IMPLEMENTED:
 - Owner accounts retain full control; per-action controls are read-only for Owners.
 
 MODIFIED:
+
 - src/routes/_authenticated/access.tsx: staff action menu, selected-user dialog,
   Assigned roles heading and explanatory copy; existing account actions preserved.
 - src/features/access/UserPermissions.tsx: contextual responsive dialog, user-scoped
@@ -5200,14 +5577,17 @@ MODIFIED:
   screenshots, UI/build verification JSON; Master Plan Section 41 and this history.
 
 REUSED:
+
 - Existing Staff/role queries, owner_set_user_permission RPC, user_permission_overrides,
   QueryClient invalidation, role labels, Radix Dialog and staff Actions menu.
 
 DATABASE CHANGES:
+
 - None. No migrations, tables, columns, relationships, indexes, constraints, triggers,
   functions, RLS, permission metadata, backfills or live data changed.
 
 SECURITY / PERMISSIONS:
+
 - Existing backend authorization/role eligibility remains unchanged. Per-user query
   and mutation target is fixed by the selected row; no second user selector.
 - Existing last-active-Owner role/deactivation protections and active status retained.
@@ -5215,6 +5595,7 @@ SECURITY / PERMISSIONS:
   protected-data restrictions. No real staff access changes made during testing.
 
 TESTS:
+
 - 22 actual-component browser checks pass with synthetic backend transport and no
   browser runtime errors. Covers existing overrides/defaults, selected-account RPC
   targets for Allow/Deny/Inherit, reset between users, search, grouped actions,
@@ -5224,6 +5605,7 @@ TESTS:
 - Evidence: docs/ACCESS_PERMISSIONS_UI_VERIFICATION.json. No live DB tests or writes.
 
 BUILD:
+
 - Isolated Vercel-preset production build passed 2026-10-12T18:58:20.611Z
   (13 October 2026, 00:28:20.611 IST), reusing the previously installed isolated
   dependencies. Patched TanStack server-core 1.169.39 retained. No deployment run.
@@ -5231,24 +5613,30 @@ BUILD:
   TANSTACK_START_SECURITY_BUILD proof restored unchanged.
 
 BUSINESS RULES VERIFIED:
+
 - Staff roles and personal action exceptions remain separate controls. Existing
   grant/revoke semantics, Owner control, role defaults and business data unchanged.
 
 REMAINING:
+
 - Hosted deployment and live-device acceptance are not verified by these local tests.
 
 NEXT PHASE:
+
 - None. Only the approved permissions presentation refinement was implemented.
 
 ## 13 October 2026 — Delegated Thaan editing and accurate permission status
 
 PHASE:
+
 - Owner-approved inventory/access revision; no additional numbered phase started.
 
 STATUS:
+
 - Implemented, tested and applied to the live database.
 
 OBJECTIVE / DECISIONS:
+
 - Stock Entry could not edit AND-47650840a because it was registered by the Owner.
   Existing Edit thaan permission did not override the separate registrant check.
 - Add three independent Owner grants for cross-registrant editing, CP viewing and CP
@@ -5258,6 +5646,7 @@ OBJECTIVE / DECISIONS:
 - Display authoritative effective permissions instead of raw role catalogue grants.
 
 IMPLEMENTED / MODIFIED:
+
 - New supabase/migrations/20261013000000_delegated_thaan_permissions.sql and identical
   drizzle/migrations/0037_delegated_thaan_permissions.sql; append-only journal idx 37.
 - src/features/access/UserPermissions.tsx: Owner-only permission-state query, corrected
@@ -5277,10 +5666,12 @@ IMPLEMENTED / MODIFIED:
   current permission-popup screenshots and DELEGATED_THAAN verification JSON files.
 
 REUSED:
+
 - Existing immutable registration IDs, creator fields, version/reason checks, request
   receipts, CP versions, inventory ledger, audit tables, role checks and Owner UI.
 
 DATABASE CHANGES / MIGRATION RECORD:
+
 - Filename: 20261013000000_delegated_thaan_permissions.sql; mirror 0037 above.
 - SHA256: 88c02cc8adacf914d404b7225c1a58bbcccb0c5e312fd9e1427dd068868f6ff2.
 - Added three permissions rows: inventory.edit_others_thaans, inventory.view_others_cp,
@@ -5309,6 +5700,7 @@ DATABASE CHANGES / MIGRATION RECORD:
   Subsequent cumulative live-schema comparison also passes with this migration recorded.
 
 SECURITY / PERMISSIONS:
+
 - No real staff grants were automatically applied. stock_ent remains read-only on the
   Owner-created draft until the Owner enables the explicit cross-registrant grant.
 - CP-view grant alone cannot edit CP; CP-change grant also requires authorised editing
@@ -5320,6 +5712,7 @@ SECURITY / PERMISSIONS:
   state is readable only by active Owners. No production user logins/fixtures generated.
 
 TESTS / VERIFICATION:
+
 - 444 cumulative disposable PostgreSQL checks pass: Supabase populated, identical
   Drizzle populated and clean-chain replay. Includes 84 additional delegation checks.
 - Covers foreign-draft denial by default, edit-only receipt with hidden pre-entered CP,
@@ -5336,32 +5729,39 @@ TESTS / VERIFICATION:
   ROLLOUT and BUILD_VERIFICATION.json files under docs. Historical proof files preserved.
 
 BUILD:
+
 - Isolated Vercel-preset build passes 2026-10-12T19:35:24.804Z
   (13 October 2026, 01:05:24.804 IST). Existing installed isolated dependencies reused;
   patched server-core 1.169.39 retained. No manual hosting deployment performed.
 
 BUSINESS RULES VERIFIED:
+
 - Actual measurements produce one first receipt; hidden existing CP remains preserved.
   IDs/creator/barcode do not change. Corrections append history and use supplied values.
 - Owner grants individual actions; no accidental general-cost or administrative access.
 
 REMAINING:
+
 - Owner must enable desired new permissions for specific users. Existing grants were
   intentionally preserved. Hosted deployment completion/live-device acceptance unverified.
 - Four legacy job-domain/assignment Owner decisions remain intentionally unchanged.
 
 NEXT PHASE:
+
 - None. Publish only the verified approved inventory/access revision to main.
 
 ## 13 October 2026 — Inventory search deduplication and responsive tabs
 
 PHASE:
+
 - Owner-approved UI refinement; no numbered phase started.
 
 STATUS:
+
 - Implemented and locally verified.
 
 IMPLEMENTED:
+
 - Removed the redundant search beside Incomplete only in Fabric Stock. The lower
   Workshop search/scanner remains the sole input and filters the same hierarchy.
 - Section labels no longer sit in an overflowing centre-aligned strip. Navigation
@@ -5373,6 +5773,7 @@ IMPLEMENTED:
 - Effective-tab fallback is shared by content and toolbar for unknown/denied hashes.
 
 MODIFIED:
+
 - src/features/inventory/InventoryToolbar.tsx (new reusable actual toolbar).
 - src/routes/_authenticated/inventory.index.tsx: integrate toolbar, preserve tab/role
   routing and remove duplicated field. No shared Tabs component styling changed.
@@ -5382,18 +5783,22 @@ MODIFIED:
   mobile screenshots, UI verification JSON and production build proof.
 
 REUSED:
+
 - Existing Radix Tabs, Checkbox, shared Input, role visibility checks, route hashes,
   Workshop hierarchy/scanner, incomplete/search state and stock-edit/barcode workflows.
 
 DATABASE CHANGES:
+
 - None. No migrations, schema, indexes, functions/triggers, RLS, seed, configuration,
   production data or actual staff grants changed.
 
 SECURITY / PERMISSIONS:
+
 - Existing role visibility and guarded workflows retained. Receiving, movement and
   finished-product sections remain conditional on their existing permissions/roles.
 
 TESTS:
+
 - 36 actual-component browser checks pass with synthetic transport and no runtime
   errors. Covers single Fabric Stock search, legacy search retention, full labels and
   touch targets at 320/390/768/1024/1440px, all eight tab selections, keyboard Home/End,
@@ -5404,30 +5809,37 @@ TESTS:
   Workshop verification proofs remain unchanged.
 
 BUILD:
+
 - Isolated Vercel-preset production build passed 2026-10-12T20:32:54.172Z
   (13 October 2026, 02:02:54.172 IST), reusing installed isolated dependencies.
   Patched TanStack server-core 1.169.39 retained. Historical build evidence preserved.
 - Proof: docs/INVENTORY_TOOLBAR_BUILD_VERIFICATION.json. No manual deployment run.
 
 BUSINESS RULES VERIFIED:
+
 - Same stock filters, IDs, barcode/edit operations and role-specific tab visibility;
   only presentation/search placement changed.
 
 REMAINING:
+
 - Hosted deployment completion/live-device acceptance not verified locally.
 
 NEXT PHASE:
+
 - None. Publish only this approved UI refinement to main.
 
 ## 13 October 2026 — Module/action access replaces creator-owned records
 
 PHASE:
+
 - Owner-approved access-model correction; no additional numbered phase started.
 
 STATUS:
+
 - Implemented, tested and applied to the live database.
 
 OBJECTIVE / BUSINESS DECISION:
+
 - Creator attribution is audit metadata, not an access boundary for module records.
   Stock work created/changed by Owner must be accessible to authorised Stock Entry
   staff; E-commerce work must be accessible to E-commerce staff rather than POS/Stock.
@@ -5436,6 +5848,7 @@ OBJECTIVE / BUSINESS DECISION:
   immutable stock/financial history and actor-bound request receipts remain enforced.
 
 BASELINE AUDIT:
+
 - Inspected current source and read-only live functions/policies before editing.
 - Creator restrictions found in registration/scanner/CP, batch extension, transfer
   history and older receiving/quote handoff APIs. Creator checks in request retries
@@ -5446,6 +5859,7 @@ BASELINE AUDIT:
   APIs and Salesperson attribution were reused; no creation ownership filter there.
 
 IMPLEMENTED / MODIFIED:
+
 - New migration supabase/migrations/20261013000100_module_role_scope.sql; identical
   drizzle/migrations/0038_module_role_scope.sql; append-only journal idx 38.
 - src/features/access/permissionLabels.ts: module CP wording and retired creator-key
@@ -5463,10 +5877,12 @@ IMPLEMENTED / MODIFIED:
   README, proof files/current permissions screenshots and this history updated.
 
 REUSED:
+
 - Existing role/action permission engine, Owner union, registration/cost/ledger APIs,
   audit triggers, request receipts, private helper signatures and database identities.
 
 DATABASE CHANGES / MIGRATION RECORD:
+
 - Migration: 20261013000100_module_role_scope.sql; mirror 0038 above.
 - Purpose: module-based stock work/CP access and explicit E-commerce order boundary.
 - SHA256: 5fcd4ab38d21bbe1634835690472031c5e0395243c76dc19e0d0adc260bbeb47.
@@ -5500,6 +5916,7 @@ DATABASE CHANGES / MIGRATION RECORD:
 - Live apply finished 2026-10-12T20:53:13.217Z (13 October 2026, 02:23:13.217 IST).
 
 SECURITY / PERMISSIONS:
+
 - Existing Stock Entry role and normal action permissions suffice for authorised
   Owner-/peer-created records. No new creator-specific permission toggle required.
 - Fabric CP visible to authorised Stock staff; POS/E-commerce/Tailor/Salesperson have
@@ -5514,6 +5931,7 @@ SECURITY / PERMISSIONS:
   preserved; stock availability projections retained for legitimate POS/E-commerce work.
 
 TESTS / VERIFICATION:
+
 - 567 cumulative disposable PostgreSQL checks pass across Supabase populated, identical
   Drizzle populated and clean chains: historical 444 checks then 123 current-revision
   checks. Tests cover Owner/peer stock visibility, scanner completion, CP visibility,
@@ -5534,24 +5952,29 @@ TESTS / VERIFICATION:
   LIVE, SECURITY, ROLLOUT and BUILD_VERIFICATION.json. Prior proof files preserved.
 
 BUILD:
+
 - Isolated Vercel-preset build passed 2026-10-12T20:53:06.840Z
   (13 October 2026, 02:23:06.840 IST), using the installed isolated dependencies.
   Patched server-core 1.169.39 retained. No manual hosting deployment run.
 
 BUSINESS RULES VERIFIED:
+
 - Module/action access replaces creator ownership; Owner has the union automatically.
   Staff receive authorised business updates across creators, with protected CP/financial
   boundaries and existing assignment/attribution rules preserved.
 
 REMAINING:
+
 - Hosted deployment completion and live-device acceptance unverified locally. Refresh
   access/stock data after the new frontend is deployed. No special creator grants needed.
 - Four legacy job-domain/assignment Owner decisions remain intentionally unchanged.
 
 NEXT PHASE:
+
 - None. Publish only this approved access correction to main.
 
 Final wording/build verification follow-up (13 October 2026):
+
 - Labelled the legacy general-cost permission Owner-only cost access to distinguish
   it from the authorised stock action View fabric CP. No permission keys or data changed.
 - Final permission browser checks remain 26 passing; TypeScript/scoped lint pass.
@@ -5560,14 +5983,15 @@ Final wording/build verification follow-up (13 October 2026):
   records this final build; the earlier successful build remains recorded above.
 - Applied migration bytes/objects were not changed by this wording clarification.
 
-
 PHASE:
+
 - Owner-approved multiple-Thaan Stock Entry and Stock Transfer UI refinement.
 - Date: 13 October 2026. Scope: four screenshot requests; no later phase started.
-STATUS:
+  STATUS:
 - Implemented and locally verified. Hosted deployment acceptance remains unverified.
 
 IMPLEMENTED:
+
 - Incomplete only moved into the newest visible batch header; responsive placement
   and empty-results escape retained. Global filtering still includes missing/zero CP.
 - Stock Entry accumulates distinct physical scanned Thaan rows. Select one/some/all;
@@ -5584,6 +6008,7 @@ IMPLEMENTED:
 - Tables scroll within their containers on small screens; page and navigation fit.
 
 MODIFIED:
+
 - src/features/inventory/ScannedThaanRows.tsx (new).
 - src/features/inventory/StockRegistration.tsx, FabricTransfer.tsx,
   WorkshopFabricStock.tsx, FabricStock.tsx, InventoryToolbar.tsx.
@@ -5596,15 +6021,18 @@ MODIFIED:
 - Master Plan Section 45 and this permanent history.
 
 REUSED:
+
 - Existing Workshop inventory/edit RPCs, fabric catalog, inventory authority,
   locations/balances, audited transfer posting/history and Code128 printing helper.
 - Existing batch creation, optional details, per-fabric printing and resume flow.
 
 DATABASE CHANGES:
+
 - None. No migration created/applied, live business data written, seed edited,
   manual database change, ID replacement or historical transaction rewrite.
 
 SECURITY / PERMISSIONS:
+
 - Existing module/action rules retained. Field editing uses per-record effective
   metadata/measurement/CP/correction flags; protected CP remains restricted.
 - Fabric transfer and label printing require their existing action permissions.
@@ -5613,6 +6041,7 @@ SECURITY / PERMISSIONS:
 - No role defaults, individual grants, RLS or function ACL changes.
 
 TESTS:
+
 - 17 multi-scan browser checks pass: accumulation/deduplication, blank unknown fields,
   independent row edits, selected identity printing, quantity validation, destination
   grouping, successful-row results and exact retry after a lost committed response.
@@ -5633,17 +6062,20 @@ TESTS:
   Earlier historical verification artifacts restored unchanged.
 
 BUILD:
+
 - Isolated Vercel-preset production build passed 2026-10-13T07:10:32.665Z
   (12:40:32.665 IST); patched TanStack server-core 1.169.39 retained.
 - docs/MULTI_THAAN_BUILD_VERIFICATION.json records the result.
 - No manual hosting deployment performed.
 
 BUSINESS RULES VERIFIED:
+
 - Same physical Thaan identity throughout scanning, editing, split transfer/printing.
 - Real quantities and permission checks retained; no CP/SP inference or fixed fabric SP.
 - Each Thaan save and each destination transfer is independently atomic and audited.
 
 REMAINING:
+
 - Cross-destination transfers and multiple edits are not one global transaction;
   completed groups/rows remain committed if a later one fails.
 - Scanner editing covers Workshop records; absent/depleted/outside-Workshop records
@@ -5654,16 +6086,18 @@ REMAINING:
 - Previous four legacy job-domain/assignment Owner decisions remain unchanged.
 
 NEXT PHASE:
+
 - None. Publish only this approved UI refinement to main.
 
-
 PHASE:
+
 - Owner-approved Dashboard, Reports & Analytics, Audit Trail refinement.
 - Date: 13 October 2026. Implemented and browser-validated in that sequence.
-STATUS:
+  STATUS:
 - Implemented and locally verified. No new ERP phase or database rollout performed.
 
 IMPLEMENTED:
+
 - Stage 1 / Dashboard: selected India day, four fixed clickable KPI cards, five
   quick actions, current controls/alerts, explicit last overview update and refresh.
   Sales trend shows hourly amount/count or sale-type amount; sales breakdown shows
@@ -5691,6 +6125,7 @@ IMPLEMENTED:
   Read-only UI retains all immutable historical evidence.
 
 MODIFIED:
+
 - src/features/reports/OwnerDashboard.tsx, OwnerReports.tsx, report-value.ts.
 - New src/features/reports/OwnerAudit.tsx, EvidenceViews.tsx, evidence-model.ts,
   use-evidence.ts.
@@ -5702,6 +6137,7 @@ MODIFIED:
 - Master Plan Sections 46–48 and this permanent implementation history.
 
 REUSED:
+
 - Existing owner_erp_overview and owner_erp_report RPCs, all 24 datasets, Owner session
   gating, QueryState, existing ERP styling/cards/inputs/dialogs and workflow routes.
 - Existing audit immutability triggers and protected RPC permissions, unchanged.
@@ -5712,17 +6148,20 @@ REUSED:
   exact fractional SQL numeric strings, zero-decimal transport and negative balances.
 
 DATABASE CHANGES:
+
 - None. No migration created/applied; no live schema/RLS/function/index/constraint,
   manual database, seed, opening quantity, price or historical business-data changes.
 - No existing applied migration file modified. No past audit events reconstructed.
 
 SECURITY / PERMISSIONS:
+
 - Owner-only rendering and query execution. Staff browser fixtures make zero report,
   dashboard or audit requests. Existing server Owner checks remain authoritative.
 - No role defaults, individual grants, RLS, ACL or immutable-history changes.
 - No staff salary/P2P/advance/deduction dataset added to these pages.
 
 TESTS:
+
 - Dashboard first: 13 browser checks pass (KPI separation/drilldown, selected day,
   dropdown independence, stock scope/units, recorded usage/reviews, responsive fit,
   non-Owner request denial and runtime errors).
@@ -5747,18 +6186,21 @@ TESTS:
   Visual review completed; earlier historical proof files preserved.
 
 BUILD:
+
 - Final isolated Vercel-preset build passed 2026-10-13T09:05:46.405Z
   (14:35:46.405 IST), patched TanStack server-core 1.169.39.
 - docs/OWNER_WORKSPACE_BUILD_VERIFICATION.json records the successful production build.
 - No manual Vercel deployment performed or hosted rollout completion asserted.
 
 BUSINESS RULES VERIFIED:
+
 - Selected-day paid sales/booking activity versus explicitly current stock/workload.
 - Exact recorded costs/quantities, preserved unknowns, separate units, no inferred
   margins, no material-issued-as-consumed substitution.
 - Owner audit evidence remains read-only and attributable only to captured facts.
 
 REMAINING:
+
 - Existing APIs expose no recorded payment methods/category classification, tailoring
   due dates, low-stock thresholds or production shortage requirements. Related views/
   alerts are unavailable rather than fabricated; none was silently added to schema.
@@ -5775,17 +6217,19 @@ REMAINING:
   Owner decisions remain intentionally unchanged.
 
 NEXT PHASE:
+
 - None. Publish only the three approved Owner workspaces to main.
 
-
 PHASE:
+
 - Owner-approved visual reference refinement for Dashboard, Reports and Audit.
 - Date: 13 October 2026. Objective: improve the actual interfaces using the three
   new visual samples while retaining approved workflows and recorded-data semantics.
-STATUS:
+  STATUS:
 - Implemented and locally verified; production build verification recorded below.
 
 IMPLEMENTED:
+
 - Dashboard: Business Overview heading; distinct coloured icon KPI cards, previous/
   next day and Today controls, refresh icon, sales amount/count columns and paid-sale
   doughnut with exact values/rounded proportion labels. Charts use recorded values,
@@ -5810,6 +6254,7 @@ IMPLEMENTED:
   module tags, responsive layouts and readable status labels.
 
 MODIFIED:
+
 - src/features/reports/OwnerDashboard.tsx, OwnerReports.tsx, OwnerAudit.tsx,
   EvidenceViews.tsx; src/routes/_authenticated/dashboard.tsx.
 - New src/features/reports/OwnerVisuals.tsx and owner-workspace.css.
@@ -5819,20 +6264,24 @@ MODIFIED:
 - Master Plan Section 49 and this permanent history.
 
 REUSED:
+
 - Existing Owner report RPCs/datasets, exact financial/quantity model, pagination,
   role guards, queries, workflow links and Radix Sheet accessibility.
 - Existing ERP brand/theme and icon library; charts are native SVG with no new dependency.
 
 DATABASE CHANGES:
+
 - None. No migration, schema/function/constraint/index/RLS/ACL, seed, live business-data
   or manual database change. No earlier applied migration modified.
 
 SECURITY / PERMISSIONS:
+
 - Owner-only pages/query execution and read-only audit behaviour preserved.
 - No role defaults, user grants, record ownership or sensitive-data boundaries changed.
 - No salary/P2P module or figures added.
 
 TESTS:
+
 - 18 Dashboard visual/browser checks pass, including actual column/doughnut charts,
   day arrows, zero-value maximum, existing KPI/booking/stock rules and mobile/desktop fit.
 - 23 Reports checks pass with the desktop report navigation/mobile selector; all 24
@@ -5851,23 +6300,27 @@ TESTS:
   restored unchanged rather than replacing historical verification artifacts.
 
 BUILD:
+
 - Final isolated Vercel-preset production build passed 2026-10-13T09:42:17.663Z
   (15:12:17.663 IST), with patched TanStack server-core 1.169.39 retained.
 - docs/OWNER_VISUAL_BUILD_VERIFICATION.json records the actual final result.
 - No manual hosting deployment or Vercel rollout completion asserted.
 
 BUSINESS RULES VERIFIED:
+
 - Visual references do not substitute sample values for recorded evidence.
 - Single selected day, current stock/workload, separate bookings and paid collections,
   unknown historical evidence and protected audit access remain intact.
 
 REMAINING:
+
 - Unsupported payment methods/due dates/stock thresholds/shortage inputs remain
   unavailable. No illustrative growth badges, notifications or week/month modes added.
 - Existing complete-result loading limitations and non-atomic cursor reads unchanged.
 - Hosted/live-device acceptance unverified. No later ERP phase started.
 
 NEXT PHASE:
+
 - None. Publish this approved visual refinement to main.
 
 ======================================================================
@@ -5875,6 +6328,7 @@ PHASE: OWNER-APPROVED THAAN ENTRY TREE AND OPTIONAL DETAILS (SECTION 50)
 STATUS: IMPLEMENTED, TESTED; LIVE MIGRATION APPLIED 13 OCTOBER 2026
 
 IMPLEMENTED:
+
 - Always-open Batch/provider → Fabric Type → individual Thaan hierarchy, with
   connecting lines and responsive fields. Removed fabric detail collapse controls.
 - Shared optional length and CP-per-metre fields per fabric; untouched/new rows
@@ -5887,6 +6341,7 @@ IMPLEMENTED:
   until explicitly saved by authorized staff. Recorded length label is accurate.
 
 MODIFIED:
+
 - StockRegistration.tsx, WorkshopFabricStock.tsx, ScannedThaanRows.tsx.
 - New forward-only Supabase migration 20261013000200_thaan_optional_colour_reason.sql,
   identical Drizzle 0039 mirror and journal entry; no earlier migration modified.
@@ -5895,10 +6350,12 @@ MODIFIED:
 - Master Plan Section 50 and this permanent history.
 
 REUSED:
+
 - Existing barcode identity, batch/request retries, per-fabric label printing,
   exact mm/paise conversion, action permissions and immutable inventory ledger.
 
 DATABASE CHANGES:
+
 - Replaced workshop_fabric_inventory, complete_barcode_thaan,
   save_registered_thaan_details and edit_workshop_thaan only; existing ACL retained.
 - No tables/columns/constraints added, no historical business-data backfill.
@@ -5909,6 +6366,7 @@ DATABASE CHANGES:
   connectivity with the original hostname/TLS behaviour. No .env/system DNS edits.
 
 SECURITY / PERMISSIONS:
+
 - Module/action permissions unchanged; staff cannot bypass completed CP or Workshop
   balance correction restrictions. Creator metadata and cross-role protections retained.
 - Missing user reason is JSON/SQL null. Required adjustment descriptions explicitly
@@ -5917,6 +6375,7 @@ SECURITY / PERMISSIONS:
   remain preserved. Clearing an existing recorded colour remains guarded.
 
 TESTS:
+
 - 687 cumulative database checks pass across populated/clean Supabase and populated
   Drizzle chains, including no-data migration, optional colour/reason, prior drafts,
   exact retries/no duplicate receipts, CP zero, stale versions and role denies.
@@ -5929,20 +6388,24 @@ TESTS:
   application so its recorded SHA256 is not rewritten.
 
 BUILD:
+
 - Isolated Vercel-preset production build passed 2026-10-13T13:35:54.733Z.
 - Patched TanStack server-core 1.169.39 retained. Historical build proof restored;
   task-specific proof is THAAN_OPTIONAL_DETAILS_BUILD_VERIFICATION.json.
 
 BUSINESS RULES VERIFIED:
+
 - No invented measurements/costs; blank colour does not block real measured stock.
 - CP remains per metre; zero CP remains incomplete. Bulk defaults are fabric-local.
 - Saved historical drafts require explicit authorized receipt; no silent stock posting.
 
 REMAINING:
+
 - Hosted frontend/device acceptance is unverified; a successful build/push does not
   confirm hosting deployment. No unrelated ERP phase or salary work added.
 
 NEXT PHASE:
+
 - Publish this approved change to main with a normal commit/push.
 
 ======================================================================
@@ -5950,6 +6413,7 @@ PHASE: OWNER-AUTHORIZED ONE-OFF TEST STOCK RESET (SECTION 51)
 STATUS: COMPLETED AND VERIFIED LIVE 14 OCTOBER 2026
 
 IMPLEMENTED:
+
 - Human explicitly confirmed: all existing stock and linked transactions are test
   data; remove them. Accounts, permissions, customers and configuration preserved.
 - Read-only dependency/count inspection, private public-data snapshot with SHA256
@@ -5967,16 +6431,19 @@ IMPLEMENTED:
   update events and one explicit reset event added: canonical count now 441.
 
 MODIFIED:
+
 - New scripts/reset-test-stock.mjs (read-only default, explicit apply/rehearsal modes)
   and verify-test-stock-reset.mjs (read-only committed-result assertions).
 - docs/TEST_STOCK_RESET_VERIFICATION.json; Master Plan Section 51 and this history.
 - No application UI, workflow code or dependency changes.
 
 REUSED:
+
 - Existing secure administrative PostgreSQL connection, Owner identity and audit
   table. Existing app RPCs used read-only to verify empty Workshop/registration views.
 
 DATABASE CHANGES:
+
 - One-off data reset; no schema migration or permanent DDL, no trigger disabling,
   no CASCADE or sequence restart. Explicit TRUNCATE RESTRICT scope followed by
   authorized quantity/reconciliation updates and a maintenance audit record.
@@ -5992,6 +6459,7 @@ DATABASE CHANGES:
   Snapshot is public table rows/catalog metadata, not a replacement auth/system dump.
 
 SECURITY / PERMISSIONS:
+
 - All six staff accounts and roles/overrides retained. Four customers, six suppliers,
   four locations, fabric/material/listing catalogs and settings unchanged except
   explicitly cleared material/listing stock balances. Existing history is preserved.
@@ -5999,6 +6467,7 @@ SECURITY / PERMISSIONS:
 - Operation is not exposed through frontend/normal staff permissions.
 
 TESTS:
+
 - Reset rehearsal verified backup, dependency restrictions, zero targets, preserved
   accounts/data/schema and stock RPC, then intentionally rolled back.
 - Actual transaction repeated assertions before commit.
@@ -6010,23 +6479,28 @@ TESTS:
   inspection until the narrow fixture metadata dependency was explicitly included.
 
 BUILD:
+
 - Not required: maintenance scripts/documentation only; application code unchanged.
 
 BUSINESS RULES VERIFIED:
+
 - Empty stock ready for fresh entry; original account/configuration/audit retained.
 - New identifiers continue their existing sequence, avoiding old barcode reuse.
 - No real transaction retention implied: human explicitly declared removed records test.
 
 REMAINING:
+
 - Refresh already-open application pages to discard cached pre-reset results.
 - Backups remain private outside Git. No new business entries or UI changes made.
 
 NEXT PHASE:
+
 - Owner can create the next real batch through existing Stock Entry.
 
 # 52. ROLE WORKSPACES, PRODUCTION ID AND WORKSHOP PRICING — 14 OCTOBER 2026
 
 IMPLEMENTED:
+
 - Seven approved role workspaces, role unions and Account access. Production is a
   new role; Owner retains the full grouped navigation and Administration. New
   self-signups wait for Owner-assigned work access instead of receiving Counter.
@@ -6061,6 +6535,7 @@ IMPLEMENTED:
   or legacy manual/untracked listings. The future website is not connected here.
 
 DATABASE / PRESERVATION:
+
 - Applied forward-only 20261014000000_role_workspaces.sql; mirrored byte-for-byte as
   Drizzle 0040, journal entry appended. The two new SQL files retain byte hashes on
   Windows checkouts. Previously published/applied migration files unchanged.
@@ -6078,6 +6553,7 @@ DATABASE / PRESERVATION:
   New Production-role mutations were verified in disposable databases only.
 
 TESTS / BUILD:
+
 - 933 cumulative database assertions across Supabase-populated, Drizzle-populated
   and Supabase-clean replay. Covers role boundaries/CP privacy, drafts, initial and
   extra issues, exact retry payloads, custom designs/size, all-piece receipt/SP,
@@ -6097,6 +6573,7 @@ TESTS / BUILD:
   Workflow/API/verification instructions: docs/ROLE_WORKSPACES.md.
 
 REMAINING / LIMITS:
+
 - Owner still connects the separate E-commerce website manually to the controlled
   read-only API. That website determines its own refresh/realtime behavior.
 - Hosted signup availability, rate limits and email confirmation follow the current
@@ -6108,6 +6585,7 @@ REMAINING / LIMITS:
 # 53. OWNER DAILY OPERATIONS AND MONTHLY BUSINESS ANALYTICS — 15 OCTOBER 2026
 
 OWNER APPROVAL:
+
 - Extend the Owner Dashboard with today's Counter + E-commerce sales and daily
   stock entry, transfers, production issue/finish and Customer Tailoring activity.
 - Reports defaults to the previous completed month, compares the preceding month,
@@ -6118,6 +6596,7 @@ OWNER APPROVAL:
   Counter attribution remains mandatory. One checkout may span Showroom floors.
 
 IMPLEMENTED:
+
 - Four fixed daily sales/booking KPIs plus always-visible daily operations cards;
   stock entry distinguishes registered labels from received metres. Production
   finished status and physical receipt counts remain separate. India half-open days.
@@ -6139,6 +6618,7 @@ IMPLEMENTED:
   retain Dashboard-selected dates. Current stock remains labelled current state.
 
 DATABASE / DATA PRESERVATION:
+
 - Forward migration 20261014000100_owner_business_analytics.sql / Drizzle 0041
   applied and verified 2026-10-14T20:38:33.102Z (15 October, India).
 - Matching SHA256: efa1b464904f3cbc0db09401556d3932f1ac80037d82300bcd26986778f059db.
@@ -6150,6 +6630,7 @@ DATABASE / DATA PRESERVATION:
   available; staff denied; paid ingress executable only by service_role.
 
 VERIFICATION:
+
 - 1,194 cumulative database assertions across populated Supabase, populated Drizzle
   and clean Supabase replay. Payment retries, multi-floor mixed carts, stock rollback,
   exact CP margins, India midnight, historic cost gaps, snapshot names and RLS/ACLs.
@@ -6162,6 +6643,7 @@ VERIFICATION:
   contract in docs/OWNER_BUSINESS_ANALYTICS.md. Synthetic screenshots in docs.
 
 LIMITS:
+
 - Separate storefront and payment provider remain future integration work. The
   trusted website server verifies settlement; this RPC does not verify a gateway
   signature, collect payment, create refunds, reserve stock or deploy that website.
@@ -6257,3 +6739,9 @@ Counter no longer selects one floor for the whole bill. Each scanned line retain
 Workshop receipt of a customer-tailoring job captures the finished garment's name, size and SP and generates a new short unique barcode for that garment only. The customer's purchased fabric is not added to store-owned finished stock.
 
 Supabase migrations `20261016000100`–`20261016000400`, `20261017000100` and `20261017000200` (Drizzle `0057`–`0062`) were applied live. Transactional multi-floor rollback, read-only live acceptance, TypeScript, scoped ESLint and the production build passed. Dashboard cleanup removed the empty Showroom parent, legacy-only dashboard controls and duplicated lower sales-channel cards while retaining their underlying reports and evidence. See `docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.
+
+# 63. GST CENTRALIZATION — 18 OCTOBER 2026
+
+Added an Owner-only effective-dated GST configuration, central integer-paise calculation, default and item-specific HSN/SAC rules, immutable sale and purchase snapshots, server-authoritative Counter completion, purchase invoice/ITC reconciliation, audited adjustments, period reports and 58/80 mm tax-invoice printing. Stock Entry continues to store base CP excluding GST and now shows purchase tax separately. No configuration or rate is seeded; activation requires explicit Owner action after CA validation. Internal movements remain untaxed and the absence of a public e-commerce checkout is recorded as an integration boundary. See `docs/GST_CONFIGURATION.md`.
+
+Forward migration `20261017000400` and matching Drizzle migration `0064` are applied. Transactional dry-run and post-apply verification confirm the protected tables and RPCs exist with zero GST configuration rows, so pre-existing business behavior remains active until the Owner configures and enables GST.

@@ -188,32 +188,32 @@ Recommended structure:
 
 src/
 ├── app/
-│   ├── router/
-│   ├── providers/
-│   ├── layouts/
-│   └── guards/
+│ ├── router/
+│ ├── providers/
+│ ├── layouts/
+│ └── guards/
 │
 ├── features/
-│   ├── inventory/
-│   ├── pos/
-│   ├── tailoring/
-│   ├── customers/
-│   ├── ecommerce/
-│   ├── whatsapp/
-│   ├── auth-roles/
-│   └── reports/
+│ ├── inventory/
+│ ├── pos/
+│ ├── tailoring/
+│ ├── customers/
+│ ├── ecommerce/
+│ ├── whatsapp/
+│ ├── auth-roles/
+│ └── reports/
 │
 ├── shared/
-│   ├── components/
-│   ├── hooks/
-│   ├── utils/
-│   ├── types/
-│   └── constants/
+│ ├── components/
+│ ├── hooks/
+│ ├── utils/
+│ ├── types/
+│ └── constants/
 │
 └── infrastructure/
-    ├── supabase/
-    ├── barcode/
-    └── storage/
+├── supabase/
+├── barcode/
+└── storage/
 
 Each feature should have its own internal structure where appropriate:
 
@@ -264,20 +264,20 @@ Create a polished ERP application shell.
 Desktop:
 
 ┌─────────────────────────────────────────────────────────────┐
-│ Logo / Maqdoom's                    Search   Alerts   User  │
+│ Logo / Maqdoom's Search Alerts User │
 ├───────────────┬─────────────────────────────────────────────┤
-│               │                                             │
-│ Dashboard     │                                             │
-│ Inventory     │              MAIN CONTENT                   │
-│ POS           │                                             │
-│ Tailoring     │                                             │
-│ Customers     │                                             │
-│ E-commerce    │                                             │
-│ WhatsApp      │                                             │
-│ Reports       │                                             │
-│ Access        │                                             │
-│ Settings      │                                             │
-│               │                                             │
+│ │ │
+│ Dashboard │ │
+│ Inventory │ MAIN CONTENT │
+│ POS │ │
+│ Tailoring │ │
+│ Customers │ │
+│ E-commerce │ │
+│ WhatsApp │ │
+│ Reports │ │
+│ Access │ │
+│ Settings │ │
+│ │ │
 └───────────────┴─────────────────────────────────────────────┘
 
 Use a professional sidebar/navigation system.
@@ -593,7 +593,7 @@ Remaining length must be derived from stock movements.
 The UI can display:
 
 Original Length: 28.50 m
-Available:       21.25 m
+Available: 21.25 m
 
 but the database should not treat 21.25 as the authoritative mutable balance.
 
@@ -795,7 +795,7 @@ Selling Price / m
 
 Then:
 
-Length to Cut: [     ] m
+Length to Cut: [ ] m
 
 Calculate:
 
@@ -1627,35 +1627,35 @@ The sample data should demonstrate the system's actual business logic.
 The first version must make this complete workflow visually demonstrable:
 
 STOCK ENTRY
-    ↓
+↓
 SCAN THAANS
-    ↓
+↓
 SET LENGTH / PRICE
-    ↓
+↓
 COMMIT RECEIVING
-    ↓
+↓
 THAAN BECOMES ACTIVE
-    ↓
+↓
 COUNTER SCANS BARCODE
-    ↓
+↓
 SYSTEM SHOWS AVAILABLE LENGTH
-    ↓
+↓
 CUT 5 METRES
-    ↓
+↓
 PRICE CALCULATED
-    ↓
+↓
 LEDGER CREATED
-    ↓
+↓
 REMAINING LENGTH UPDATES
-    ↓
+↓
 TAILORING JOB
-    ↓
+↓
 FABRIC + PADDING CONSUMED
-    ↓
+↓
 OWNER SEES COST VS SELLING VALUE
-    ↓
+↓
 AUDIT TRAIL SHOWS EVERYTHING
-    ↓
+↓
 WHATSAPP RECEIPT PREVIEW
 
 This is the core vertical slice.
@@ -1672,7 +1672,7 @@ shipping integration
 
 real WhatsApp provider integration
 
-GST finalization
+automated GST return filing (effective-dated GST configuration, tax invoices and operational reconciliation are documented in `docs/GST_CONFIGURATION.md`)
 
 multi-branch implementation
 

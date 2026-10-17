@@ -1481,7 +1481,6 @@ Customer Tailoring CP + charge pricing rule for newly booked Counter orders.
 - Owner can revoke or grant Salesperson work viewing, Salesperson selection and
   final tailoring-total entry through the existing individual permissions controls.
 
-
 # 36. OWNER-APPROVED PRODUCTION WORKFLOW REVISION
 
 Approved 11 October 2026 after the nine-stage Owner Production comparison and
@@ -1519,7 +1518,6 @@ single-Tailor assignment and mandatory adjacent finished-product floor transfer.
   pieces and remaining physical stock, with archived pieces distinguished where
   applicable. Counter sees exact product availability and Owner SP without CP.
 
-
 # 37. OWNER-APPROVED GROUPED SIDEBAR
 
 Approved 11 October 2026. Group navigation into Overview, Stock & Inventory,
@@ -1531,7 +1529,6 @@ Show only existing role/permission-authorized options and hide empty groups.
 Each child option opens its corresponding existing workflow/tab directly. Keep
 same-page drafts and uncertain transaction retry payloads across tab navigation.
 This navigation revision does not change database permissions or business rules.
-
 
 # 38. OWNER-APPROVED LABELS-FIRST STOCK ENTRY
 
@@ -1563,7 +1560,6 @@ revisions remain applicable elsewhere.
 - Legacy barcode scanning uses the existing safe catalogue. Do not reissue historical
   labels, change historical identities or guess missing opening quantities.
 
-
 # 39. OWNER-APPROVED OPTIONAL DETAILS BEFORE PRINTING
 
 Approved 12 October 2026 following the finalised workflow/reference comparison and
@@ -1584,7 +1580,6 @@ before barcode generation, without making them mandatory for identity creation.
   A partial length alone creates no inventory item or movement.
 - Existing Owner-managed action permissions, ownership and restricted CP visibility
   apply equally to pre-generation details and subsequent scanner completion.
-
 
 # 40. OWNER-APPROVED WORKSHOP INVENTORY HIERARCHY
 
@@ -1650,6 +1645,7 @@ raw catalogue grants alone do not represent effective database access.
 # 43. OWNER-APPROVED RESPONSIVE INVENTORY NAVIGATION
 
 Approved 13 October 2026 from the Inventory screenshot:
+
 - Fabric Stock uses its existing lower Workshop search/scanner only. Remove the
   duplicate input beside Incomplete only.
 - Inventory sections retain their existing IDs, routing and role visibility. Show
@@ -1688,6 +1684,7 @@ Approved 13 October 2026. This supersedes the creator-based stock rules in Secti
 # 45. OWNER-APPROVED MULTIPLE-THAAN SCANNING AND TRANSFER UI
 
 Approved 13 October 2026 from the four Stock Entry/Inventory/Transfer screenshots:
+
 - Place the global Incomplete only filter on the right of the newest visible batch
   header. Keep it accessible when no rows match. Zero/missing CP remains incomplete.
 - Stock Entry scans accumulate distinct physical Thaan rows. Select one, some or all
@@ -1704,11 +1701,11 @@ Approved 13 October 2026 from the four Stock Entry/Inventory/Transfer screenshot
 - Preserve module/action permissions, original quantities and historical movements.
   No receipt approval, invented measurements/prices, database schema changes or new roles.
 
-
 # 46. OWNER-APPROVED DAILY DASHBOARD WORKSPACE
 
 Approved 13 October 2026. Attached images explain behaviour, not visual styling.
 Use the existing ERP visual language and responsive layout.
+
 - A selected India date defaults to today. Four fixed clickable KPIs: paid fabric
   plus finished-product collections, fabric sales, finished-product sales and
   Customer Tailoring bookings separately.
@@ -1725,6 +1722,7 @@ Use the existing ERP visual language and responsive layout.
 # 47. OWNER-APPROVED REPORTS & ANALYTICS WORKSPACE
 
 Approved 13 October 2026; implement after Dashboard validation.
+
 - Organise all 24 existing Owner datasets into seven categories: Sales & Payments,
   Stock & Inventory, Production & Costs, Orders & Tailoring, Finished Products,
   Transfers & Locations, Audit & Reconciliation.
@@ -1738,6 +1736,7 @@ Approved 13 October 2026; implement after Dashboard validation.
 # 48. OWNER-APPROVED IMMUTABLE AUDIT EVIDENCE WORKSPACE
 
 Approved 13 October 2026; implement after Reports validation.
+
 - Audit is a searchable newest-first evidence log, not a sales analytics dashboard.
 - Search captured identifiers; filter recorded users, module, action, record type
   and date presets/custom ranges. Open an event for actor, timestamp, reference,
@@ -1747,12 +1746,12 @@ Approved 13 October 2026; implement after Reports validation.
 - Read-only Owner UI; retain existing Owner-protected RPCs and immutable database
   audit protections. No event edits/deletes, salary/P2P or invented suspicious scores.
 
-
 # 49. OWNER-APPROVED VISUAL REFERENCE REFINEMENT
 
 Approved 13 October 2026 from three visual interface samples. These references guide
 layout, hierarchy, spacing and presentation; sample figures, growth rates, alerts
 and unsupported controls do not create new business rules or recorded data.
+
 - Dashboard uses Business Overview heading, four clearer KPI cards, date navigation,
   actual-data column/doughnut charts, compact operational cards and a right-hand
   alerts/quick-actions rail. Keep the single-day scope and bookings/collections split.
@@ -1770,6 +1769,7 @@ and unsupported controls do not create new business rules or recorded data.
 # 50. OWNER-APPROVED THAAN ENTRY TREE AND OPTIONAL DETAILS
 
 Approved 13 October 2026.
+
 - Create Batch shows an always-open Batch/provider → Fabric Type → individual
   Thaan hierarchy with indentation and connecting lines, on desktop and mobile.
 - Each fabric has optional shared length in metres and CP per metre in rupees.
@@ -1791,6 +1791,7 @@ Approved 13 October 2026.
 
 Approved 14 October 2026: the Owner explicitly confirmed all existing stock and
 linked sales, tailoring jobs and online orders were test data and requested removal.
+
 - Clear test stock identities, batches, costs/prices, balances, movements, holds,
   stock/listing links and dependent test transaction/request records atomically.
 - Preserve login accounts, profiles, roles, permissions, customers, suppliers,
@@ -1808,6 +1809,7 @@ linked sales, tailoring jobs and online orders were test data and requested remo
 # 52. APPROVED ROLE WORKSPACES AND PRODUCTION ID RECEIPT
 
 Approved 14 October 2026; supersedes Section 50's length-only stock activation rule.
+
 - Seven roles: Stock Entry, Counter/POS, E-commerce, Salesperson, Tailor, Production,
   Owner. Staff receive the specifically approved workspace menus plus Account.
   Roles combine; Owner retains all workflows and grouped Administration.
@@ -1840,6 +1842,7 @@ Approved 14 October 2026; supersedes Section 50's length-only stock activation r
 # 53. APPROVED OWNER DAILY AND MONTHLY BUSINESS ANALYSIS
 
 Approved 14–15 October 2026; supplements Section 52.
+
 - Dashboard: today's India paid Counter + online sales, fabric/product totals,
   separate tailoring bookings, stock registrations/receipts, posted transfers,
   production issues/finished jobs/Workshop receipts, and customer jobs. Current
@@ -1907,6 +1910,10 @@ Completed: 0053 applied with every row in all 97 existing public tables preserve
 This section supersedes the earlier floor-first Counter wording in Sections 55 and 58. Owner manages editable POS terminal codes separately from staff accounts and assigns active terminals to Counter users; Owner accounts do not require a POS code. Current live assignments are `counter@example.com` → `F3-POS1` and `maaz7do@gmail.com` → `F3-POS2`.
 
 One invoice can contain stock from multiple physical Showroom floors. Every sale line records, validates, locks and debits its own source location atomically. The receipt and Owner evidence retain both the item floor and transaction POS code. The internal Showroom parent remains for hierarchy and history but is excluded from operational stock cards and sale sources.
+
+## 63. Central GST configuration and invoice snapshots — 18 October 2026
+
+Owner Administration contains an effective-dated GST configuration with CA-controlled HSN/SAC and rates for purchases, fabric, finished products and tailoring. No rate is seeded or activated by migration. Stock Entry preserves base CP excluding GST while showing purchase GST and supplier totals; Counter sales calculate tax server-side and preserve immutable invoice snapshots for 58/80 mm reprints. Owner reconciliation groups output tax, purchases, ITC and audited adjustments. Internal transfers and production retain base CP without re-taxing movements. A future public e-commerce checkout must reuse the same tax service because this repository currently has listings but no public checkout/payment transaction. Contract: `docs/GST_CONFIGURATION.md`.
 
 Counter records the advance and the remaining balance is calculated. Customer receipts contain prices; a separate tailor work order contains production details and notes without prices. Workshop can scan a customer bill or job, enter the stitched garment's name, size and SP and receive it under a new short barcode. This barcode is for the customer-finished garment only and does not convert purchased fabric into store-owned finished stock.
 

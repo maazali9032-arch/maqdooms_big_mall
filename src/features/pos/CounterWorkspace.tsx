@@ -28,12 +28,14 @@ import {
   reserveTotals,
   counterPayload,
   previewTotal,
+  gstPreview,
   tailoringAmounts,
   availableAt,
   type CounterRow,
   type ScanRecord,
   type TailoringGroup,
 } from "./counter-workspace-model";
+import { useGstConfiguration, type GstSupplyType } from "@/features/gst/tax";
 type BillRequest = {
   p_request: string;
   p_items: ReturnType<typeof counterPayload>["items"];
@@ -43,6 +45,12 @@ type BillRequest = {
   p_name: string;
   p_contact: string;
   p_advance_paise?: number;
+  p_tax_context: {
+    supply_type: GstSupplyType;
+    customer_gstin: string;
+    customer_state_code: string;
+    payment_method: string;
+  };
 };
 const blankGroup = () => ({
   garment: "",
@@ -75,6 +83,7 @@ function CounterContent({
   canIssue: boolean;
 }) {
   const qc = useQueryClient();
+  const gst = useGstConfiguration();
   const billCommitted = useRef(false);
   const [extraSource, setExtraSource] = useState<{ id: string; name: string } | null>(null);
   const [work, setWork] = useState<CounterWork | null>(null);
@@ -89,6 +98,10 @@ function CounterContent({
     [contact, setContact] = useState(""),
     [paid, setPaid] = useState(true),
     [advance, setAdvance] = useState("");
+  const [supplyType, setSupplyType] = useState<GstSupplyType>("intra_state");
+  const [customerGstin, setCustomerGstin] = useState("");
+  const [customerStateCode, setCustomerStateCode] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const [form, setForm] = useState(blankGroup),
     [reserves, setReserves] = useState<ScanRecord | null>(null),
     [ambiguous, setAmbiguous] = useState<ScanRecord | null>(null);
@@ -212,24 +225,12 @@ function CounterContent({
   const bill = useMutation({
     mutationFn: async (args: BillRequest) => {
       setPending(args);
-      const { p_advance_paise, p_paid, ...standard } = args;
-      const { data, error } =
-        p_advance_paise === undefined
-          ? await (
-              supabase.rpc as unknown as (
-                name: string,
-                args: Record<string, unknown>,
-              ) => Promise<{ data: string | null; error: Error | null }>
-            )("complete_counter_bill_multi", { ...standard, p_paid })
-          : await (
-              supabase.rpc as unknown as (
-                name: string,
-                args: Record<string, unknown>,
-              ) => Promise<{ data: string | null; error: Error | null }>
-            )("complete_counter_bill_multi_with_advance", {
-              ...standard,
-              p_advance_paise,
-            });
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: string | null; error: Error | null }>
+      )("complete_counter_bill_gst", { ...args, p_advance_paise: args.p_advance_paise ?? null });
       if (error) throw error;
       if (!data)
         throw new Error("The bill was saved but its ID was not returned. Retry the same bill.");
@@ -249,6 +250,8 @@ function CounterContent({
       setContact("");
       setPaid(true);
       setAdvance("");
+      setCustomerGstin("");
+      setCustomerStateCode("");
       void qc.invalidateQueries();
       toast.success("Bill saved; stock updated");
     },
@@ -323,7 +326,8 @@ function CounterContent({
         throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
       const payload = counterPayload(rows, groups);
-      const billTotal = previewTotal(rows, groups);
+      const tax = gstPreview(rows, groups, gst.data, supplyType);
+      const billTotal = tax?.final ?? previewTotal(rows, groups);
       const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
       if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
         throw new Error("Advance cannot exceed the bill total");
@@ -339,6 +343,12 @@ function CounterContent({
         p_salesperson: salesperson,
         p_name: name,
         p_contact: contact,
+        p_tax_context: {
+          supply_type: supplyType,
+          customer_gstin: customerGstin.trim().toUpperCase(),
+          customer_state_code: customerStateCode.trim(),
+          payment_method: paymentMethod,
+        },
         ...(groups.length && advancePaise !== null && billTotal !== BigInt(advancePaise)
           ? { p_advance_paise: advancePaise }
           : {}),
@@ -348,7 +358,10 @@ function CounterContent({
     }
   }
   const pendingTailoring = canTailor && rows.some((r) => r.selected && !r.group);
-  const total = previewTotal(rows, groups, pendingTailoring ? form.stitching : undefined);
+  const taxPreview = gstPreview(rows, groups, gst.data, supplyType);
+  const total = pendingTailoring
+    ? previewTotal(rows, groups, form.stitching)
+    : (taxPreview?.final ?? previewTotal(rows, groups));
   const updateRow = (key: string, change: Partial<CounterRow>) =>
     setRows(rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
   return (
@@ -649,6 +662,47 @@ function CounterContent({
                       onChange={(e) => setContact(e.target.value.replace(/[^0-9]/g, ""))}
                     />
                   </div>
+                  {gst.data?.configuration?.enabled && (
+                    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <select
+                        aria-label="GST supply type"
+                        className="h-11 rounded border bg-background p-2"
+                        value={supplyType}
+                        onChange={(e) => setSupplyType(e.target.value as GstSupplyType)}
+                      >
+                        <option value="intra_state">Intra-state · CGST + SGST</option>
+                        <option value="inter_state">Inter-state · IGST</option>
+                      </select>
+                      <Input
+                        aria-label="Customer GSTIN"
+                        placeholder="Customer GSTIN (optional)"
+                        value={customerGstin}
+                        onChange={(e) => setCustomerGstin(e.target.value.toUpperCase())}
+                      />
+                      <Input
+                        aria-label="Customer state code"
+                        inputMode="numeric"
+                        maxLength={2}
+                        placeholder="State code (optional)"
+                        value={customerStateCode}
+                        onChange={(e) =>
+                          setCustomerStateCode(e.target.value.replace(/\D/g, "").slice(0, 2))
+                        }
+                      />
+                      <select
+                        aria-label="Payment method"
+                        className="h-11 rounded border bg-background p-2"
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="upi">UPI</option>
+                        <option value="bank_transfer">Bank transfer</option>
+                        <option value="mixed">Mixed</option>
+                      </select>
+                    </div>
+                  )}
                   <SalespersonPicker
                     id="combined-salesperson"
                     value={salesperson}
@@ -702,6 +756,21 @@ function CounterContent({
                     Bill total{" "}
                     {total === null ? "Enter quantities and prices" : reportMoney(String(total))}
                   </p>
+                  {gst.data?.configuration?.enabled && taxPreview && !pendingTailoring && (
+                    <div className="grid gap-1 rounded-lg bg-muted/30 p-3 text-sm sm:grid-cols-2">
+                      <span>Taxable {reportMoney(String(taxPreview.taxable))}</span>
+                      {supplyType === "intra_state" ? (
+                        <span>
+                          CGST {reportMoney(String(taxPreview.cgst))} · SGST{" "}
+                          {reportMoney(String(taxPreview.sgst))}
+                        </span>
+                      ) : (
+                        <span>IGST {reportMoney(String(taxPreview.igst))}</span>
+                      )}
+                      <strong>GST {reportMoney(String(taxPreview.gst))}</strong>
+                      <strong>Invoice total {reportMoney(String(taxPreview.final))}</strong>
+                    </div>
+                  )}
                   {pendingTailoring && (
                     <p role="status" className="text-sm">
                       Add the selected tailoring job before completing this bill.

@@ -1271,7 +1271,7 @@ The following are not present as complete features:
 - public e-commerce storefront/customer authentication;
 - live WhatsApp sending/provider integration;
 - payment gateway, shipping and fulfilment integrations;
-- GST finalization or accounting system;
+- automated GST return filing or accounting-ledger integration (GST configuration, transaction snapshots, thermal tax invoices and operational reconciliation are implemented; see `docs/GST_CONFIGURATION.md`);
 - per-user permission assignment UI;
 - new/custom roles beyond the fixed five;
 - a different inventory allocation algorithm;

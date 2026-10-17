@@ -7,6 +7,42 @@ import { Panel } from "@/shared/components/page";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { printFabricLabel } from "@/features/inventory/fabric-label";
+type GstInvoice = {
+  invoice_number: string;
+  supply_type: string;
+  payment_method: string | null;
+  business: {
+    legal_name: string;
+    trading_name: string;
+    address: string;
+    contact: string;
+    gstin: string;
+    state_code: string;
+  };
+  customer: {
+    name?: string | null;
+    phone?: string | null;
+    gstin?: string | null;
+    state_code?: string | null;
+  };
+  taxable_paise: string;
+  cgst_paise: string;
+  sgst_paise: string;
+  igst_paise: string;
+  gst_paise: string;
+  final_paise: string;
+  lines: {
+    id: string;
+    description: string;
+    classification_code: string;
+    quantity: string;
+    unit: string;
+    rate_bps: number;
+    taxable_paise: string;
+    gst_paise: string;
+    final_paise: string;
+  }[];
+};
 export type CounterReceipt = {
   id: string;
   code: string;
@@ -40,7 +76,18 @@ export type CounterReceipt = {
     fabrics:
       { barcode: string; name: string; quantity_mm: string; source?: string | null }[] | null;
   }[];
+  tax?: GstInvoice | null;
 };
+function printThermal(node: HTMLElement, title: string, width: 58 | 80) {
+  const popup = window.open("", "_blank", "width=520,height=760");
+  if (!popup) throw new Error("Allow pop-ups to print the invoice");
+  popup.document.write(
+    `<!doctype html><html><head><title>${title.replace(/[<>]/g, "")}</title><style>@page{size:${width}mm auto;margin:2mm}*{box-sizing:border-box}body{margin:0;width:${width - 4}mm;font:10px/1.25 ui-monospace,monospace;color:#000}h2{font-size:13px;margin:0;text-align:center}p{margin:2px 0}.thermal-invoice{width:100%}.screen-only{display:none}.line{border-top:1px dashed #000;padding:3px 0}.row{display:flex;justify-content:space-between;gap:4px}.right{text-align:right}.strong{font-weight:700}@media print{button{display:none}}</style></head><body>${node.innerHTML}</body></html>`,
+  );
+  popup.document.close();
+  popup.focus();
+  setTimeout(() => popup.print(), 150);
+}
 export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
   const printable = useRef<HTMLDivElement>(null);
   const tailorPrintable = useRef<HTMLDivElement>(null);
@@ -64,20 +111,48 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
     <Panel
       title="Customer bill"
       actions={
-        <Button
-          onClick={() => {
-            if (printable.current)
-              printFabricLabel(printable.current, "Customer bill " + receipt.code);
-          }}
-        >
-          Print bill
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() =>
+              printable.current &&
+              printThermal(printable.current, "Tax invoice " + receipt.code, 58)
+            }
+          >
+            Print 58 mm
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              printable.current &&
+              printThermal(printable.current, "Tax invoice " + receipt.code, 80)
+            }
+          >
+            Print 80 mm
+          </Button>
+        </div>
       }
     >
-      <div ref={printable} className="space-y-3">
-        <h2 className="text-xl font-semibold">MAQDOOM’S Big Mall</h2>
+      <div
+        ref={printable}
+        className="thermal-invoice mx-auto max-w-[58mm] space-y-2 border bg-white p-2 text-black shadow-sm"
+      >
+        <h2 className="text-center text-base font-semibold">
+          {receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall"}
+        </h2>
+        {receipt.tax && (
+          <>
+            <p className="text-center text-[10px]">
+              {receipt.tax.business.address}
+              <br />
+              GSTIN: {receipt.tax.business.gstin} · {receipt.tax.business.contact}
+            </p>
+            <p className="text-center font-semibold">TAX INVOICE</p>
+          </>
+        )}
         <p className="break-all font-mono text-xs">{receipt.code}</p>
-        <BarcodeGraphic code={receipt.code} />
+        <div className="screen-only">
+          <BarcodeGraphic code={receipt.code} />
+        </div>
         <p className="text-sm">
           {new Date(receipt.created_at).toLocaleString("en-IN")} · {receipt.source}
           {receipt.pos_code ? ` · ${receipt.pos_code}` : ""}
@@ -126,6 +201,35 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
             </div>
           ))}
         </div>
+        {receipt.tax && (
+          <div className="space-y-1 border-t border-dashed pt-2 text-xs">
+            <div className="flex justify-between">
+              <span>Taxable</span>
+              <span>{reportMoney(receipt.tax.taxable_paise)}</span>
+            </div>
+            {receipt.tax.supply_type === "intra_state" ? (
+              <>
+                <div className="flex justify-between">
+                  <span>CGST</span>
+                  <span>{reportMoney(receipt.tax.cgst_paise)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>SGST</span>
+                  <span>{reportMoney(receipt.tax.sgst_paise)}</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between">
+                <span>IGST</span>
+                <span>{reportMoney(receipt.tax.igst_paise)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-semibold">
+              <span>Total GST</span>
+              <span>{reportMoney(receipt.tax.gst_paise)}</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between border-t pt-3">
           <strong>Total {reportMoney(receipt.total_paise)}</strong>
           <strong>

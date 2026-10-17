@@ -17,6 +17,7 @@ export type ModuleKey =
   | "reports"
   | "audit"
   | "access"
+  | "gst"
   | "settings";
 
 export const MODULE_PATHS: Record<ModuleKey, string> = {
@@ -33,6 +34,7 @@ export const MODULE_PATHS: Record<ModuleKey, string> = {
   reports: "/reports",
   audit: "/audit",
   access: "/access",
+  gst: "/gst",
   settings: "/settings",
 };
 
@@ -76,6 +78,7 @@ export function moduleForPath(pathname: string): ModuleKey | null {
  * in Postgres.
  */
 export function canAccessPath(roles: string[], permissions: string[], pathname: string): boolean {
+  if (pathname === "/gst" || pathname.startsWith("/gst/")) return roles.includes("owner");
   if (
     pathname === "/tailoring" &&
     roles.includes("production") &&
