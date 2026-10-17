@@ -16,7 +16,7 @@ type Terminal = {
 };
 export type PosStaff = { id: string; full_name: string; active: boolean; roles: string[] };
 
-const rpc = supabase.rpc as unknown as (
+const rpc = supabase.rpc.bind(supabase) as unknown as (
   name: string,
   args: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: Error | null }>;

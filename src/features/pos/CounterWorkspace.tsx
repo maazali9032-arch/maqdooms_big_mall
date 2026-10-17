@@ -153,8 +153,10 @@ function CounterContent({
           toast.info("Choose the Showroom floor holding this fabric");
           return;
         }
-        setExtraScanned({ ...record, cuts: [choices[0].cut] });
-        setExtraSource(choices[0].location);
+        const choice = choices[0];
+        if (!choice) return;
+        setExtraScanned({ ...record, cuts: [choice.cut] });
+        setExtraSource(choice.location);
         setBarcode("");
         return;
       }
@@ -179,7 +181,9 @@ function CounterContent({
         toast.error("No fabric is available on a Showroom floor");
         return;
       }
-      addRow(record, choices[0].cut, choices[0].location);
+      const choice = choices[0];
+      if (!choice) return;
+      addRow(record, choice.cut, choice.location);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -227,6 +231,8 @@ function CounterContent({
               p_advance_paise,
             });
       if (error) throw error;
+      if (!data)
+        throw new Error("The bill was saved but its ID was not returned. Retry the same bill.");
       billCommitted.current = true;
       const result = await supabase.rpc("counter_bill", { p_code: data });
       if (result.error) throw result.error;

@@ -186,7 +186,7 @@ export function OwnerFactoryDefinitions() {
               <option value="">Choose existing user</option>
               {users.data?.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name} · {u.id}
+                  {u.name}
                 </option>
               ))}
             </select>
@@ -226,8 +226,9 @@ export function OwnerFactoryDefinitions() {
                     >
                       <div>
                         <strong>{t.real_name}</strong>
-                        <p className="break-all font-mono text-xs">
-                          User {t.profile_id || "Not linked"} · {t.active ? "Active" : "Inactive"}
+                        <p className="text-xs text-muted-foreground">
+                          {t.profile_id ? "Linked staff account" : "No staff login linked"} ·{" "}
+                          {t.active ? "Active" : "Inactive"}
                         </p>
                       </div>
                       <Button

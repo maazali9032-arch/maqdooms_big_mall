@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSession, ROLE_LABELS } from "@/app/providers/session";
-import { PageHeader, Panel, DemoNotice } from "@/shared/components/page";
+import { PageHeader, Panel } from "@/shared/components/page";
 import { AccountSettings } from "@/features/access/AccountSettings";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -43,23 +43,20 @@ function SettingsPage() {
       </Panel>
       <AccountSettings />
       {isOwner && (
-        <Panel title="Unit &amp; money system">
-          <p className="text-sm text-muted-foreground">
-            Lengths are stored as integer millimetres and displayed in metres; money is stored as
-            integer paise. Yards are not an active business unit.
-          </p>
-        </Panel>
-      )}
-
-      {isOwner && (
-        <Panel title="Integrations">
-          <DemoNotice>
-            WhatsApp automation, payment gateways and the public storefront are deliberately not
-            connected. The storefront will be a separate application reading a controlled set of
-            Showroom-only storefront API from this same database. POS sales update its stock
-            availability.
-          </DemoNotice>
-        </Panel>
+        <details className="panel px-4 py-3 text-sm sm:px-5">
+          <summary className="cursor-pointer font-medium">System information</summary>
+          <div className="mt-3 grid gap-3 text-xs text-muted-foreground sm:grid-cols-2">
+            <p>
+              <strong className="block text-foreground">Units and money</strong>
+              Lengths display in metres and money displays in rupees. Exact millimetres and paise
+              are retained internally for calculations.
+            </p>
+            <p>
+              <strong className="block text-foreground">Connections</strong>
+              WhatsApp automation, payment gateways and the public storefront are not connected yet.
+            </p>
+          </div>
+        </details>
       )}
     </>
   );

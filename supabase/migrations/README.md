@@ -275,3 +275,15 @@ shared draft batch update policy, and E-commerce-only online-order policies. Rep
 Exact objects, SHA256 and verification are in the Implementation History and
 `docs/MODULE_ROLE_SCOPE.md` / MODULE_ROLE_SCOPE verification files. Previous migrations
 and data preserved; use a new migration for future changes.
+
+## UI workflow clarity (17 October 2026)
+
+Applied and verified: `20261017000300_ui_workflow_clarity.sql`; byte-identical Drizzle
+mirror `0063_ui_workflow_clarity.sql`, journal idx 63. It replaces the existing
+Showroom-floor reader with an expandable current-Thaan result and adds the POS operator
+display name to Salesperson Work. It changes no tables or business rows, preserves UUIDs
+for evidence while removing them from business selectors, and keeps authenticated role
+checks inside both functions. The combined finished-garment receipt, POS RPC binding fix,
+compact Account information and Salesperson Work card UI are documented in
+`docs/UI_WORKFLOW_CLARITY.md`. The focused live rollout and recorded-hash verification
+passed; previous migrations were not replayed or modified.
