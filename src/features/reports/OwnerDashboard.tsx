@@ -31,6 +31,7 @@ type Overview = {
   customer_tailoring_bookings: { orders: string; booked_customer_price_paise: string };
   controls: Record<string, number>;
 };
+const dashboardHiddenLegacyControls = new Set(["unresolved_legacy", "unreconciled_thans"]);
 export function OwnerDashboard() {
   const { isOwner } = useSession();
   const [day, setDay] = useState(indiaDay()),
@@ -508,12 +509,14 @@ export function OwnerDashboard() {
               <p>Alerts could not load. Refresh to retry.</p>
             ) : overview.data ? (
               <div className="space-y-1">
-                {Object.entries(overview.data.controls).map(([key, count]) => (
-                  <a href="/reports#controls" key={key} className="owner-alert-row">
-                    <span>{title(key)}</span>
-                    <strong>{count}</strong>
-                  </a>
-                ))}
+                {Object.entries(overview.data.controls)
+                  .filter(([key]) => !dashboardHiddenLegacyControls.has(key))
+                  .map(([key, count]) => (
+                    <a href="/reports#controls" key={key} className="owner-alert-row">
+                      <span>{title(key)}</span>
+                      <strong>{count}</strong>
+                    </a>
+                  ))}
               </div>
             ) : (
               <p>Loading alerts…</p>
