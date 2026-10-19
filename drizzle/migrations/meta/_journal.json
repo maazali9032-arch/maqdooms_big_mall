@@ -463,6 +463,13 @@
       "when": 1792368060000,
       "tag": "0066_short_document_scan_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792368120000,
+      "tag": "0067_gst_configuration_reload",
+      "breakpoints": true
     }
   ]
 }

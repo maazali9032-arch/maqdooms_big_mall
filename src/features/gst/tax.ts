@@ -105,16 +105,20 @@ export function percentToBps(value: string) {
   return bps;
 }
 
-export function useGstConfiguration() {
+export function useGstConfiguration(ownerEditor = false) {
   return useQuery({
-    queryKey: ["gst-transaction-configuration"],
+    queryKey: [ownerEditor ? "gst-owner-configuration" : "gst-transaction-configuration"],
     queryFn: async () => {
       const { data, error } = await (
         supabase.rpc as unknown as (
           name: string,
           args?: Record<string, unknown>,
         ) => Promise<{ data: unknown; error: Error | null }>
-      ).call(supabase, "gst_transaction_configuration", {});
+      ).call(
+        supabase,
+        ownerEditor ? "owner_gst_configuration" : "gst_transaction_configuration",
+        {},
+      );
       if (error) throw error;
       return data as GstTransactionConfiguration;
     },

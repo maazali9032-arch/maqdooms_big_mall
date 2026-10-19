@@ -4,6 +4,8 @@ GST is an Owner-controlled, effective-dated subsystem. Migration `20261017000400
 
 ## Owner setup
 
+The configuration editor loads the most recently saved version. Its effective date is displayed in local time; changes use the save time unless the Owner explicitly chooses a different date. Future dates remain scheduled. POS/Stock Entry (including when operated by an Owner) read the effective active version rather than an unscheduled draft or future version. The reload fix requires `20261019000300_gst_configuration_reload.sql` (Drizzle `0067_gst_configuration_reload.sql`); it preserves every existing configuration and invoice.
+
 Open **Administration → GST Configuration**. Enter the legal identity, GSTIN, state code, effective date and one default rule for each supported category: stock purchase, fabric sale, finished-product sale and tailoring service. Every rule needs its CA-verified HSN/SAC and rate. Optional references such as `FABRIC:VELVET`, `PRODUCT:SHERWANI` and `SERVICE:ALTERATION` override a category default.
 
 Choose whether selling prices include GST or have GST added, how the invoice presents totals, whether fabric and stitching are displayed together or separately, and how non-creditable purchase GST is reported. Saving creates a new immutable version; it does not rewrite old invoices.
@@ -17,6 +19,8 @@ CP remains the base purchase cost per metre excluding GST. When GST is active, S
 Ordinary Counter bills use the registered business state automatically, so staff do not select intra-state/inter-state treatment or repeatedly enter state codes. When a GST business invoice is required, the user opens **Add GST business invoice details** and enters the customer's GSTIN. The system derives the supply treatment from that GSTIN's state code and the effective business registration state. Payment method remains transaction-specific. The server recalculates every line using the active effective-dated rules inside the same sale transaction, stores an immutable business, customer, line and tax snapshot, updates the payable total, and only then records full or advance payment. Retrying the same request stays idempotent.
 
 Customer reprints read the saved snapshot. The bill has dedicated **58 mm** and **80 mm** print actions and shows taxable value plus CGST/SGST or IGST. The existing price-free tailor work order remains separate.
+
+The receipt honors the invoice display and tailoring display saved in its tax snapshot: final-price-first emphasizes the payable total before the tax breakdown; taxable-first leads with taxable value and taxes. Separate tailoring presentation lists fabric and stitching tax components with HSN/SAC; combined presentation keeps the customer-facing job together. These preferences never alter an older snapshot.
 
 ## Reports and corrections
 

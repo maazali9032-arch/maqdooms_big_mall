@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, StatusBadge } from "@/shared/components/page";
+import { gstLocalDateTime } from "./configuration-time";
 import {
   formatGstRate,
   percentToBps,
@@ -28,7 +29,7 @@ type Draft = Omit<GstConfiguration, "id">;
 
 const blankConfig = (): Draft => ({
   enabled: false,
-  effective_from: new Date().toISOString().slice(0, 16),
+  effective_from: gstLocalDateTime(new Date()),
   legal_name: "",
   trading_name: "MAQDOOM’S Big Mall",
   address: "",
@@ -91,10 +92,11 @@ function Choice<T extends string>({
 
 export function GstConfigurationPage() {
   const { isOwner } = useSession();
-  const query = useGstConfiguration();
+  const query = useGstConfiguration(true);
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft>(blankConfig);
   const [rules, setRules] = useState<DraftRule[]>(blankRules);
+  const [effectiveDateEdited, setEffectiveDateEdited] = useState(false);
 
   useEffect(() => {
     if (!query.data?.configuration) return;
@@ -102,8 +104,11 @@ export function GstConfigurationPage() {
     void _id;
     setDraft({
       ...configuration,
-      effective_from: new Date(configuration.effective_from).toISOString().slice(0, 16),
+      effective_from: gstLocalDateTime(
+        new Date(Math.max(Date.now(), Date.parse(configuration.effective_from))),
+      ),
     });
+    setEffectiveDateEdited(false);
     setRules(
       query.data.rules.map((rule) => ({
         ...rule,
@@ -143,7 +148,10 @@ export function GstConfigurationPage() {
         p_request: crypto.randomUUID(),
         p_configuration: {
           ...draft,
-          effective_from: new Date(draft.effective_from).toISOString(),
+          effective_from:
+            !effectiveDateEdited && new Date(draft.effective_from).getTime() <= Date.now()
+              ? new Date().toISOString()
+              : new Date(draft.effective_from).toISOString(),
           legal_name: draft.legal_name.trim(),
           trading_name: draft.trading_name.trim(),
           address: draft.address.trim(),
@@ -157,6 +165,7 @@ export function GstConfigurationPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["gst-transaction-configuration"] });
+      await queryClient.invalidateQueries({ queryKey: ["gst-owner-configuration"] });
       toast.success("GST configuration version saved");
     },
     onError: (error) => toast.error(error.message),
@@ -183,7 +192,7 @@ export function GstConfigurationPage() {
     <div className="space-y-4">
       <Panel
         title="Activation and effective date"
-        description="No unverified rate is activated automatically. Saving creates a new immutable configuration version."
+        description="Saving creates a new immutable version. Changes apply from save time unless you choose a different effective date. Scheduled future versions retain their date."
         actions={
           <StatusBadge
             status={draft.enabled ? "active" : "draft"}
@@ -197,7 +206,10 @@ export function GstConfigurationPage() {
             <Input
               type="datetime-local"
               value={draft.effective_from}
-              onChange={(event) => setDraft({ ...draft, effective_from: event.target.value })}
+              onChange={(event) => {
+                setEffectiveDateEdited(true);
+                setDraft({ ...draft, effective_from: event.target.value });
+              }}
             />
           </label>
           <label className="flex items-center gap-2 self-end rounded-lg border p-3 text-sm">

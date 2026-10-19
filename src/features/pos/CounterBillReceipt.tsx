@@ -9,6 +9,8 @@ import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { printFabricLabel } from "@/features/inventory/fabric-label";
 type GstInvoice = {
   invoice_number: string;
+  invoice_display: "final_first" | "taxable_first";
+  tailoring_display: "separate" | "combined";
   supply_type: string;
   payment_method: string | null;
   business: {
@@ -33,6 +35,7 @@ type GstInvoice = {
   final_paise: string;
   lines: {
     id: string;
+    source_item_id: string;
     description: string;
     classification_code: string;
     quantity: string;
@@ -171,7 +174,16 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
             <div key={line.id} className="space-y-1 p-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
                 <strong>{line.name}</strong>
-                <strong>{reportMoney(line.amount_paise)}</strong>
+                <strong>
+                  {reportMoney(
+                    receipt.tax?.lines.some((taxLine) => taxLine.source_item_id === line.id)
+                      ? receipt.tax.lines
+                          .filter((taxLine) => taxLine.source_item_id === line.id)
+                          .reduce((sum, taxLine) => sum + BigInt(taxLine.final_paise), 0n)
+                          .toString()
+                      : line.amount_paise,
+                  )}
+                </strong>
               </div>
               {line.barcode && <p className="break-all font-mono text-xs">{line.barcode}</p>}
               {line.source && <p className="text-xs">Stock source: {line.source}</p>}
@@ -188,10 +200,22 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
               {line.kind === "tailoring" && (
                 <>
                   <p>
-                    {line.fabric_amount_paise != null && line.stitching_paise != null
+                    {receipt.tax?.tailoring_display !== "combined" &&
+                    line.fabric_amount_paise != null &&
+                    line.stitching_paise != null
                       ? `Fabric ${reportMoney(line.fabric_amount_paise)} + Stitching ${reportMoney(line.stitching_paise)} · Delivery: ${line.delivery_date}`
                       : `Customer tailoring · Entire job total · Delivery: ${line.delivery_date}`}
                   </p>
+                  {receipt.tax?.tailoring_display === "separate" &&
+                    receipt.tax.lines
+                      .filter((taxLine) => taxLine.source_item_id === line.id)
+                      .map((taxLine) => (
+                        <p key={taxLine.id} className="text-xs">
+                          {taxLine.description} · HSN/SAC {taxLine.classification_code} · Taxable{" "}
+                          {reportMoney(taxLine.taxable_paise)} + GST{" "}
+                          {reportMoney(taxLine.gst_paise)} = {reportMoney(taxLine.final_paise)}
+                        </p>
+                      ))}
                   <p className="break-all font-mono text-xs">{line.job_code}</p>
                   {line.design && <p>Design: {line.design}</p>}
                   {line.fabrics?.map((cut, i) => (
@@ -207,6 +231,9 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
         </div>
         {receipt.tax && (
           <div className="space-y-1 border-t border-dashed pt-2 text-xs">
+            {receipt.tax.invoice_display === "final_first" && (
+              <p className="text-base font-bold">Payable {reportMoney(receipt.tax.final_paise)}</p>
+            )}
             <div className="flex justify-between">
               <span>Taxable</span>
               <span>{reportMoney(receipt.tax.taxable_paise)}</span>
