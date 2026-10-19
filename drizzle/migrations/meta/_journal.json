@@ -449,6 +449,13 @@
       "when": 1792195440000,
       "tag": "0064_gst_centralization",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792368000000,
+      "tag": "0065_gst_operational_input_audit",
+      "breakpoints": true
     }
   ]
 }

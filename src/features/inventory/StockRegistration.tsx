@@ -52,11 +52,10 @@ type Work =
         quantity: number;
         rows: { colour: string | null; length_mm: number | null; cp_paise_per_m: number | null }[];
       }[];
-      purchase: {
+      purchase?: {
         supplier_gstin: string;
         invoice_number: string;
         invoice_date: string;
-        supply_type: "intra_state" | "inter_state";
         itc_status: "eligible" | "ineligible" | "reversed" | "pending";
         actual_taxable_paise: number | null;
         actual_gst_paise: number | null;
@@ -165,12 +164,10 @@ export function StockRegistration() {
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
+  const [supplierInvoiceAvailable, setSupplierInvoiceAvailable] = useState<"no" | "yes">("no");
   const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
-  const [purchaseSupply, setPurchaseSupply] = useState<"intra_state" | "inter_state">(
-    "intra_state",
-  );
   const [itcStatus, setItcStatus] = useState<"eligible" | "ineligible" | "reversed" | "pending">(
     "pending",
   );
@@ -221,6 +218,11 @@ export function StockRegistration() {
   );
   const purchaseRule = defaultGstRule(gst.data, "purchase");
   const gstEnabled = Boolean(gst.data?.configuration?.enabled && purchaseRule);
+  const supplierStateCode = supplierGstin.trim().slice(0, 2);
+  const purchaseSupply =
+    /^\d{2}$/.test(supplierStateCode) && supplierStateCode !== gst.data?.configuration?.state_code
+      ? "inter_state"
+      : "intra_state";
   const purchaseTotals = (() => {
     try {
       let base = 0n;
@@ -438,69 +440,96 @@ export function StockRegistration() {
           </Panel>
           {gstEnabled && (
             <Panel
-              title="Supplier invoice & purchase GST"
-              description={`CP remains the base cost excluding GST. The active purchase rule is ${formatGstRate(purchaseRule!.rate_bps)} (${purchaseRule!.classification_code}).`}
+              title="Supplier invoice available?"
+              description="CP remains the base cost excluding GST. Record supplier-invoice values only when you have the invoice."
             >
-              <fieldset disabled={frozen} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Input
-                  aria-label="Supplier GSTIN"
-                  placeholder="Supplier GSTIN (optional)"
-                  value={supplierGstin}
-                  onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                />
-                <Input
-                  aria-label="Supplier invoice number"
-                  placeholder="Supplier invoice number"
-                  value={supplierInvoice}
-                  onChange={(e) => setSupplierInvoice(e.target.value)}
-                />
-                <Input
-                  aria-label="Supplier invoice date"
-                  type="date"
-                  value={supplierInvoiceDate}
-                  onChange={(e) => setSupplierInvoiceDate(e.target.value)}
-                />
-                <select
-                  aria-label="Purchase supply type"
-                  className="h-11 rounded border bg-background p-2"
-                  value={purchaseSupply}
-                  onChange={(e) => setPurchaseSupply(e.target.value as typeof purchaseSupply)}
+              <fieldset disabled={frozen} className="space-y-3">
+                <div
+                  className="flex flex-wrap gap-2"
+                  role="radiogroup"
+                  aria-label="Supplier invoice available"
                 >
-                  <option value="intra_state">Intra-state · CGST + SGST</option>
-                  <option value="inter_state">Inter-state · IGST</option>
-                </select>
-                <select
-                  aria-label="Input tax credit status"
-                  className="h-11 rounded border bg-background p-2"
-                  value={itcStatus}
-                  onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
-                >
-                  <option value="pending">ITC pending review</option>
-                  <option value="eligible">ITC eligible</option>
-                  <option value="ineligible">ITC ineligible</option>
-                  <option value="reversed">ITC reversed</option>
-                </select>
-                <Input
-                  aria-label="Actual taxable amount"
-                  inputMode="decimal"
-                  placeholder="Invoice taxable ₹ (optional)"
-                  value={actualTaxable}
-                  onChange={(e) => setActualTaxable(e.target.value)}
-                />
-                <Input
-                  aria-label="Actual GST amount"
-                  inputMode="decimal"
-                  placeholder="Invoice GST ₹ (optional)"
-                  value={actualGst}
-                  onChange={(e) => setActualGst(e.target.value)}
-                />
-                <Input
-                  aria-label="Actual supplier total"
-                  inputMode="decimal"
-                  placeholder="Supplier total ₹ (optional)"
-                  value={actualSupplier}
-                  onChange={(e) => setActualSupplier(e.target.value)}
-                />
+                  <Button
+                    type="button"
+                    variant={supplierInvoiceAvailable === "no" ? "default" : "outline"}
+                    onClick={() => setSupplierInvoiceAvailable("no")}
+                  >
+                    No
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={supplierInvoiceAvailable === "yes" ? "default" : "outline"}
+                    onClick={() => setSupplierInvoiceAvailable("yes")}
+                  >
+                    Yes
+                  </Button>
+                </div>
+                {supplierInvoiceAvailable === "no" ? (
+                  <p className="text-sm text-muted-foreground">
+                    Stock can be received without a supplier invoice. No purchase GST or ITC record
+                    will be created.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      The active purchase rule is {formatGstRate(purchaseRule!.rate_bps)} (
+                      {purchaseRule!.classification_code}). Supplier values are optional and
+                      reconcile the calculated estimate; they do not claim ITC automatically.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Input
+                        aria-label="Supplier GSTIN"
+                        placeholder="Supplier GSTIN (optional)"
+                        value={supplierGstin}
+                        onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                      />
+                      <Input
+                        aria-label="Supplier invoice number"
+                        placeholder="Supplier invoice number"
+                        value={supplierInvoice}
+                        onChange={(e) => setSupplierInvoice(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Supplier invoice date"
+                        type="date"
+                        value={supplierInvoiceDate}
+                        onChange={(e) => setSupplierInvoiceDate(e.target.value)}
+                      />
+                      <select
+                        aria-label="Input tax credit status"
+                        className="h-11 rounded border bg-background p-2"
+                        value={itcStatus}
+                        onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
+                      >
+                        <option value="pending">ITC pending review</option>
+                        <option value="eligible">ITC eligible</option>
+                        <option value="ineligible">ITC ineligible</option>
+                        <option value="reversed">ITC reversed</option>
+                      </select>
+                      <Input
+                        aria-label="Actual taxable amount"
+                        inputMode="decimal"
+                        placeholder="Invoice taxable ₹ (optional)"
+                        value={actualTaxable}
+                        onChange={(e) => setActualTaxable(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Actual GST amount"
+                        inputMode="decimal"
+                        placeholder="Invoice GST ₹ (optional)"
+                        value={actualGst}
+                        onChange={(e) => setActualGst(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Actual supplier total"
+                        inputMode="decimal"
+                        placeholder="Supplier total ₹ (optional)"
+                        value={actualSupplier}
+                        onChange={(e) => setActualSupplier(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
               </fieldset>
             </Panel>
           )}
@@ -748,6 +777,7 @@ export function StockRegistration() {
                             </div>
                           ))}
                           {gstEnabled &&
+                            supplierInvoiceAvailable === "yes" &&
                             (() => {
                               try {
                                 const detail = thaanDetail(r, n);
@@ -831,7 +861,7 @@ export function StockRegistration() {
               <p>Total Thaans: {total}</p>
               <p>Fabric Types: {rows.length}</p>
               <p>Estimated Barcodes: {total}</p>
-              {gstEnabled && purchaseTotals && (
+              {gstEnabled && supplierInvoiceAvailable === "yes" && purchaseTotals && (
                 <p>
                   Base {reportMoney(String(purchaseTotals.base))} · GST{" "}
                   {reportMoney(String(purchaseTotals.gst))} · Supplier total{" "}
@@ -896,20 +926,25 @@ export function StockRegistration() {
                             : null,
                         })),
                       })),
-                      purchase: {
-                        supplier_gstin: supplierGstin.trim(),
-                        invoice_number: supplierInvoice.trim(),
-                        invoice_date: supplierInvoiceDate,
-                        supply_type: purchaseSupply,
-                        itc_status: itcStatus,
-                        actual_taxable_paise: actualTaxable.trim()
-                          ? fabricMoneyInput(actualTaxable)
-                          : null,
-                        actual_gst_paise: actualGst.trim() ? fabricMoneyInput(actualGst) : null,
-                        actual_supplier_paise: actualSupplier.trim()
-                          ? fabricMoneyInput(actualSupplier)
-                          : null,
-                      },
+                      ...(supplierInvoiceAvailable === "yes"
+                        ? {
+                            purchase: {
+                              supplier_gstin: supplierGstin.trim(),
+                              invoice_number: supplierInvoice.trim(),
+                              invoice_date: supplierInvoiceDate,
+                              itc_status: itcStatus,
+                              actual_taxable_paise: actualTaxable.trim()
+                                ? fabricMoneyInput(actualTaxable)
+                                : null,
+                              actual_gst_paise: actualGst.trim()
+                                ? fabricMoneyInput(actualGst)
+                                : null,
+                              actual_supplier_paise: actualSupplier.trim()
+                                ? fabricMoneyInput(actualSupplier)
+                                : null,
+                            },
+                          }
+                        : {}),
                     });
                   } catch (error) {
                     toast.error(

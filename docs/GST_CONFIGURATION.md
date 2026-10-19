@@ -10,11 +10,11 @@ Choose whether selling prices include GST or have GST added, how the invoice pre
 
 ## Stock receiving
 
-CP remains the base purchase cost per metre excluding GST. When GST is active, Stock Entry shows base value, GST and supplier amount for each complete Thaan row and the batch total. Supplier GSTIN, invoice number/date, supply type, ITC status and optional actual invoice totals are recorded for reconciliation. Transfers and production continue to carry base CP; tax is not added again during an internal movement.
+CP remains the base purchase cost per metre excluding GST. When GST is active, Stock Entry first asks **Supplier invoice available?**. Selecting **No** receives stock without creating a GST purchase or ITC record. Selecting **Yes** reveals the supplier GSTIN, invoice number/date, ITC status and optional actual invoice totals for reconciliation. The supplier GSTIN determines intra-state versus inter-state treatment; staff do not choose it manually. Missing actual values remain estimates from the Owner-approved rule and are never treated as a verified supplier invoice or an automatic ITC claim. Transfers and production continue to carry base CP; tax is not added again during an internal movement.
 
 ## Counter billing
 
-The Counter selects intra-state or inter-state supply and may record the customer GSTIN/state code and payment method. The server recalculates every line using the active effective-dated rules inside the same sale transaction. It stores an immutable business, customer, line and tax snapshot, updates the payable total, and only then records full or advance payment. Retrying the same request stays idempotent.
+Ordinary Counter bills use the registered business state automatically, so staff do not select intra-state/inter-state treatment or repeatedly enter state codes. When a GST business invoice is required, the user opens **Add GST business invoice details** and enters the customer's GSTIN. The system derives the supply treatment from that GSTIN's state code and the effective business registration state. Payment method remains transaction-specific. The server recalculates every line using the active effective-dated rules inside the same sale transaction, stores an immutable business, customer, line and tax snapshot, updates the payable total, and only then records full or advance payment. Retrying the same request stays idempotent.
 
 Customer reprints read the saved snapshot. The bill has dedicated **58 mm** and **80 mm** print actions and shows taxable value plus CGST/SGST or IGST. The existing price-free tailor work order remains separate.
 
@@ -25,6 +25,7 @@ The GST page provides period totals, rate/HSN-SAC grouping, supplier reconciliat
 ## Boundaries
 
 - No unverified GST rate is a system default.
+- Migration `20261019000100_gst_operational_input_audit.sql` changes only server function definitions. It preserves historical snapshots and documents; apply it together with the matching application release.
 - The current repository has no public e-commerce checkout/payment transaction to tax. E-commerce listings and stock visibility remain unchanged; a future checkout must call the same tax service and persist a snapshot.
 - Previously completed bills do not gain a fabricated tax snapshot.
 - A physical printer test is required for each 58/80 mm printer and browser-driver combination.

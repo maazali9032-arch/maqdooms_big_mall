@@ -46,9 +46,7 @@ type BillRequest = {
   p_contact: string;
   p_advance_paise?: number;
   p_tax_context: {
-    supply_type: GstSupplyType;
     customer_gstin: string;
-    customer_state_code: string;
     payment_method: string;
   };
 };
@@ -98,9 +96,8 @@ function CounterContent({
     [contact, setContact] = useState(""),
     [paid, setPaid] = useState(true),
     [advance, setAdvance] = useState("");
-  const [supplyType, setSupplyType] = useState<GstSupplyType>("intra_state");
+  const [businessInvoice, setBusinessInvoice] = useState(false);
   const [customerGstin, setCustomerGstin] = useState("");
-  const [customerStateCode, setCustomerStateCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [form, setForm] = useState(blankGroup),
     [reserves, setReserves] = useState<ScanRecord | null>(null),
@@ -250,8 +247,8 @@ function CounterContent({
       setContact("");
       setPaid(true);
       setAdvance("");
+      setBusinessInvoice(false);
       setCustomerGstin("");
-      setCustomerStateCode("");
       void qc.invalidateQueries();
       toast.success("Bill saved; stock updated");
     },
@@ -325,8 +322,10 @@ function CounterContent({
       if (rows.some((r) => r.selected && !r.group))
         throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
+      if (businessInvoice && !/^\d{2}[A-Z0-9]{13}$/.test(customerGstin.trim().toUpperCase()))
+        throw new Error("Enter the customer's valid GSTIN for a GST business invoice");
       const payload = counterPayload(rows, groups);
-      const tax = gstPreview(rows, groups, gst.data, supplyType);
+      const tax = gstPreview(rows, groups, gst.data, derivedSupplyType);
       const billTotal = tax?.final ?? previewTotal(rows, groups);
       const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
       if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
@@ -344,9 +343,7 @@ function CounterContent({
         p_name: name,
         p_contact: contact,
         p_tax_context: {
-          supply_type: supplyType,
-          customer_gstin: customerGstin.trim().toUpperCase(),
-          customer_state_code: customerStateCode.trim(),
+          customer_gstin: businessInvoice ? customerGstin.trim().toUpperCase() : "",
           payment_method: paymentMethod,
         },
         ...(groups.length && advancePaise !== null && billTotal !== BigInt(advancePaise)
@@ -358,7 +355,13 @@ function CounterContent({
     }
   }
   const pendingTailoring = canTailor && rows.some((r) => r.selected && !r.group);
-  const taxPreview = gstPreview(rows, groups, gst.data, supplyType);
+  const businessStateCode = gst.data?.configuration?.state_code;
+  const customerStateCode = customerGstin.trim().slice(0, 2);
+  const derivedSupplyType: GstSupplyType =
+    businessInvoice && /^\d{2}$/.test(customerStateCode) && customerStateCode !== businessStateCode
+      ? "inter_state"
+      : "intra_state";
+  const taxPreview = gstPreview(rows, groups, gst.data, derivedSupplyType);
   const total = pendingTailoring
     ? previewTotal(rows, groups, form.stitching)
     : (taxPreview?.final ?? previewTotal(rows, groups));
@@ -663,44 +666,56 @@ function CounterContent({
                     />
                   </div>
                   {gst.data?.configuration?.enabled && (
-                    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <select
-                        aria-label="GST supply type"
-                        className="h-11 rounded border bg-background p-2"
-                        value={supplyType}
-                        onChange={(e) => setSupplyType(e.target.value as GstSupplyType)}
-                      >
-                        <option value="intra_state">Intra-state · CGST + SGST</option>
-                        <option value="inter_state">Inter-state · IGST</option>
-                      </select>
-                      <Input
-                        aria-label="Customer GSTIN"
-                        placeholder="Customer GSTIN (optional)"
-                        value={customerGstin}
-                        onChange={(e) => setCustomerGstin(e.target.value.toUpperCase())}
-                      />
-                      <Input
-                        aria-label="Customer state code"
-                        inputMode="numeric"
-                        maxLength={2}
-                        placeholder="State code (optional)"
-                        value={customerStateCode}
-                        onChange={(e) =>
-                          setCustomerStateCode(e.target.value.replace(/\D/g, "").slice(0, 2))
-                        }
-                      />
-                      <select
-                        aria-label="Payment method"
-                        className="h-11 rounded border bg-background p-2"
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                      >
-                        <option value="cash">Cash</option>
-                        <option value="card">Card</option>
-                        <option value="upi">UPI</option>
-                        <option value="bank_transfer">Bank transfer</option>
-                        <option value="mixed">Mixed</option>
-                      </select>
+                    <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">Payment and tax invoice</p>
+                          <p className="text-xs text-muted-foreground">
+                            Ordinary retail bills use the registered business state automatically.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBusinessInvoice((current) => !current);
+                            if (businessInvoice) setCustomerGstin("");
+                          }}
+                        >
+                          {businessInvoice
+                            ? "Use ordinary retail bill"
+                            : "Add GST business invoice details"}
+                        </Button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {businessInvoice && (
+                          <div>
+                            <Input
+                              aria-label="Customer GSTIN"
+                              placeholder="Customer GSTIN"
+                              value={customerGstin}
+                              onChange={(e) => setCustomerGstin(e.target.value.toUpperCase())}
+                            />
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Supply type is derived from this GSTIN and the registered business
+                              state.
+                            </p>
+                          </div>
+                        )}
+                        <select
+                          aria-label="Payment method"
+                          className="h-11 rounded border bg-background p-2"
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        >
+                          <option value="cash">Cash</option>
+                          <option value="card">Card</option>
+                          <option value="upi">UPI</option>
+                          <option value="bank_transfer">Bank transfer</option>
+                          <option value="mixed">Mixed</option>
+                        </select>
+                      </div>
                     </div>
                   )}
                   <SalespersonPicker
@@ -759,7 +774,7 @@ function CounterContent({
                   {gst.data?.configuration?.enabled && taxPreview && !pendingTailoring && (
                     <div className="grid gap-1 rounded-lg bg-muted/30 p-3 text-sm sm:grid-cols-2">
                       <span>Taxable {reportMoney(String(taxPreview.taxable))}</span>
-                      {supplyType === "intra_state" ? (
+                      {derivedSupplyType === "intra_state" ? (
                         <span>
                           CGST {reportMoney(String(taxPreview.cgst))} · SGST{" "}
                           {reportMoney(String(taxPreview.sgst))}

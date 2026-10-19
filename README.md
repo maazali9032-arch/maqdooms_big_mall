@@ -1672,7 +1672,7 @@ shipping integration
 
 real WhatsApp provider integration
 
-automated GST return filing (effective-dated GST configuration, tax invoices and operational reconciliation are documented in `docs/GST_CONFIGURATION.md`)
+automated GST return filing (effective-dated GST configuration, tax invoices and operational reconciliation are documented in `docs/GST_CONFIGURATION.md`; the operational-input audit is in `docs/GST_OPERATIONAL_INPUT_AUDIT.md`)
 
 multi-branch implementation
 
