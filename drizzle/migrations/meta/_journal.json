@@ -456,6 +456,13 @@
       "when": 1792368000000,
       "tag": "0065_gst_operational_input_audit",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1792368060000,
+      "tag": "0066_short_document_scan_codes",
+      "breakpoints": true
     }
   ]
 }

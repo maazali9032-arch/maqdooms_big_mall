@@ -1,5 +1,7 @@
 # Maqdoom's Fabric Manager
 
+Compact bill, production and tailoring scan identities are documented in [Short document scan codes](docs/SHORT_DOCUMENT_SCAN_CODES.md). Original invoice references and historical barcodes are preserved.
+
 Build Maqdoom's Big Mall — ERP & Operations Platform
 
 Build a professional, production-oriented ERP and retail operations management platform for Maqdoom's Big Mall.

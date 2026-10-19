@@ -1,5 +1,7 @@
 # Maqdoom's Big Mall ERP — Complete System and Operations Guide
 
+> **Prepared revision — 19 October 2026:** New bills, production documents and customer tailoring jobs support separate 15-character scan codes. Invoice references and historical barcodes remain unchanged. See `docs/SHORT_DOCUMENT_SCAN_CODES.md` for the migration prerequisite and verification status.
+
 > **Current workflow update — 17 October 2026:** POS terminal administration,
 > multi-floor single-invoice billing, advance/balance collection, the price-free
 > tailor work order and Workshop receipt of customer-finished garments are now

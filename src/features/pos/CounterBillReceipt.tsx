@@ -46,6 +46,7 @@ type GstInvoice = {
 export type CounterReceipt = {
   id: string;
   code: string;
+  scan_code?: string | null;
   created_at: string;
   total_paise: string;
   paid_amount_paise?: string;
@@ -150,8 +151,11 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
           </>
         )}
         <p className="break-all font-mono text-xs">{receipt.code}</p>
-        <div className="screen-only">
-          <BarcodeGraphic code={receipt.code} />
+        <div>
+          <BarcodeGraphic code={receipt.scan_code ?? receipt.code} />
+          {receipt.scan_code && (
+            <p className="text-center font-mono text-xs">{receipt.scan_code}</p>
+          )}
         </div>
         <p className="text-sm">
           {new Date(receipt.created_at).toLocaleString("en-IN")} · {receipt.source}
@@ -268,6 +272,8 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
                   <section key={job.job_code} className="rounded border p-3 text-sm">
                     <strong>{job.garment}</strong>
                     <p className="font-mono text-xs">{job.job_code}</p>
+                    <BarcodeGraphic code={job.scan_code ?? job.job_code} />
+                    {job.scan_code && <p className="font-mono text-xs">{job.scan_code}</p>}
                     <p>
                       Delivery: {job.delivery_date} · {job.factory} → {job.tailor}
                     </p>
@@ -303,6 +309,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
 
 type TailorOrder = {
   job_code: string;
+  scan_code?: string | null;
   garment: string;
   delivery_date: string;
   design: string | null;

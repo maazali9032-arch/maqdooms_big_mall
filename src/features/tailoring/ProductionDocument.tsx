@@ -7,6 +7,7 @@ import { fabricBarcodeBars, printFabricLabel } from "@/features/inventory/fabric
 export type ProductionRecord = {
   id: string;
   code: string;
+  scan_code?: string | null;
   product: string;
   design: string;
   size: string | null;
@@ -76,7 +77,8 @@ export function ProductionDocument({ code }: { code: string }) {
     <div className="space-y-2 rounded border p-3">
       <div ref={print}>
         <h3 className="font-semibold">Production ID · {job.code}</h3>
-        <BarcodeGraphic code={job.code} />
+        <BarcodeGraphic code={job.scan_code ?? job.code} />
+        {job.scan_code && <p className="text-center font-mono text-xs">{job.scan_code}</p>}
         <p>
           {job.product} · {job.design} · Size {job.size ?? "Not recorded"} · {job.quantity} pieces
         </p>
