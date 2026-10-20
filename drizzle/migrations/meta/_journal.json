@@ -491,6 +491,13 @@
       "when": 1792454520000,
       "tag": "0070_gst_option_consistency",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792454580000,
+      "tag": "0071_customer_finished_receiver_access",
+      "breakpoints": true
     }
   ]
 }

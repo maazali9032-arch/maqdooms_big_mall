@@ -12,6 +12,8 @@ Detection itself is read-only. The original receive, pricing, inventory and barc
 
 Prepared migration: `20261020000200_unified_finished_receipt_lookup.sql`, with identical Drizzle mirror `0069_unified_finished_receipt_lookup.sql`. It depends on the short scan-code columns in migration 0066. Deploy the function before the application change. No production migration or deployment was performed during this task.
 
+**20 October live update:** 0069 is now applied live with its prerequisites. Follow-up migration `20261020000400_customer_finished_receiver_access.sql` / Drizzle `0071_customer_finished_receiver_access.sql` is also applied. Stock Entry already has `production.receive`; the receive RPC accepted it but its final finished-item result reader did not, rolling back the receipt with a role error. 0071 aligns that reader with the existing receiving permission. It does not open the full tailoring workspace or alter RLS, table grants, role defaults or billing access. Live rollback dry-run/post-commit stock-only lookup checks and historical checksums passed. No customer garment receipt was posted by testing. The default-role receive/barcode/reprint flow, exact retries and revoked/denied access are exercised by `scripts/customer-finished-receiver-cases.mjs` in the disposable full-chain harness.
+
 ## Verification
 
 The disposable PGlite test chain checks customer bill/job and production detection, original/short/UUID lookups, source details, no stock writes during detection, receiving-worker authorization, denied roles and bills without stitching. TypeScript, targeted lint and the application build cover the component integration. Physical scanner acceptance remains a rollout check.

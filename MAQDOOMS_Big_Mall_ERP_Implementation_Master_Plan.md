@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 20 October 2026, including Section 72:** Migrations 0065–0070 are now applied live after explicit user authorization, successful rollback dry run and post-commit verification. The hosted POS serves matching frontend code markers from the current implementation. Section 72 supersedes prior pending-migration statements. No live customer test bill was posted; authenticated checkout and physical printer/scanner acceptance remain separate milestones. See the matching dated history entry.
+> **Current approved implementation status — 20 October 2026, including Section 74:** Migrations 0065–0071 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -2022,3 +2022,11 @@ Customer receipts omit internal floor/POS and tailoring identity details while r
 Stitching payment state derives exclusively from the entered amount: zero/blank, partial or full total. Keep the payment-method selector; remove the independent paid/unpaid selector. Validate against the GST-inclusive total and preserve retry semantics. Finished-product transfer notes are optional at both UI and existing backend; unrelated mandatory correction reasons remain intact. No migration is needed for these changes.
 
 Extra fabric remains scan job/bill → scan Thaan → enter metres → confirm. Preselect a single job, explicitly select among multiple garments and retain authorized open-job/stock checks. Record the issue against the same job and preserve the original customer invoice/balance. Exact retries must not duplicate deductions; tailor reprints include additional issues. Do not silently introduce extra charges. Verified with disposable transaction tests and synthetic/visually inspected receipt previews; physical printer acceptance remains pending. See History Section 72 and `docs/COUNTER_RECEIPTS.md`.
+
+Release: `99cd532` was pushed to main; the hosted POS payment hint and revised receipt content markers were verified over HTTP. No new migration is needed for this presentation revision. Authenticated/physical printer acceptance remains separate.
+
+# 74. RECEIVER RESULT AUTHORIZATION — 20 OCTOBER 2026
+
+Stock Entry already has `production.receive` by default. Customer-garment receipt and its result/reprint reader must both honor this permission; the final lookup must not require an unrelated role name. Migration `20261020000400_customer_finished_receiver_access.sql` / Drizzle `0071_customer_finished_receiver_access.sql` revises only `customer_tailoring_finished_item` authorization, with no wider billing/table access, role-default or RLS change.
+
+0071 is applied live after rollback dry-run, historical-data checksums and post-commit stock-only lookup verification. Disposable tests cover barcode generation/reprint, exact/repeated retry, changed-payload rejection, permission revocation, unrelated/anonymous denial, job-ready status and no saleable-store stock movement. Existing receive validation, locks, audits and barcode uniqueness remain authoritative. Migration does not fabricate/complete the customer's failed receipt; the user retries their real operation. See History Section 73.

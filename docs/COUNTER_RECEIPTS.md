@@ -13,3 +13,5 @@ Extra fabric: scan the tailor job code (or customer bill), scan a physical Thaan
 Finished-product transfer notes are optional in the UI, matching the existing live `transfer_finished_products` fallback. The movement still records its system reason, operator, source/destination, time and pieces. Mandatory reasons for corrections or other unrelated workflows are unchanged. No database migration is required by this revision.
 
 Verification: TypeScript, scoped ESLint, production build, `scripts/receipt-presentation-test.mjs` (optional absolute Playwright module path for visual previews), full disposable PostgreSQL migration replay and GST/extra-fabric regressions. No test customer bill was posted to production.
+
+Release: pushed in `99cd532`; hosted POS/receipt code markers verified. Physical printer acceptance remains pending.

@@ -1,3 +1,4 @@
+import { customerFinishedReceiverCases } from "./customer-finished-receiver-cases.mjs";
 /** Disposable PostgreSQL only. No .env, network database or production settings. */
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
@@ -102,6 +103,7 @@ try {
   const receiptFixtures = await gstPaidRetailCases(db);
   await unifiedFinishedReceiptCases(db, receiptFixtures);
   await gstOptionConsistencyCases(db, receiptFixtures);
+  await customerFinishedReceiverCases(db, receiptFixtures);
 } finally {
   await db.close();
 }

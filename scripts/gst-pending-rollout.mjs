@@ -1,4 +1,4 @@
-/** Explicit six-migration release. Default: exercise actual schema and roll back. */
+/** Forward release with hash checks. Default: exercise actual schema and roll back. */
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -16,6 +16,10 @@ const files = [
     "0069_unified_finished_receipt_lookup.sql",
   ],
   ["20261020000300_gst_option_consistency.sql", "0070_gst_option_consistency.sql"],
+  [
+    "20261020000400_customer_finished_receiver_access.sql",
+    "0071_customer_finished_receiver_access.sql",
+  ],
 ];
 const migrations = [];
 for (const [file, mirror] of files) {
@@ -54,6 +58,7 @@ async function fingerprints(tx) {
     "gst_purchase_documents",
     "gst_purchase_lines",
     "inventory_movements",
+    "customer_tailoring_finished_items",
   ]) {
     // Only new scan aliases/default cut ordinals are excluded; every historical value is compared.
     const [row] = await tx.unsafe(
@@ -66,6 +71,7 @@ async function fingerprints(tx) {
 async function verify(tx) {
   const [checks] = await tx.unsafe(`select
  to_regprocedure('public.resolve_finished_receipt(text)') is not null as unified_receipt,
+ position('production.receive' in pg_get_functiondef('public.customer_tailoring_finished_item(text)'::regprocedure))>0 as receiver_result_access,
  to_regprocedure('public.owner_gst_configuration()') is not null as owner_reader,
  position('gst_stage_counter_bill_multi(' in pg_get_functiondef('public.complete_counter_bill_gst(uuid,jsonb,jsonb,boolean,bigint,uuid,text,text,jsonb)'::regprocedure))>0 as private_staging,
  position('configuration_id' in pg_get_functiondef('public.gst_snapshot_counter_bill(uuid,jsonb)'::regprocedure))>0 as preview_version_guard,
@@ -88,7 +94,12 @@ async function verify(tx) {
     Object.values(result).every(Boolean),
     "Read-only configuration/report verification failed",
   );
-  return { ...checks, ...result };
+  const [stock] =
+    await tx`select r.user_id from public.user_roles r where r.role_key='stock_entry' and public.has_perm(r.user_id,'production.receive') and not exists(select 1 from public.user_roles other where other.user_id=r.user_id and other.role_key in ('owner','counter','tailor','production')) order by r.user_id limit 1`;
+  assert(stock, "A stock-only receiver is required for permission verification");
+  await tx`select set_config('request.jwt.claim.sub',${stock.user_id},true)`;
+  await tx`select public.customer_tailoring_finished_item('__permission_probe_not_a_real_barcode__')`;
+  return { ...checks, ...result, stock_receiver_lookup: true };
 }
 try {
   await sql.begin(async (tx) => {
@@ -109,7 +120,7 @@ try {
       assert.equal(native.length, 0, `Unreconciled migration record: ${m.file}`);
       await tx.unsafe(m.source.replace(/^BEGIN;\s*$/m, "").replace(/^COMMIT;\s*$/m, ""));
       await tx`insert into supabase_migrations.schema_migrations(version,name,statements) values(${m.version},${m.file.slice(15, -4)},${[m.source]})`;
-      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST pending fixes 0065-0070", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
+      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST and receiver fixes 0065-0071", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
       console.log(apply ? "Staged for atomic commit:" : "Dry-run staged:", m.file);
     }
     const checks = await verify(tx);
@@ -122,7 +133,7 @@ try {
     if (!apply) throw rollback;
   });
   console.log(
-    "COMMITTED: all six migrations and tracking records; no business transactions posted.",
+    "COMMITTED: pending migrations and tracking records; no business transactions posted.",
   );
   await sql.begin("read only", async (tx) => {
     console.log(JSON.stringify({ post_commit: await verify(tx) }));
