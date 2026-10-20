@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductionReceipt } from "./ProductionReceipt";
 import { FinishedProductInventory } from "./FinishedProductInventory";
 import { CustomerTailoringReceipt } from "./CustomerTailoringReceipt";
 import { Panel } from "@/shared/components/page";
-import { Button } from "@/components/ui/button";
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
+import type { FinishedReceiptMatch } from "./finished-receipt-lookup";
 export function FinishedProductWorkspace() {
   const { isOwner, roles, can } = useSession();
   const customerReceiptAllowed =
@@ -19,9 +20,34 @@ export function FinishedProductWorkspace() {
     isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
   const [loaded, setLoaded] = useState(false),
     [expanded, setExpanded] = useState(false),
-    [receiptType, setReceiptType] = useState<"customer" | "production">(
-      customerReceiptAllowed ? "customer" : "production",
-    );
+    [code, setCode] = useState("");
+  const [childBusy, setChildBusy] = useState(false);
+  const [match, setMatch] = useState<FinishedReceiptMatch | null>(null);
+  const [matchVersion, setMatchVersion] = useState(0);
+  const scan = useMutation({
+    mutationFn: async (value: string) => {
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: Error | null }>
+      ).call(supabase, "resolve_finished_receipt", { p_code: value });
+      if (error) throw error;
+      const result = data as FinishedReceiptMatch | null;
+      if (!result) throw new Error("No matching customer stitching or shop production document");
+      if (
+        (result.kind === "customer" && !customerReceiptAllowed) ||
+        (result.kind === "production" && !productionReceiptAllowed)
+      )
+        throw new Error("You do not have permission to receive this document type");
+      return result;
+    },
+    onSuccess: (result) => {
+      setMatch(result);
+      setMatchVersion((version) => version + 1);
+      setCode("");
+    },
+  });
   const existing = useQuery({
     queryKey: ["finished-product-inventory", "exists"],
     enabled: transferAllowed,
@@ -35,33 +61,62 @@ export function FinishedProductWorkspace() {
     <div className="space-y-4">
       <Panel
         title="Receive finished garments"
-        description="Choose whether the returned garment belongs to a customer stitching job or to shop production."
-        actions={
-          customerReceiptAllowed && productionReceiptAllowed ? (
-            <div className="flex rounded-lg border bg-muted/40 p-1">
-              <Button
-                size="sm"
-                variant={receiptType === "customer" ? "default" : "ghost"}
-                onClick={() => setReceiptType("customer")}
-              >
-                Customer stitching
-              </Button>
-              <Button
-                size="sm"
-                variant={receiptType === "production" ? "default" : "ghost"}
-                onClick={() => setReceiptType("production")}
-              >
-                Shop production
-              </Button>
-            </div>
-          ) : undefined
-        }
+        description="Scan a customer bill, tailoring job or Production ID. Its source is detected automatically."
       >
-        {customerReceiptAllowed && receiptType === "customer" ? (
-          <CustomerTailoringReceipt embedded />
-        ) : productionReceiptAllowed ? (
-          <ProductionReceipt embedded onLoaded={() => setLoaded(true)} />
-        ) : null}
+        {(customerReceiptAllowed || productionReceiptAllowed) && (
+          <BarcodeEntry
+            label="Finished garment receipt barcode"
+            placeholder="Scan bill, tailoring job or Production ID"
+            value={code}
+            onChange={setCode}
+            onScan={(value) => scan.mutate(value)}
+            disabled={scan.isPending || childBusy}
+          />
+        )}
+        {scan.isPending && (
+          <p role="status" className="mt-3 text-sm">
+            Identifying scanned document…
+          </p>
+        )}
+        {scan.error && (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {scan.error.message}
+          </p>
+        )}
+        {match && (
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm" role="status">
+              <strong>
+                {match.kind === "customer" ? "Customer stitching" : "Shop production"}
+              </strong>
+              <p className="break-all font-mono text-xs">{match.code}</p>
+              {match.kind === "production" && (
+                <p>
+                  {match.name} · {match.status}
+                </p>
+              )}
+            </div>
+            <fieldset disabled={scan.isPending}>
+              {match.kind === "customer" ? (
+                <CustomerTailoringReceipt
+                  key={`${match.id}:${matchVersion}`}
+                  embedded
+                  resolvedJobs={match.jobs}
+                  onBusyChange={setChildBusy}
+                />
+              ) : (
+                <ProductionReceipt
+                  key={`${match.id}:${matchVersion}`}
+                  embedded
+                  initialCode={match.id}
+                  hideScanner
+                  onLoaded={() => setLoaded(true)}
+                  onBusyChange={setChildBusy}
+                />
+              )}
+            </fieldset>
+          </div>
+        )}
       </Panel>
       {existing.error && (
         <p role="alert">

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSession } from "@/app/providers/session";
@@ -11,16 +11,9 @@ import { BarcodeSticker } from "./BarcodeSticker";
 import { printFabricLabel } from "./fabric-label";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { reportMoney } from "@/features/reports/report-value";
+import type { ReceiptJob } from "./finished-receipt-lookup";
 
-type Job = {
-  id: string;
-  code: string;
-  bill_code: string | null;
-  garment: string;
-  status: string;
-  customer: string | null;
-  design: string | null;
-};
+type Job = ReceiptJob;
 type FinishedItem = {
   id: string;
   job_id: string;
@@ -39,7 +32,15 @@ const rpc = supabase.rpc.bind(supabase) as unknown as (
   args: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: Error | null }>;
 
-export function CustomerTailoringReceipt({ embedded = false }: { embedded?: boolean }) {
+export function CustomerTailoringReceipt({
+  embedded = false,
+  resolvedJobs,
+  onBusyChange,
+}: {
+  embedded?: boolean;
+  resolvedJobs?: ReceiptJob[];
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const { isOwner, roles, can } = useSession();
   const allowed =
     isOwner ||
@@ -56,13 +57,14 @@ export function CustomerTailoringReceipt({ embedded = false }: { embedded?: bool
   const [item, setItem] = useState<FinishedItem | null>(null);
   const jobs = useQuery({
     queryKey: ["customer-tailoring", "workshop-receipt", lookup],
-    enabled: allowed && !!lookup,
+    enabled: allowed && !!lookup && !resolvedJobs,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("customer_tailoring_work", { p_code: lookup });
       if (error) throw error;
       return (data ?? []) as unknown as Job[];
     },
   });
+  const jobRows = resolvedJobs ?? jobs.data;
   const receive = useMutation({
     mutationFn: async () => {
       if (!jobId || !name.trim() || !size.trim() || !sp.trim())
@@ -84,44 +86,62 @@ export function CustomerTailoringReceipt({ embedded = false }: { embedded?: bool
     },
     onError: (error) => toast.error(error.message),
   });
+  useEffect(() => {
+    onBusyChange?.(receive.isPending);
+  }, [receive.isPending, onBusyChange]);
+  useEffect(() => {
+    if (resolvedJobs?.length === 1) {
+      setJobId(resolvedJobs[0]!.id);
+      setName(resolvedJobs[0]!.garment);
+    }
+  }, [resolvedJobs]);
   if (!allowed) return null;
-  const selected = jobs.data?.find((job) => job.id === jobId);
+  const selected = jobRows?.find((job) => job.id === jobId);
   const content = (
     <div className="space-y-3">
-      <BarcodeEntry
-        value={code}
-        onChange={setCode}
-        label="Customer bill or tailoring ID"
-        placeholder="Scan bill or tailoring ID"
-        disabled={receive.isPending}
-        onScan={(value) => {
-          setLookup(value);
-          setJobId("");
-          setItem(null);
-        }}
-      />
+      {!resolvedJobs && (
+        <BarcodeEntry
+          value={code}
+          onChange={setCode}
+          label="Customer bill or tailoring ID"
+          placeholder="Scan bill or tailoring ID"
+          disabled={receive.isPending}
+          onScan={(value) => {
+            setLookup(value);
+            setJobId("");
+            setItem(null);
+          }}
+        />
+      )}
       {jobs.error ? <p role="alert">{jobs.error.message}</p> : null}
-      {jobs.data && !jobs.data.length ? <p>No matching customer tailoring job.</p> : null}
-      {!!jobs.data?.length && (
+      {jobRows && !jobRows.length ? <p>No matching customer tailoring job.</p> : null}
+      {!!jobRows?.length && (
         <select
           aria-label="Customer tailoring job to receive"
           className="w-full rounded-md border bg-background p-2"
           value={jobId}
           onChange={(event) => {
             const id = event.target.value;
-            const job = jobs.data?.find((entry) => entry.id === id);
+            const job = jobRows?.find((entry) => entry.id === id);
             setJobId(id);
             setName(job?.garment ?? "");
             setItem(null);
           }}
         >
           <option value="">Choose the stitched garment</option>
-          {jobs.data.map((job) => (
+          {jobRows.map((job) => (
             <option key={job.id} value={job.id}>
               {job.code} · {job.garment} · {job.customer || "Customer not recorded"}
             </option>
           ))}
         </select>
+      )}
+      {selected && (
+        <p className="text-sm text-muted-foreground">
+          {selected.code} · {selected.status}
+          {selected.factory ? ` · Factory: ${selected.factory}` : ""}
+          {selected.tailor ? ` · Tailor: ${selected.tailor}` : ""}
+        </p>
       )}
       {selected && (
         <div className="grid gap-3 sm:grid-cols-3">

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSession } from "@/app/providers/session";
@@ -34,9 +34,15 @@ type Piece = {
 export function ProductionReceipt({
   onLoaded,
   embedded = false,
+  initialCode,
+  hideScanner = false,
+  onBusyChange,
 }: {
   onLoaded?: () => void;
   embedded?: boolean;
+  initialCode?: string;
+  hideScanner?: boolean;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const { isOwner, can } = useSession();
   const receiveAllowed = isOwner || can("production.receive");
@@ -136,18 +142,31 @@ export function ProductionReceipt({
       toast.error(e.message);
     },
   });
-  if (!receiveAllowed && !priceAllowed) return null;
   const frozen = scan.isPending || savePrice.isPending || !!scanPending || !!pricePending;
+  const started = useRef(false);
+  const startScan = scan.mutate;
+  useEffect(() => {
+    if (initialCode && !started.current) {
+      started.current = true;
+      startScan({ p_request: crypto.randomUUID(), p_code: initialCode });
+    }
+  }, [initialCode, startScan]);
+  useEffect(() => {
+    onBusyChange?.(frozen);
+  }, [frozen, onBusyChange]);
+  if (!receiveAllowed && !priceAllowed) return null;
   const content = (
     <div className="space-y-4">
-      <BarcodeEntry
-        value={code}
-        onChange={setCode}
-        label="Workshop Production ID"
-        placeholder="Scan or type Production ID"
-        disabled={frozen}
-        onScan={(value) => scan.mutate({ p_request: crypto.randomUUID(), p_code: value })}
-      />
+      {!hideScanner && (
+        <BarcodeEntry
+          value={code}
+          onChange={setCode}
+          label="Workshop Production ID"
+          placeholder="Scan or type Production ID"
+          disabled={frozen}
+          onScan={(value) => scan.mutate({ p_request: crypto.randomUUID(), p_code: value })}
+        />
+      )}
       {scanPending && !scan.isPending && (
         <div role="alert" className="space-y-2 text-sm">
           <p>The receipt result is uncertain. Retry the same scan before starting another batch.</p>

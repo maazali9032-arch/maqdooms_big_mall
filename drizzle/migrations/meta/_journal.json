@@ -477,6 +477,13 @@
       "when": 1792454400000,
       "tag": "0068_gst_paid_retail_bill",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792454460000,
+      "tag": "0069_unified_finished_receipt_lookup",
+      "breakpoints": true
     }
   ]
 }
