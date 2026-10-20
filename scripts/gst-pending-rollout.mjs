@@ -20,6 +20,7 @@ const files = [
     "20261020000400_customer_finished_receiver_access.sql",
     "0071_customer_finished_receiver_access.sql",
   ],
+  ["20261020000500_production_sp_before_barcode.sql", "0072_production_sp_before_barcode.sql"],
 ];
 const migrations = [];
 for (const [file, mirror] of files) {
@@ -59,6 +60,11 @@ async function fingerprints(tx) {
     "gst_purchase_lines",
     "inventory_movements",
     "customer_tailoring_finished_items",
+    "finished_products",
+    "finished_product_prices",
+    "finished_product_receipts",
+    "finished_product_price_reviews",
+    "barcodes",
   ]) {
     // Only new scan aliases/default cut ordinals are excluded; every historical value is compared.
     const [row] = await tx.unsafe(
@@ -71,6 +77,10 @@ async function fingerprints(tx) {
 async function verify(tx) {
   const [checks] = await tx.unsafe(`select
  to_regprocedure('public.resolve_finished_receipt(text)') is not null as unified_receipt,
+ to_regprocedure('public.receive_production_barcode_priced(uuid,text,jsonb)') is not null as priced_production_receipt,
+ position('Positive SP is required' in pg_get_functiondef('public.complete_production_batch(uuid,uuid,text,text)'::regprocedure))>0 as old_unpriced_receipt_blocked,
+ position('validate_production_piece_prices' in pg_get_functiondef('public.receive_finished_products(uuid,uuid,jsonb,text)'::regprocedure))>0 as owner_allocation_requires_sp,
+ not has_function_privilege('authenticated','public.complete_production_batch_priced(uuid,uuid,text,text,jsonb)','execute') as private_priced_staging,
  position('production.receive' in pg_get_functiondef('public.customer_tailoring_finished_item(text)'::regprocedure))>0 as receiver_result_access,
  to_regprocedure('public.owner_gst_configuration()') is not null as owner_reader,
  position('gst_stage_counter_bill_multi(' in pg_get_functiondef('public.complete_counter_bill_gst(uuid,jsonb,jsonb,boolean,bigint,uuid,text,text,jsonb)'::regprocedure))>0 as private_staging,
@@ -120,7 +130,7 @@ try {
       assert.equal(native.length, 0, `Unreconciled migration record: ${m.file}`);
       await tx.unsafe(m.source.replace(/^BEGIN;\s*$/m, "").replace(/^COMMIT;\s*$/m, ""));
       await tx`insert into supabase_migrations.schema_migrations(version,name,statements) values(${m.version},${m.file.slice(15, -4)},${[m.source]})`;
-      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST and receiver fixes 0065-0071", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
+      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST and receipt fixes 0065-0072", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
       console.log(apply ? "Staged for atomic commit:" : "Dry-run staged:", m.file);
     }
     const checks = await verify(tx);

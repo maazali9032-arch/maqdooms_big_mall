@@ -2040,3 +2040,11 @@ The loaded panel remains mounted across floor changes, clears quantities when fa
 # 76. FINISHED-PIECE TRANSFER SELECTION — 20 OCTOBER 2026
 
 The barcode/piece cell is a padded native label for that row's Move checkbox, so staff can select/deselect several pieces by clicking their barcode areas. Preserve other selections, disabled/pending protections, keyboard access and the 200-piece cap. Highlight selected rows; History remains an independent action. This is a frontend-only interaction change with no migration. See History Section 75.
+
+# 77. PRICE-FIRST PRODUCTION RECEIPT — 20 OCTOBER 2026
+
+For new shop-production pieces, positive SP is required for each piece before generating its barcode. Scan only reads the order. Show product/design/size and initial SP for every planned piece; allow apply-all and individual overrides. Require all prices and both receiving/pricing permissions before whole-batch confirmation. Receive, complete status, costing, initial reviewed prices and barcode generation remain one atomic operation. Preserve unchanged request/price retries after uncertain results.
+
+Applied migration `20261020000500_production_sp_before_barcode.sql` / Drizzle `0072_production_sp_before_barcode.sql` introduces the priced scanner/private completion APIs and strict canonical per-piece validation. Old completion APIs cannot generate unpriced pieces; existing receipt retries/reopening remain. The legacy Owner allocation route also requires initial piece SP. Existing records/barcodes are not regenerated, backfilled or repriced. Customer-finished receipt already enforces the same positive-SP requirement.
+
+TypeScript, scoped lint, production build, disposable transactions and responsive synthetic browser tests passed. Live dry-run/post-commit checks and historical-value fingerprints passed; 0072 is applied. Contract and test commands are in `docs/PRODUCTION_PRICED_RECEIPT.md`; implementation details are in History Section 76. This supersedes earlier instructions saying a production scan receives stock before SP entry.

@@ -16,4 +16,6 @@ Prepared migration: `20261020000200_unified_finished_receipt_lookup.sql`, with i
 
 ## Verification
 
+**Latest production workflow, 20 October:** Migration 0072 is applied. The shop-production branch now reads the scanned order, requires positive initial SP for every piece and only then receives/generates barcodes on explicit confirmation. This supersedes the earlier scan-to-receive behavior. Customer-finished garments already require SP. Existing barcodes are preserved. See `docs/PRODUCTION_PRICED_RECEIPT.md`.
+
 The disposable PGlite test chain checks customer bill/job and production detection, original/short/UUID lookups, source details, no stock writes during detection, receiving-worker authorization, denied roles and bills without stitching. TypeScript, targeted lint and the application build cover the component integration. Physical scanner acceptance remains a rollout check.

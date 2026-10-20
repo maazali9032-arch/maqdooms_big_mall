@@ -338,9 +338,13 @@ export async function gstOptionConsistencyCases(db, fixture) {
       randomUUID(),
       job,
     ]);
-    await one("select complete_production_batch($1,$2,'completed','GST test')", [
+    await one("select receive_production_barcode_priced($1,$2,$3::jsonb)", [
       randomUUID(),
       job,
+      JSON.stringify([
+        { piece_number: 1, sp_paise: 10000 },
+        { piece_number: 2, sp_paise: 10000 },
+      ]),
     ]);
     const pieces = await one("select workshop_production_pieces($1)", [job]);
     await one("select set_workshop_product_sp($1,$2,$3::jsonb,$4)", [

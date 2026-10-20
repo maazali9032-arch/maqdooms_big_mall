@@ -16,6 +16,7 @@ import { reportMoney } from "@/features/reports/report-value";
 import type { Database } from "@/integrations/supabase/types";
 type Functions = Database["public"]["Functions"];
 type ScanRequest = { p_request: string; p_code: string };
+type PricedReceipt = ScanRequest & { p_prices: { piece_number: number; sp_paise: number }[] };
 type Piece = {
   id: string;
   job_id: string;
@@ -52,7 +53,7 @@ export function ProductionReceipt({
   const [reason, setReason] = useState("");
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [allPrice, setAllPrice] = useState("");
-  const [scanPending, setScanPending] = useState<ScanRequest | null>(null);
+  const [receiptPending, setReceiptPending] = useState<PricedReceipt | null>(null);
   const [pricePending, setPricePending] = useState<
     Functions["set_workshop_product_sp"]["Args"] | null
   >(null);
@@ -85,12 +86,7 @@ export function ProductionReceipt({
   };
   const scan = useMutation({
     mutationFn: async (request: ScanRequest) => {
-      if (receiveAllowed) {
-        setScanPending(request);
-        const { data, error } = await supabase.rpc("receive_production_barcode", request);
-        if (error) throw error;
-        return data as string;
-      }
+      // Identification is read-only. New pieces are received only after every SP is entered.
       const { data, error } = await supabase.rpc("production_job_document", {
         p_code: request.p_code,
       });
@@ -99,21 +95,58 @@ export function ProductionReceipt({
       return (data as unknown as { id: string }).id;
     },
     onSuccess: (id) => {
-      setScanPending(null);
       setScanned(id);
       setPrices({});
       setAllPrice("");
       setReason("");
       refresh();
       onLoaded?.();
-      if (receiveAllowed)
-        toast.success("Complete batch is in Workshop. Set SP and print its piece labels.");
     },
     onError: (e) => {
-      if (definiteDatabaseRejection(e)) setScanPending(null);
       toast.error(e.message);
     },
   });
+  const receivePriced = useMutation({
+    mutationFn: async (request: PricedReceipt) => {
+      setReceiptPending(request);
+      const { error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ error: Error | null }>
+      ).call(supabase, "receive_production_barcode_priced", request);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setReceiptPending(null);
+      setPrices({});
+      refresh();
+      onLoaded?.();
+      toast.success("Finished pieces received with saved SP and barcodes");
+    },
+    onError: (error) => {
+      if (definiteDatabaseRejection(error)) setReceiptPending(null);
+      toast.error(error.message);
+    },
+  });
+  function confirmPricedReceipt() {
+    try {
+      if (receiptPending) {
+        receivePriced.mutate(receiptPending);
+        return;
+      }
+      if (!receiveAllowed || !priceAllowed || !job.data)
+        throw new Error("Receiving and finished-product pricing permissions required");
+      const p_prices = Array.from({ length: job.data.quantity }, (_, i) => {
+        const sp = receiptCost(prices[`piece-${i + 1}`] ?? "");
+        if (sp <= 0) throw new Error(`Enter a positive SP for piece ${i + 1}`);
+        return { piece_number: i + 1, sp_paise: sp };
+      });
+      receivePriced.mutate({ p_request: crypto.randomUUID(), p_code: job.data.code, p_prices });
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  }
   const savePrice = useMutation({
     mutationFn: async () => {
       const edits = (pieces.data ?? []).filter(
@@ -142,7 +175,25 @@ export function ProductionReceipt({
       toast.error(e.message);
     },
   });
-  const frozen = scan.isPending || savePrice.isPending || !!scanPending || !!pricePending;
+  const frozen =
+    scan.isPending ||
+    savePrice.isPending ||
+    receivePriced.isPending ||
+    !!receiptPending ||
+    !!pricePending;
+  const initialPricesReady = (() => {
+    try {
+      return (
+        !!job.data &&
+        Array.from(
+          { length: job.data.quantity },
+          (_, i) => receiptCost(prices[`piece-${i + 1}`] ?? "") > 0,
+        ).every(Boolean)
+      );
+    } catch {
+      return false;
+    }
+  })();
   const started = useRef(false);
   const startScan = scan.mutate;
   useEffect(() => {
@@ -166,12 +217,6 @@ export function ProductionReceipt({
           disabled={frozen}
           onScan={(value) => scan.mutate({ p_request: crypto.randomUUID(), p_code: value })}
         />
-      )}
-      {scanPending && !scan.isPending && (
-        <div role="alert" className="space-y-2 text-sm">
-          <p>The receipt result is uncertain. Retry the same scan before starting another batch.</p>
-          <Button onClick={() => scan.mutate(scanPending)}>Retry same production scan</Button>
-        </div>
       )}
       {job.error && (
         <p role="alert">
@@ -203,6 +248,98 @@ export function ProductionReceipt({
             </p>
           )}
           {pieces.isPending && <p>Loading pieces…</p>}
+          {!job.data.received_at && pieces.data?.length === 0 && (
+            <fieldset disabled={frozen} className="space-y-3 rounded-xl border p-3">
+              <h3 className="font-semibold">Set SP before generating finished-item barcodes</h3>
+              <p className="text-sm">
+                Confirm every piece has arrived. Enter a positive SP for each piece, then receive
+                the batch and generate its barcodes together.
+              </p>
+              {!priceAllowed && (
+                <p role="alert">
+                  Finished-product pricing permission is required before these pieces can be
+                  received.
+                </p>
+              )}
+              {priceAllowed && (
+                <>
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="text-sm">
+                      SP for all pieces ₹
+                      <Input
+                        aria-label="Initial SP for all pieces"
+                        inputMode="decimal"
+                        value={allPrice}
+                        onChange={(e) => setAllPrice(e.target.value)}
+                      />
+                    </label>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        try {
+                          if (receiptCost(allPrice) <= 0) throw new Error("Enter a positive SP");
+                          setPrices(
+                            Object.fromEntries(
+                              Array.from({ length: job.data.quantity }, (_, i) => [
+                                `piece-${i + 1}`,
+                                allPrice,
+                              ]),
+                            ),
+                          );
+                        } catch (error) {
+                          toast.error((error as Error).message);
+                        }
+                      }}
+                    >
+                      Apply SP to all pieces
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {Array.from({ length: job.data.quantity }, (_, i) => {
+                      const spec = job.data.pieces?.find((p) => p.piece_number === i + 1);
+                      return (
+                        <label key={i} className="space-y-1 rounded-lg border p-3 text-sm">
+                          <strong>
+                            Piece {i + 1} · {spec?.product ?? job.data.product}
+                          </strong>
+                          <p>
+                            {spec?.design ?? job.data.design} · Size{" "}
+                            {spec?.size ?? job.data.size ?? "Not recorded"}
+                          </p>
+                          SP ₹
+                          <Input
+                            aria-label={`Initial SP for piece ${i + 1}`}
+                            inputMode="decimal"
+                            value={prices[`piece-${i + 1}`] ?? ""}
+                            onChange={(e) =>
+                              setPrices({ ...prices, [`piece-${i + 1}`]: e.target.value })
+                            }
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              <Button
+                disabled={
+                  !receiveAllowed || !priceAllowed || receivePriced.isPending || !initialPricesReady
+                }
+                onClick={confirmPricedReceipt}
+              >
+                Receive and generate priced barcodes
+              </Button>
+            </fieldset>
+          )}
+          {receiptPending && !receivePriced.isPending && (
+            <div role="alert" className="space-y-2">
+              <p>
+                The receipt result is uncertain. Retry the same prices and request before changing
+                this order.
+              </p>
+              <Button onClick={confirmPricedReceipt}>Retry same priced receipt</Button>
+            </div>
+          )}
           {!!pieces.data?.length && (
             <>
               {priceAllowed && (
@@ -281,10 +418,7 @@ export function ProductionReceipt({
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
-                  <Button
-                    disabled={savePrice.isPending || !!scanPending}
-                    onClick={() => savePrice.mutate()}
-                  >
+                  <Button disabled={savePrice.isPending} onClick={() => savePrice.mutate()}>
                     {pricePending ? "Retry same SP request" : "Save Workshop SP"}
                   </Button>
                 </div>
@@ -325,7 +459,7 @@ export function ProductionReceipt({
       title="Scan Production Barcode"
       description={
         receiveAllowed
-          ? "Scan only when every piece has arrived. This marks the complete batch finished and receives it into Workshop. Scanning again opens the same pieces."
+          ? "Scan to review the batch, enter SP for every finished piece, then confirm receipt and barcode generation. Existing receipts open their saved pieces."
           : "Scan an already received Production ID to set Workshop selling prices."
       }
     >

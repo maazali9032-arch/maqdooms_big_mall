@@ -7,6 +7,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { Panel } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { quantityInput, quantityText } from "@/features/inventory/ledger-quantity";
 import {
   definiteDatabaseRejection,
@@ -84,6 +85,7 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
   const qc = useQueryClient();
   const [jobId, setJobId] = useState("");
   const [usage, setUsage] = useState<Record<string, string>>({});
+  const [initialPrices, setInitialPrices] = useState<Record<number, string>>({});
   const [reason, setReason] = useState("");
   const [scan, setScan] = useState("");
   const [barcode, setBarcode] = useState<string | undefined>();
@@ -176,7 +178,9 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
           .sort((a, b) => a.issue_line_id.localeCompare(b.issue_line_id));
         if (!materials.some((m) => lines.some((l) => l.id === m.issue_line_id && l.thaan_id)))
           throw new Error("Record actual fabric usage for piece " + number);
-        return { piece_number: number, materials };
+        const sp_paise = fabricMoneyInput(initialPrices[number] ?? "");
+        if (sp_paise <= 0) throw new Error("Enter a positive SP for piece " + number);
+        return { piece_number: number, materials, sp_paise };
       });
       receive.mutate({
         p_request: crypto.randomUUID(),
@@ -209,6 +213,7 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
               onChange={(e) => {
                 setJobId(e.target.value);
                 setUsage({});
+                setInitialPrices({});
               }}
             >
               <option value="">Completed Production Job</option>
@@ -243,6 +248,21 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
                     </tr>
                   </thead>
                   <tbody>
+                    <tr>
+                      <th>Initial SP ₹ (required before barcode)</th>
+                      {Array.from({ length: job.quantity }, (_, i) => (
+                        <td key={i} className="p-1">
+                          <Input
+                            aria-label={`Initial SP for piece ${i + 1}`}
+                            inputMode="decimal"
+                            value={initialPrices[i + 1] ?? ""}
+                            onChange={(e) =>
+                              setInitialPrices({ ...initialPrices, [i + 1]: e.target.value })
+                            }
+                          />
+                        </td>
+                      ))}
+                    </tr>
                     {lines.map((line) => (
                       <tr key={line.id}>
                         <td className="min-w-48 p-2">
