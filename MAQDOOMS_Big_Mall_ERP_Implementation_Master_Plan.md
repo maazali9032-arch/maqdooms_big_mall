@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 20 October 2026, including Section 74:** Migrations 0065–0071 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
+> **Current approved implementation status — 20 October 2026, including Section 77:** Migrations 0065–0072 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 

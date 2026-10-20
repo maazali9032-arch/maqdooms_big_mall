@@ -2,7 +2,7 @@
 
 This is the permanent chronological record of work actually completed. The root `MAQDOOMS_Big_Mall_ERP_Implementation_Master_Plan.md` is the complete ERP source of truth. The operations guide describes the previous system; where they disagree, the master plan governs future work.
 
-> **Latest status — 20 October 2026, including Section 73:** Migrations 0065–0071 are applied live and verified after commit. Section 72's receipt, amount-only deposit and optional transfer-note changes are pushed and their hosted code markers verified. Section 73 corrects the stock receiver's generated-barcode lookup permission. Historical business records were preserved; no live test sale or customer garment receipt was posted. Physical printer/authenticated workflow acceptance remains pending. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
+> **Latest status — 20 October 2026, including Section 76:** Migrations 0065–0072 are applied live and verified after commit. Section 72's receipt, amount-only deposit and optional transfer-note changes are pushed and their hosted code markers verified. Section 73 corrects the stock receiver's generated-barcode lookup permission. Historical business records were preserved; no live test sale or customer garment receipt was posted. Physical printer/authenticated workflow acceptance remains pending. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
 
 ## Permanent recording and migration rules
 
