@@ -4,6 +4,10 @@ import fs from "node:fs/promises";
 
 export async function customerFinishedReceiverCases(db, fixture) {
   assert.equal(
+    await fs.readFile("supabase/migrations/20261021000100_tailor_work_order_status.sql", "utf8"),
+    await fs.readFile("drizzle/migrations/0073_tailor_work_order_status.sql", "utf8"),
+  );
+  assert.equal(
     await fs.readFile(
       "supabase/migrations/20261020000400_customer_finished_receiver_access.sql",
       "utf8",
@@ -98,6 +102,12 @@ export async function customerFinishedReceiverCases(db, fixture) {
     false,
   );
   await login(fixture.owner);
+  const orders = await one("select tailor_work_order($1)", [fixture.unpaid]);
+  assert.equal(
+    orders[0].status,
+    "ready",
+    "Workshop copy must show the recorded current job status",
+  );
   console.log(
     "PASS: default stock receiver generates/reads/reprints one customer garment barcode; retry, revoked/denied/anonymous access and no store-stock movements.",
   );

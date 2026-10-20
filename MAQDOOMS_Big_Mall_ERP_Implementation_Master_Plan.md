@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 20 October 2026, including Section 77:** Migrations 0065–0072 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
+> **Current approved implementation status — 21 October 2026, including Section 78:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -2048,3 +2048,11 @@ For new shop-production pieces, positive SP is required for each piece before ge
 Applied migration `20261020000500_production_sp_before_barcode.sql` / Drizzle `0072_production_sp_before_barcode.sql` introduces the priced scanner/private completion APIs and strict canonical per-piece validation. Old completion APIs cannot generate unpriced pieces; existing receipt retries/reopening remain. The legacy Owner allocation route also requires initial piece SP. Existing records/barcodes are not regenerated, backfilled or repriced. Customer-finished receipt already enforces the same positive-SP requirement.
 
 TypeScript, scoped lint, production build, disposable transactions and responsive synthetic browser tests passed. Live dry-run/post-commit checks and historical-value fingerprints passed; 0072 is applied. Contract and test commands are in `docs/PRODUCTION_PRICED_RECEIPT.md`; implementation details are in History Section 76. This supersedes earlier instructions saying a production scan receives stock before SP entry.
+
+# 78. UPDATED CUSTOMER/WORKSHOP PRINT CONTRACT — 21 OCTOBER 2026
+
+Use the purchase contents to adapt the customer invoice. Fabric-only bills show fabric identity, quantity/rate and tax totals without tailoring fields. Stitching bills add garment, allocated fabric/quantity, assigned delivery date and fabric/stitching charge summary. All bills show a short recorded reference plus scannable bill barcode, retained accounting invoice number, prominent Invoice total and adjacent Amount paid/Balance due with explicit Paid/Partially paid/Unpaid status. Print actual method/date when recorded; do not infer missing payment dates. This supersedes earlier omission of retail paid amount/balance and fabric references. Preserve immutable tax amounts and saved GST presentation choices.
+
+The separate workshop copy is structured into references, scannable job identity, garment/fabric/assignment/delivery/current-status details and recorded tailoring instructions. Exclude every financial field. Do not claim nonexistent measurement/component data. Migration `20261021000100_tailor_work_order_status.sql` / Drizzle `0073_tailor_work_order_status.sql` adds only recorded status to the existing price-free API. Permissions, pricing, payment entry and extra-fabric rules stay unchanged. History Section 77 and `docs/COUNTER_RECEIPTS.md` record the implementation and verification.
+
+0073 is applied live after actual-schema dry-run rollback and post-commit checks; existing business fingerprints matched. TypeScript, scoped lint, build, full disposable regression chain and visual receipt previews passed. Physical printer/user acceptance remains separate.

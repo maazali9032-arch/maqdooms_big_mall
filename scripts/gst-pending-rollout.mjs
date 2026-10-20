@@ -21,6 +21,7 @@ const files = [
     "0071_customer_finished_receiver_access.sql",
   ],
   ["20261020000500_production_sp_before_barcode.sql", "0072_production_sp_before_barcode.sql"],
+  ["20261021000100_tailor_work_order_status.sql", "0073_tailor_work_order_status.sql"],
 ];
 const migrations = [];
 for (const [file, mirror] of files) {
@@ -77,6 +78,7 @@ async function fingerprints(tx) {
 async function verify(tx) {
   const [checks] = await tx.unsafe(`select
  to_regprocedure('public.resolve_finished_receipt(text)') is not null as unified_receipt,
+ position('''status'',job.status' in pg_get_functiondef('public.tailor_work_order(text)'::regprocedure))>0 as workshop_copy_real_status,
  to_regprocedure('public.receive_production_barcode_priced(uuid,text,jsonb)') is not null as priced_production_receipt,
  position('Positive SP is required' in pg_get_functiondef('public.complete_production_batch(uuid,uuid,text,text)'::regprocedure))>0 as old_unpriced_receipt_blocked,
  position('validate_production_piece_prices' in pg_get_functiondef('public.receive_finished_products(uuid,uuid,jsonb,text)'::regprocedure))>0 as owner_allocation_requires_sp,
@@ -130,7 +132,7 @@ try {
       assert.equal(native.length, 0, `Unreconciled migration record: ${m.file}`);
       await tx.unsafe(m.source.replace(/^BEGIN;\s*$/m, "").replace(/^COMMIT;\s*$/m, ""));
       await tx`insert into supabase_migrations.schema_migrations(version,name,statements) values(${m.version},${m.file.slice(15, -4)},${[m.source]})`;
-      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST and receipt fixes 0065-0072", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
+      await tx`insert into supabase_migrations.erp_execution_history(version,filename,sha256,mode,verification) values(${m.version},${m.file},${m.hash},'applied',${tx.json({ release: "GST and receipt fixes 0065-0073", business_values: "unchanged; checksums verified", verified_at: new Date().toISOString() })})`;
       console.log(apply ? "Staged for atomic commit:" : "Dry-run staged:", m.file);
     }
     const checks = await verify(tx);

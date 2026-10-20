@@ -1,4 +1,5 @@
 import { deliveryDate } from "./receipt-format";
+import { Fragment } from "react";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { GstInvoiceSummary, GstTailoringComponents } from "@/features/gst/GstInvoicePresentation";
@@ -11,6 +12,28 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   const balance =
     receipt.balance_paise ?? (BigInt(receipt.total_paise) - BigInt(received)).toString();
   const payment = receipt.tax?.payment_method?.replaceAll("_", " ");
+  const paymentStatus =
+    BigInt(balance) === 0n ? "Paid" : BigInt(received) > 0n ? "Partially paid" : "Unpaid";
+  const fabricSubtotal = receipt.lines.reduce(
+    (sum, line) =>
+      sum +
+      BigInt(
+        line.kind === "fabric"
+          ? line.amount_paise
+          : line.kind === "tailoring"
+            ? (line.fabric_amount_paise ?? "0")
+            : "0",
+      ),
+    0n,
+  );
+  const stitchingSubtotal = receipt.lines.reduce(
+    (sum, line) => sum + BigInt(line.stitching_paise ?? "0"),
+    0n,
+  );
+  const finishedSubtotal = receipt.lines.reduce(
+    (sum, line) => sum + BigInt(line.kind === "product" ? line.amount_paise : "0"),
+    0n,
+  );
   return (
     <>
       <h2 className="invoice-heading text-center text-base font-semibold">
@@ -28,13 +51,13 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
       <p className="invoice-heading text-center font-semibold">
         {receipt.tax ? "TAX INVOICE" : "SALES RECEIPT"}
       </p>
-      <p className="invoice-reference break-all font-mono text-xs">
-        Invoice: {receipt.tax?.invoice_number ?? receipt.code}
+      <p className="invoice-heading text-center font-semibold">
+        Bill reference: {receipt.scan_code ?? receipt.code}
       </p>
       <BarcodeGraphic code={receipt.scan_code ?? receipt.code} />
-      {receipt.scan_code && (
-        <p className="invoice-heading text-center font-mono text-xs">{receipt.scan_code}</p>
-      )}
+      <p className="invoice-reference break-all font-mono text-xs">
+        Invoice number: {receipt.tax?.invoice_number ?? receipt.code}
+      </p>
       <p className="invoice-meta text-xs">
         Date:{" "}
         {new Date(receipt.created_at).toLocaleString("en-IN", {
@@ -72,14 +95,18 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
                 <strong>{reportMoney(amount)}</strong>
               </div>
               {line.kind === "fabric" && (
-                <p>
-                  {reportQuantity(line.quantity, line.unit)} × {reportMoney(line.price_paise!)} / m
-                  {receipt.tax
-                    ? receipt.tax.price_mode === "inclusive"
-                      ? " (incl. GST)"
-                      : " (before GST)"
-                    : ""}
-                </p>
+                <>
+                  <p className="break-all">Fabric ref: {line.barcode ?? "Not recorded"}</p>
+                  <p>
+                    {reportQuantity(line.quantity, line.unit)} × {reportMoney(line.price_paise!)} /
+                    m
+                    {receipt.tax
+                      ? receipt.tax.price_mode === "inclusive"
+                        ? " (incl. GST)"
+                        : " (before GST)"
+                      : ""}
+                  </p>
+                </>
               )}
               {line.size && (
                 <p>
@@ -89,11 +116,12 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
               )}
               {line.kind === "tailoring" && (
                 <>
-                  <p>Delivery: {deliveryDate(line.delivery_date)}</p>
-                  {line.design && <p>Design: {line.design}</p>}
+                  {line.delivery_date && <p>Delivery: {deliveryDate(line.delivery_date)}</p>}
                   {line.fabrics?.map((fabric, index) => (
                     <p key={index}>
                       {fabric.name} · {reportQuantity(fabric.quantity_mm, "mm")} for stitching
+                      <br />
+                      <span className="break-all">Fabric ref: {fabric.barcode}</span>
                     </p>
                   ))}
                   {receipt.tax ? (
@@ -119,6 +147,32 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           );
         })}
       </div>
+      {tailoring && (
+        <div className="invoice-cost-summary space-y-1 border-t pt-2 text-xs">
+          <p className="font-semibold">
+            Sale summary
+            {receipt.tax?.price_mode === "inclusive"
+              ? " (including GST)"
+              : receipt.tax
+                ? " (before GST)"
+                : ""}
+          </p>
+          <div className="invoice-row flex justify-between">
+            <span>Fabric</span>
+            <span>{reportMoney(fabricSubtotal.toString())}</span>
+          </div>
+          <div className="invoice-row flex justify-between">
+            <span>Stitching</span>
+            <span>{reportMoney(stitchingSubtotal.toString())}</span>
+          </div>
+          {finishedSubtotal > 0n && (
+            <div className="invoice-row flex justify-between">
+              <span>Finished items</span>
+              <span>{reportMoney(finishedSubtotal.toString())}</span>
+            </div>
+          )}
+        </div>
+      )}
       {receipt.tax ? (
         <GstInvoiceSummary tax={receipt.tax} />
       ) : (
@@ -128,21 +182,32 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         </div>
       )}
       <div className="invoice-payment space-y-1 border-t pt-2 text-xs">
-        {tailoring ? (
-          <>
-            <div className="invoice-row flex justify-between">
-              <span>{receipt.paid ? "Amount paid" : "Advance received"}</span>
-              <strong>{reportMoney(received)}</strong>
-            </div>
-            <div className="invoice-row flex justify-between">
-              <strong>Balance due</strong>
-              <strong>{reportMoney(balance)}</strong>
-            </div>
-          </>
-        ) : (
-          <p className="font-semibold">{receipt.paid ? "Paid in full" : "Unpaid"}</p>
-        )}
+        <div className="invoice-row flex justify-between font-semibold">
+          <span>Payment status</span>
+          <span>{paymentStatus}</span>
+        </div>
+        <div className="invoice-row flex justify-between">
+          <span>Amount paid</span>
+          <strong>{reportMoney(received)}</strong>
+        </div>
+        <div className="invoice-row flex justify-between">
+          <strong>Balance due</strong>
+          <strong>{reportMoney(balance)}</strong>
+        </div>
         {payment && <p className="capitalize">Payment: {payment}</p>}
+        {BigInt(received) > 0n && receipt.paid_at && (
+          <p>
+            Payment date:{" "}
+            {new Date(receipt.paid_at).toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
       </div>
     </>
   );
@@ -151,6 +216,7 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
 export type TailorOrder = {
   job_code: string;
   scan_code?: string | null;
+  status?: string;
   garment: string;
   delivery_date: string;
   design: string | null;
@@ -170,52 +236,104 @@ export function TailorWorkOrderContent({
 }) {
   return (
     <>
-      <h2 className="invoice-heading text-center text-base font-semibold">
-        {receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall"}
-      </h2>
-      <p className="invoice-heading text-center font-semibold">TAILOR WORK ORDER</p>
-      <p className="invoice-reference break-all text-xs">
-        Customer bill ref: {receipt.scan_code ?? receipt.code}
-      </p>
-      {receipt.customer?.name && <p className="text-xs">Customer: {receipt.customer.name}</p>}
       {jobs.map((job) => (
-        <section
+        <article
           key={job.job_code}
-          className="invoice-line space-y-1 border-t border-dashed py-2 text-xs"
+          className="workorder-sheet rounded-2xl border bg-white p-4 text-sm"
         >
-          <strong className="block text-sm">{job.garment}</strong>
-          <BarcodeGraphic code={job.scan_code ?? job.job_code} />
-          <p className="invoice-heading text-center font-mono">{job.scan_code ?? job.job_code}</p>
-          <p>
-            <strong>Delivery:</strong> {deliveryDate(job.delivery_date)}
-          </p>
-          <p>
-            <strong>Factory:</strong> {job.factory}
-          </p>
-          <p>
-            <strong>Tailor:</strong> {job.tailor}
-          </p>
-          {job.design && (
-            <p>
-              <strong>Design:</strong> {job.design}
-            </p>
-          )}
-          {job.notes && (
-            <p className="whitespace-pre-wrap">
-              <strong>Instructions:</strong> {job.notes}
-            </p>
-          )}
-          <p className="font-semibold">Fabric issued</p>
-          {job.fabrics.map((fabric, index) => (
-            <div key={index} className="invoice-row flex justify-between gap-2">
-              <span>
-                {fabric.name}
-                <small className="block">{fabric.barcode}</small>
-              </span>
-              <strong>{reportQuantity(fabric.quantity_mm, "mm")}</strong>
+          <header className="workorder-header flex items-start justify-between gap-3 border-b pb-4">
+            <div>
+              <h2 className="text-lg font-semibold">
+                {receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall"}
+              </h2>
+              <p className="text-xs uppercase text-muted-foreground">
+                Customer stitching work order
+              </p>
             </div>
-          ))}
-        </section>
+            <span className="workorder-badge rounded bg-muted px-2 py-1 text-xs">
+              Workshop copy
+            </span>
+          </header>
+          <div className="workorder-meta grid grid-cols-2 gap-4 py-4">
+            <div>
+              <p className="workorder-label text-xs uppercase text-muted-foreground">Work order</p>
+              <strong className="break-all">{job.scan_code ?? job.job_code}</strong>
+            </div>
+            <div>
+              <p className="workorder-label text-xs uppercase text-muted-foreground">
+                Customer bill
+              </p>
+              <strong className="break-all">{receipt.scan_code ?? receipt.code}</strong>
+            </div>
+          </div>
+          <div className="workorder-barcode mx-auto max-w-[240px] text-center">
+            <BarcodeGraphic code={job.scan_code ?? job.job_code} />
+            <p className="text-xs">Scan to open this stitching job</p>
+          </div>
+          <section className="workorder-section mt-4 border-t py-4">
+            <h3 className="mb-3 font-semibold">Garment details</h3>
+            <dl className="space-y-3">
+              <div className="workorder-row flex justify-between gap-4">
+                <dt>Garment</dt>
+                <dd className="text-right font-semibold">{job.garment}</dd>
+              </div>
+              {receipt.customer?.name && (
+                <div className="workorder-row flex justify-between gap-4">
+                  <dt>Customer</dt>
+                  <dd className="text-right">{receipt.customer.name}</dd>
+                </div>
+              )}
+              {job.fabrics.map((fabric, index) => (
+                <Fragment key={index}>
+                  <div className="workorder-row flex justify-between gap-4">
+                    <dt>Fabric allocated</dt>
+                    <dd className="text-right font-semibold">
+                      {fabric.name} · {reportQuantity(fabric.quantity_mm, "mm")}
+                    </dd>
+                  </div>
+                  <div className="workorder-row flex justify-between gap-4">
+                    <dt>Fabric reference</dt>
+                    <dd className="break-all text-right font-mono text-xs">{fabric.barcode}</dd>
+                  </div>
+                </Fragment>
+              ))}
+              <div className="workorder-row flex justify-between gap-4">
+                <dt>Factory</dt>
+                <dd className="text-right">{job.factory}</dd>
+              </div>
+              <div className="workorder-row flex justify-between gap-4">
+                <dt>Assigned tailor</dt>
+                <dd className="text-right font-semibold">{job.tailor}</dd>
+              </div>
+              {job.delivery_date && (
+                <div className="workorder-row flex justify-between gap-4">
+                  <dt>Delivery date</dt>
+                  <dd className="text-right font-semibold">{deliveryDate(job.delivery_date)}</dd>
+                </div>
+              )}
+              {job.status && (
+                <div className="workorder-row flex justify-between gap-4">
+                  <dt>Status</dt>
+                  <dd className="workorder-status rounded bg-muted px-2 text-right capitalize">
+                    {job.status.replaceAll("_", " ")}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </section>
+          <section className="workorder-section border-t pt-4">
+            <h3 className="mb-3 font-semibold">Tailoring instructions</h3>
+            {job.design && (
+              <p>
+                <strong>Design / style:</strong> {job.design}
+              </p>
+            )}
+            {job.notes && <p className="whitespace-pre-wrap">{job.notes}</p>}
+            {!job.design && !job.notes && (
+              <p className="text-muted-foreground">No additional instructions recorded.</p>
+            )}
+          </section>
+        </article>
       ))}
     </>
   );

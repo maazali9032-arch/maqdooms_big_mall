@@ -102,17 +102,16 @@ try {
   const render = (receipt) =>
     renderToStaticMarkup(createElement(CustomerReceiptContent, { receipt }));
   const retail = render(base);
-  assert(retail.includes("Paid in full"));
-  for (const hidden of [
-    "Showroom",
-    "F3-POS1",
-    "Stock source",
-    "Advance",
-    "Balance",
-    "TST-23340169a",
-  ])
+  assert(
+    retail.includes("Payment status") &&
+      retail.includes("Paid") &&
+      retail.includes("Amount paid") &&
+      retail.includes("Balance due"),
+  );
+  assert(retail.includes("TST-23340169a") && retail.includes("Fabric ref:"));
+  for (const hidden of ["Showroom", "F3-POS1", "Stock source", "Advance"])
     assert(!retail.includes(hidden), `Retail customer receipt exposes ${hidden}`);
-  assert.equal(retail.match(/Payable/g).length, 1);
+  assert.equal(retail.match(/Invoice total/g).length, 1);
   assert(retail.includes("BILL-accounting-reference"), "Keep the accounting invoice number");
   const stitched = {
     ...base,
@@ -164,7 +163,8 @@ try {
   };
   const tailoring = render(stitched);
   assert(
-    tailoring.includes("Advance received") &&
+    tailoring.includes("Amount paid") &&
+      tailoring.includes("Partially paid") &&
       tailoring.includes("Balance due") &&
       tailoring.includes("1,650.00"),
   );
@@ -174,11 +174,9 @@ try {
     tax: { ...stitched.tax, tailoring_display: "combined", invoice_display: "taxable_first" },
   });
   assert(!combined.includes("HSN/SAC"));
-  assert(combined.indexOf("Taxable") < combined.indexOf("Payable"));
+  assert(combined.indexOf("Taxable") < combined.indexOf("Invoice total"));
   assert(
-    render({ ...stitched, paid_amount_paise: "0", balance_paise: "315000" }).includes(
-      "Advance received",
-    ),
+    render({ ...stitched, paid_amount_paise: "0", balance_paise: "315000" }).includes("Unpaid"),
   );
   const full = render({ ...stitched, paid: true, paid_amount_paise: "315000", balance_paise: "0" });
   assert(full.includes("Amount paid") && !full.includes("Advance received"));
@@ -186,6 +184,7 @@ try {
     {
       job_code: "CT-internal-job-uuid",
       scan_code: "TJ-3DBEGG2CH89H",
+      status: "in_progress",
       garment: "Pathani Kurta Pajama",
       delivery_date: "2026-10-25",
       factory: "Factory B",
@@ -199,7 +198,12 @@ try {
     createElement(TailorWorkOrderContent, { receipt: stitched, jobs }),
   );
   for (const required of [
-    "TAILOR WORK ORDER",
+    "Customer stitching work order",
+    "Workshop copy",
+    "Garment details",
+    "Tailoring instructions",
+    "Fabric allocated",
+    "in progress",
     "TJ-3DBEGG2CH89H",
     "Factory B",
     "Nadeem",

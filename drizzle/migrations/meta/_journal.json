@@ -505,6 +505,13 @@
       "when": 1792454640000,
       "tag": "0072_production_sp_before_barcode",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792540800000,
+      "tag": "0073_tailor_work_order_status",
+      "breakpoints": true
     }
   ]
 }

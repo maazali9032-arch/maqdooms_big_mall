@@ -3,12 +3,17 @@ import type { GstInvoice } from "@/features/pos/CounterBillReceipt";
 
 /** Both screen and thermal printing render these fields from the immutable invoice, never live config. */
 export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
-  const payable = <p className="text-base font-bold">Payable {reportMoney(tax.final_paise)}</p>;
+  const payable = (
+    <div className="invoice-row invoice-grand-total flex justify-between gap-2 text-base font-bold">
+      <span>Invoice total</span>
+      <span>{reportMoney(tax.final_paise)}</span>
+    </div>
+  );
   return (
     <div className="invoice-tax-summary space-y-1 border-t border-dashed pt-2 text-xs">
       {tax.invoice_display === "final_first" && payable}
       <div className="flex justify-between">
-        <span>Taxable</span>
+        <span>Taxable amount</span>
         <span>{reportMoney(tax.taxable_paise)}</span>
       </div>
       {tax.supply_type === "intra_state" ? (
@@ -53,13 +58,15 @@ export function GstTailoringComponents({
           <div key={line.id} className="invoice-component text-xs">
             <div className="invoice-row flex justify-between gap-2">
               <span>{line.description}</span>
-              <span>{reportMoney(line.final_paise)}</span>
+              <span>
+                {reportMoney(
+                  line.entered_amount_paise ??
+                    (tax.price_mode === "inclusive" ? line.final_paise : line.taxable_paise),
+                )}
+              </span>
             </div>
             <p>
               HSN/SAC {line.classification_code} · GST {line.rate_bps / 100}%
-            </p>
-            <p>
-              Taxable {reportMoney(line.taxable_paise)} · GST {reportMoney(line.gst_paise)}
             </p>
           </div>
         ))}

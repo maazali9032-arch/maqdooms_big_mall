@@ -208,7 +208,7 @@ export async function gstOptionConsistencyCases(db, fixture) {
               createElement(GstInvoiceSummary, { tax: receipt.tax }),
             );
             assert.equal(
-              summary.indexOf("Payable") < summary.indexOf("Taxable"),
+              summary.indexOf("Invoice total") < summary.indexOf("Taxable"),
               invoice_display === "final_first",
             );
             const jobLine = receipt.lines.find((l) => l.kind === "tailoring");

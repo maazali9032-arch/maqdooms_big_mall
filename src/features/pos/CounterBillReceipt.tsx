@@ -44,6 +44,7 @@ export type GstInvoice = {
     taxable_paise: string;
     gst_paise: string;
     final_paise: string;
+    entered_amount_paise?: string;
   }[];
 };
 export type CounterReceipt = {
@@ -159,7 +160,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
             <div className="mt-4 space-y-3">
               <div
                 ref={tailorPrintable}
-                className="thermal-invoice mx-auto max-w-[80mm] space-y-2 border bg-white p-3 text-black"
+                className="thermal-invoice mx-auto max-w-2xl space-y-4 bg-white text-black"
               >
                 <TailorWorkOrderContent receipt={receipt} jobs={tailorOrder.data} />
               </div>
