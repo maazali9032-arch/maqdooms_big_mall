@@ -2,7 +2,7 @@
 
 This is the permanent chronological record of work actually completed. The root `MAQDOOMS_Big_Mall_ERP_Implementation_Master_Plan.md` is the complete ERP source of truth. The operations guide describes the previous system; where they disagree, the master plan governs future work.
 
-> **Latest status — 21 October 2026, including Section 78:** Migrations 0065–0073 are applied live and verified after commit. Section 72's receipt, amount-only deposit and optional transfer-note changes are pushed and their hosted code markers verified. Section 73 corrects the stock receiver's generated-barcode lookup permission. Historical business records were preserved; no live test sale or customer garment receipt was posted. Physical printer/authenticated workflow acceptance remains pending. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
+> **Latest status — 21 October 2026, including Section 79:** Migrations 0065–0073 are applied live and verified after commit. Section 72's receipt, amount-only deposit and optional transfer-note changes are pushed and their hosted code markers verified. Section 73 corrects the stock receiver's generated-barcode lookup permission. Historical business records were preserved; no live test sale or customer garment receipt was posted. Physical printer/authenticated workflow acceptance remains pending. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
 
 ## Permanent recording and migration rules
 
@@ -6896,3 +6896,10 @@ Updated the customer bill to follow the supplied thermal-invoice reference: two-
 Presentation reads immutable invoice amounts: exclusive line amounts use saved taxable amounts; inclusive lines use saved final amounts. Saved final-first/taxable-first order remains unchanged. CGST/SGST/IGST percentage labels are shown only when the saved lines share a single rate; mixed-rate invoices retain per-item classifications/rates without inventing a single summary rate. Existing retail/stitching privacy, paid/partial/unpaid calculations and price-free tailor copy remain. No database migration, Edge Function, permission, location rename or transaction changes.
 
 Files: `src/features/pos/ReceiptContent.tsx`, `CounterBillReceipt.tsx`, shared `customer-invoice.css`, `receipt-format.ts`, `src/features/gst/GstInvoicePresentation.tsx`, receipt presentation tests and `docs/COUNTER_RECEIPTS.md`. Verification: synthetic SSR/browser tests for 58/80 mm retail and stitching, combined/taxable-first, inclusive/exclusive, interstate/mixed rates and individual table-cell overflow; visual inspection; TypeScript, scoped ESLint and production build. No live test bill was created. Physical thermal-printer acceptance remains pending.
+
+
+# 79. OWNER BARCODE INSPECTOR ON ALL SCREENS — 21 OCTOBER 2026
+
+Removed the phone user-agent, coarse-pointer and viewport-size gates from `src/features/reports/OwnerBarcodeInspector.tsx`. The same floating Global Barcode Inspector is now available on desktop, tablet and mobile Owner dashboards. Resizing no longer unmounts the inspector. Existing Owner-only access, Dashboard placement, read-only RPC, manual/keyboard entry, camera preference and cleanup are preserved. Shared camera guidance is device-neutral. No database migration, stock mutation or permission change.
+
+Updated `scripts/barcode-inspector-ui-test.mjs` replaces historical device-exclusion assertions with all-screen visibility, desktop Enter lookup and resize-continuity coverage. All 32 actual-component browser checks passed, including existing staff/page exclusions, pagination, retry, unknown results, real CODE128 MediaStream decoding and camera cleanup. TypeScript, scoped ESLint and production build passed. Contract: `docs/OWNER_BARCODE_INSPECTOR.md`. Temporary synthetic screenshots/reports preserve historical artifacts. Physical camera and authenticated hosted acceptance remain separate.

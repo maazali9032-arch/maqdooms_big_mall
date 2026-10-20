@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 21 October 2026, including Section 79:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
+> **Current approved implementation status — 21 October 2026, including Section 80:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -2063,3 +2063,8 @@ The separate workshop copy is structured into references, scannable job identity
 Customer receipts follow the supplied table-based reference with compact branding/business details, recorded short bill alias and unchanged barcode, India date/time and optional customer, numbered item/quantity/rate/amount columns, immutable tax breakdown, highlighted invoice total, amount paid, balance due, recorded method/date, status badge and thank-you footer. Use a wider 80 mm screen preview and preserve both thermal print widths. Tailoring details span the item table; retail omits tailoring. The full accounting reference is available in a collapsed screen-only disclosure. Do not fabricate a sequential bill number or change stored identities.
 
 Exclusive table amounts come from saved taxable values; inclusive amounts from saved final values. All saved GST display options remain authoritative. Show summary tax percentages only for a single saved GST rate; mixed rates retain item-level detail. Shared CSS must style both screen and isolated popup printing. No database, authorization, function or location changes. Receipt browser/SSR, TypeScript, scoped lint and build checks passed; physical printer acceptance remains separate. See History Section 78 and `docs/COUNTER_RECEIPTS.md`.
+
+
+# 80. ALL-SCREEN OWNER BARCODE INSPECTOR — 21 OCTOBER 2026
+
+Display the existing floating Global Barcode Inspector on Owner dashboards at all screen sizes and input-device types. Do not restrict by phone user agent, coarse pointer, width or height. Keep open inspection state through resizing. Preserve Dashboard-only placement, Owner-only backend authorization, read-only data access, camera cleanup and manual/keyboard scanner support. No database or permission changes are required. The 32-check actual-component browser suite, TypeScript, scoped lint and production build passed. See History Section 79 and `docs/OWNER_BARCODE_INSPECTOR.md`. This supersedes historical phone-only display requirements; physical-camera acceptance remains separate.

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Barcode, Camera, RefreshCw } from "lucide-react";
 import { useSession } from "@/app/providers/session";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { BarcodeCamera } from "@/shared/components/barcode-camera";
@@ -113,33 +112,10 @@ function EvidenceCard({ event }: { event: Evidence }) {
   );
 }
 
-/** Mounted only by the Dashboard; width and Owner checks also remove the camera on resize/logout. */
+/** Dashboard inspector is available at every screen size; Owner access is still required. */
 export function OwnerBarcodeInspector() {
   const { isOwner } = useSession();
-  const mobile = useIsMobile();
-  const [phone, setPhone] = useState(false);
-  const [shortViewport, setShortViewport] = useState(false);
-  useEffect(() => {
-    const pointer = window.matchMedia("(pointer: coarse)");
-    const short = window.matchMedia("(max-height: 767px)");
-    const update = () => {
-      const agent = navigator.userAgent;
-      const tablet =
-        /iPad|Tablet|Kindle|Silk/i.test(agent) ||
-        (/Android/i.test(agent) && !/Mobile/i.test(agent)) ||
-        (/Macintosh/i.test(agent) && navigator.maxTouchPoints > 1);
-      setPhone(pointer.matches && /Mobi|iPhone|iPod/i.test(agent) && !tablet);
-      setShortViewport(short.matches);
-    };
-    update();
-    pointer.addEventListener("change", update);
-    short.addEventListener("change", update);
-    return () => {
-      pointer.removeEventListener("change", update);
-      short.removeEventListener("change", update);
-    };
-  }, []);
-  return isOwner && (mobile || shortViewport) && phone ? <Inspector /> : null;
+  return isOwner ? <Inspector /> : null;
 }
 function Inspector() {
   const { userId } = useSession();

@@ -106,7 +106,7 @@ export function BarcodeCamera({
       ) : (
         <p role="status" className="text-sm">
           {ready
-            ? "Point the rear camera at the barcode. It will open automatically."
+            ? "Point the camera at the barcode. It will open automatically."
             : "Starting camera…"}
         </p>
       )}

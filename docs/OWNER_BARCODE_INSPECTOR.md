@@ -1,8 +1,8 @@
-# Owner mobile Global Barcode Inspector
+# Owner Global Barcode Inspector — all screen sizes
 
-The floating barcode button is mounted by OwnerDashboard only. It requires the Owner session, a phone user agent, a coarse primary pointer and a compact phone viewport (portrait or landscape; width or height below 768px). Desktop (including narrow windows), tablets/iPadOS, staff, and other pages have no button. Changing role/page/viewport unmounts the scanner.
+The floating barcode button is mounted by OwnerDashboard on desktop, tablet and phone screens, with no user-agent, pointer, viewport-width or viewport-height restriction. Owner access and Dashboard-only placement remain unchanged. Resizing preserves an open inspector; changing role/page unmounts it. This 21 October 2026 revision supersedes the original phone-only display rule.
 
-The button opens the existing Sheet as a mobile bottom drawer and starts the rear camera. Locally bundled @zxing/browser decodes CODE128 and other supported formats; frames remain on the device. Manual typing and keyboard scanners use the same BarcodeEntry component extracted from Workshop stock search. Camera results submit through that same lookup. Permission denial, missing camera, network retry and unknown codes have explicit states. Tracks stop on detection, close, unmount, backgrounding or a late permission response.
+The button opens the existing Sheet as a responsive bottom drawer and starts an available camera (preferring the rear camera where supported). Locally bundled @zxing/browser decodes CODE128 and other supported formats; frames remain on the device. Manual typing and keyboard scanners use the same BarcodeEntry component extracted from Workshop stock search. Camera results submit through that same lookup. Permission denial, missing camera, network retry and unknown codes have explicit states. Tracks stop on detection, close, unmount, backgrounding or a late permission response.
 
 ## Recorded evidence
 
@@ -32,3 +32,7 @@ RPC arguments: p_barcode (trimmed exact identifier, 1–200 characters), p_limit
 Unrelated in-progress POS/Production/navigation changes are excluded from this feature's commit and build. Their pending cleanup migration 0042 is not applied as part of the inspector.
 
 The forward-only legacy-evidence extension 20261015000200 / Drizzle 0044 links singular legacy audit entity names and saved batch/bill codes, and preserves recorded actor names. SHA256: b58a245b230ff32b9748fa09b389233e7ff79ddbef1b7897e98f6c5859b3fa79. The already-applied 0043 bytes remain unchanged. Fresh isolated Vercel production build passed, including camera decoding chunks.
+
+## All-screen revision — 21 October 2026
+
+Removed device/viewport checks from `OwnerBarcodeInspector.tsx`; no RPC, database, role or read-only behavior changed. Camera guidance now says “the camera” so it also fits desktop webcams. Updated browser regression checks confirm desktop/manual Enter lookup, narrow desktops, tablets, phone layouts and open-dialog resize continuity, alongside existing role/page exclusions, real CODE128 video-stream decoding, pagination, errors and track cleanup. All 32 checks passed; TypeScript, scoped lint and production build passed. Current synthetic artifacts are written to a temporary directory rather than overwriting historical screenshots/reports. Physical camera/hosted authenticated acceptance remains separate.

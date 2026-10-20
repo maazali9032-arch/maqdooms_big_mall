@@ -35,6 +35,7 @@ const check = (v, label) => {
 };
 const base = "http://127.0.0.1:5199";
 try {
+  const artifacts = await fs.mkdtemp(path.join(os.tmpdir(), "barcode-inspector-all-screens-"));
   await server.listen();
   browser = await chromium.launch({ channel: "msedge", headless: true });
   const phone = await browser.newContext({ ...devices["iPhone 13"] });
@@ -77,7 +78,7 @@ try {
     );
     await page
       .getByRole("dialog")
-      .screenshot({ path: `docs/OWNER_BARCODE_INSPECTOR_${width}.png` });
+      .screenshot({ path: path.join(artifacts, `inspector-${width}.png`) });
   }
   await page.getByLabel("Inspect barcode", { exact: true }).fill("UNKNOWN");
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
@@ -92,10 +93,11 @@ try {
   await page.getByText("₹400.00", { exact: true }).waitFor();
   check(true, "Network failure supports retry");
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 768, height: 1024 });
   check(
-    (await page.getByRole("button", { name: "Open Global Barcode Inspector" }).count()) === 0,
-    "Tablet width removes inspector",
+    await page.getByRole("button", { name: "Open Global Barcode Inspector" }).isVisible(),
+    "Tablet width retains inspector",
   );
   await page.setViewportSize({ width: 844, height: 390 });
   check(
@@ -108,10 +110,7 @@ try {
     "Landscape drawer fits",
   );
   await page.setViewportSize({ width: 900, height: 1000 });
-  check(
-    (await page.getByRole("dialog").count()) === 0,
-    "Resizing out of phone layout closes drawer",
-  );
+  check(await page.getByRole("dialog").isVisible(), "Resizing preserves the open inspector");
   for (const role of [
     "stock_entry",
     "counter",
@@ -143,6 +142,7 @@ try {
   );
   check(await page.evaluate(() => window.cameraStops > 0), "Detection stops camera tracks");
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Remove Owner access (fixture)" }).click();
   check(
     (await page.getByRole("button", { name: "Open Global Barcode Inspector" }).count()) === 0,
@@ -151,6 +151,7 @@ try {
   await page.goto(base + "?camera=delay");
   await page.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.waitForTimeout(650);
   check(
     await page.evaluate(() => window.cameraStops > 0),
@@ -159,13 +160,27 @@ try {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await desktop.goto(base);
   check(
-    (await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).count()) === 0,
-    "Desktop never shows floating icon",
+    await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).isVisible(),
+    "Desktop shows floating icon",
   );
+  await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
+  await desktop.getByLabel("Inspect barcode", { exact: true }).fill("AND-909558881");
+  await desktop.getByLabel("Inspect barcode", { exact: true }).press("Enter");
+  await desktop.getByText("₹400.00", { exact: true }).waitFor();
+  check(
+    await desktop.getByRole("heading", { name: "Current stock & location" }).isVisible(),
+    "Desktop keyboard scanner/manual entry opens recorded stock",
+  );
+  check(
+    await desktop.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+    "Desktop drawer fits screen",
+  );
+  await desktop.getByRole("button", { name: "Close", exact: true }).click();
+  await desktop.getByRole("dialog").waitFor({ state: "hidden" });
   await desktop.setViewportSize({ width: 390, height: 844 });
   check(
-    (await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).count()) === 0,
-    "Narrow desktop still excluded",
+    await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).isVisible(),
+    "Narrow desktop retains floating icon",
   );
   const tablet = await browser.newContext({
     ...devices["iPad Mini"],
@@ -174,12 +189,12 @@ try {
   const tp = await tablet.newPage();
   await tp.goto(base);
   check(
-    (await tp.getByRole("button", { name: "Open Global Barcode Inspector" }).count()) === 0,
-    "Narrow tablet explicitly excluded",
+    await tp.getByRole("button", { name: "Open Global Barcode Inspector" }).isVisible(),
+    "Tablet shows floating icon",
   );
   check(errors.length === 0, "No browser runtime errors: " + errors.join(","));
   await fs.writeFile(
-    "docs/OWNER_BARCODE_INSPECTOR_UI_VERIFICATION.json",
+    path.join(artifacts, "verification.json"),
     JSON.stringify(
       {
         verified_at: new Date().toISOString(),
@@ -192,6 +207,7 @@ try {
       2,
     ) + "\n",
   );
+  console.log("Synthetic screenshots/report: " + artifacts);
   console.log("PASS: " + checks + " inspector browser checks");
 } finally {
   await browser?.close();
