@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, StatusBadge } from "@/shared/components/page";
 import { gstLocalDateTime } from "./configuration-time";
+import { gstReadWithDeadline, readOwnerGstConfiguration } from "./configuration-reader";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   formatGstRate,
   percentToBps,
@@ -161,11 +163,18 @@ export function GstConfigurationPage() {
         p_rules: normalized,
       });
       if (error) throw error;
-      return data;
+      const persisted = await gstReadWithDeadline((signal) =>
+        readOwnerGstConfiguration(supabase as unknown as SupabaseClient, signal),
+      );
+      if (persisted.configuration?.id !== data)
+        throw new Error(
+          "GST version was saved, but a newer version is now present. Reload before editing again.",
+        );
+      return persisted;
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["gst-transaction-configuration"] });
-      await queryClient.invalidateQueries({ queryKey: ["gst-owner-configuration"] });
+    onSuccess: (persisted) => {
+      queryClient.setQueryData(["gst-owner-configuration"], persisted);
+      void queryClient.invalidateQueries({ queryKey: ["gst-transaction-configuration"] });
       toast.success("GST configuration version saved");
     },
     onError: (error) => toast.error(error.message),

@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { gstReadWithDeadline, readOwnerGstConfiguration } from "./configuration-reader";
 
 export type GstCategory = "purchase" | "fabric_sale" | "finished_sale" | "tailoring";
 export type GstPriceMode = "inclusive" | "exclusive";
@@ -108,19 +110,16 @@ export function percentToBps(value: string) {
 export function useGstConfiguration(ownerEditor = false) {
   return useQuery({
     queryKey: [ownerEditor ? "gst-owner-configuration" : "gst-transaction-configuration"],
-    queryFn: async () => {
-      const { data, error } = await (
-        supabase.rpc as unknown as (
-          name: string,
-          args?: Record<string, unknown>,
-        ) => Promise<{ data: unknown; error: Error | null }>
-      ).call(
-        supabase,
-        ownerEditor ? "owner_gst_configuration" : "gst_transaction_configuration",
-        {},
-      );
-      if (error) throw error;
-      return data as GstTransactionConfiguration;
-    },
+    retry: false,
+    queryFn: ({ signal }) =>
+      gstReadWithDeadline(async (requestSignal) => {
+        const client = supabase as unknown as SupabaseClient;
+        if (ownerEditor) return readOwnerGstConfiguration(client, requestSignal);
+        const { data, error } = await client
+          .rpc("gst_transaction_configuration", {})
+          .abortSignal(requestSignal);
+        if (error) throw error;
+        return data as GstTransactionConfiguration;
+      }, signal),
   });
 }

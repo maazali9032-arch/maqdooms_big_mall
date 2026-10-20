@@ -98,7 +98,21 @@ export async function gstConfigurationReloadCases(db) {
   );
   assert.equal(tax.inclusive.final_paise, "10000");
   assert.equal(tax.exclusive.final_paise, "10500");
+  await db.exec("set role authenticated");
+  const [ownerRead] = await q(
+    "select id,price_mode from gst_configuration_versions order by created_at desc,id desc limit 1",
+  );
+  assert.equal(
+    ownerRead.id,
+    future,
+    "The compatibility table reader must see the latest saved version through Owner RLS",
+  );
   await q("select set_config('request.jwt.claim.sub','',false)");
+  assert.equal(
+    (await q("select id from gst_configuration_versions")).length,
+    0,
+    "Other sessions must not see Owner configuration rows",
+  );
   await assert.rejects(q("select owner_gst_configuration()"), /Owner required/);
   console.log(
     "PASS: all four GST choices persist, latest-saved editor, active/future transaction isolation, historical preservation, inclusive/exclusive totals and Owner authorization.",
