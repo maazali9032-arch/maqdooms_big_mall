@@ -1,5 +1,7 @@
 # GST configuration, invoices and reconciliation
 
+**Live release update, 20 October 2026:** With explicit user authorization, migrations 0065–0070 were committed together after a successful actual-schema rollback dry run. Post-commit configuration/report/function/permission checks passed; historical business-value checksums matched. The hosted POS serves the matching version/completion guards. Pending-rollout statements below describe the earlier preparation stage and are superseded by this update. No live test sale was posted; authenticated checkout and physical printing remain acceptance tasks. The release script is `scripts/gst-pending-rollout.mjs` (default dry run, explicit `--apply`); it validates mirrors and execution hashes and preserves migration records.
+
 GST is an Owner-controlled, effective-dated subsystem. Migration `20261017000400_gst_centralization.sql` creates no active configuration and seeds no rates. Existing receiving and Counter transactions continue through their established behavior until the Owner saves an enabled version after CA validation.
 
 ## Owner setup
