@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gstConfigurationReloadCases } from "./gst-configuration-reload-cases.mjs";
+import { gstPaidRetailCases } from "./gst-paid-retail-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 const source = await fs.readFile(
   "supabase/migrations/20261019000200_short_document_scan_codes.sql",
@@ -18,6 +19,10 @@ assert.equal(
   await fs.readFile("drizzle/migrations/0067_gst_configuration_reload.sql", "utf8"),
 );
 const db = new PGlite();
+assert.equal(
+  await fs.readFile("supabase/migrations/20261020000100_gst_paid_retail_bill.sql", "utf8"),
+  await fs.readFile("drizzle/migrations/0068_gst_paid_retail_bill.sql", "utf8"),
+);
 try {
   await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
     create schema auth;create table auth.users(id uuid primary key,email text);
@@ -92,6 +97,7 @@ try {
     "PASS: full migration replay, historical preservation, 300 compact identities, lookup integration and private resolver permissions.",
   );
   await gstConfigurationReloadCases(db);
+  await gstPaidRetailCases(db);
 } finally {
   await db.close();
 }
