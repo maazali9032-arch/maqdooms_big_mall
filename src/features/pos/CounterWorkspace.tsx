@@ -370,7 +370,7 @@ function CounterContent({
         title="Scan item, customer bill, tailor work order or Production ID"
         description={
           work
-            ? `Extra fabric for ${work.code}`
+            ? "Order loaded below. Scan a Thaan next to issue extra fabric."
             : "Scan any Showroom item. Its recorded floor is attached automatically to this bill."
         }
         actions={
@@ -409,9 +409,9 @@ function CounterContent({
           disabled={frozen || scan.isPending}
         />
       </Panel>
-      {work && extraSource && (
+      {work && (
         <AdditionalCounterFabric
-          key={`${extraSource.id}:${work.kind}:${work.code}`}
+          key={`${work.kind}:${work.code}`}
           source={extraSource}
           work={work}
           scanned={extraScanned}

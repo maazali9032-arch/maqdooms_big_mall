@@ -15,3 +15,5 @@ Finished-product transfer notes are optional in the UI, matching the existing li
 Verification: TypeScript, scoped ESLint, production build, `scripts/receipt-presentation-test.mjs` (optional absolute Playwright module path for visual previews), full disposable PostgreSQL migration replay and GST/extra-fabric regressions. No test customer bill was posted to production.
 
 Release: pushed in `99cd532`; hosted POS/receipt code markers verified. Physical printer acceptance remains pending.
+
+20 October follow-up: a scanned production/customer order now appears immediately below the POS scanner, with its existing document/job details and next-step prompt. It no longer waits for a fabric scan to select a source floor. Quantity/issue actions still require scanned fabric and a known floor. The loaded panel stays mounted across floor changes, preserving retry locks. `scripts/counter-loaded-order-ui-test.mjs` covers immediate display, responsiveness, source changes, closed jobs, CP exclusion and unchanged retries using synthetic RPCs. No migration or data reset is required.

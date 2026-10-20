@@ -30,7 +30,7 @@ export function AdditionalCounterFabric({
   disabled,
   canIssue,
 }: {
-  source: { id: string; name: string };
+  source: { id: string; name: string } | null;
   work: CounterWork;
   scanned: ScanRecord | null;
   onScannedChange: (scan: ScanRecord | null) => void;
@@ -89,7 +89,7 @@ export function AdditionalCounterFabric({
   const selected = work.jobs.find((j) => j.id === job);
   const open = !!selected && ["open", "in_progress"].includes(selected.status);
   const available = Number(
-    scanned?.cuts?.flatMap((c) => c.locations).find((l) => l.id === source.id)?.quantity_mm ?? 0,
+    scanned?.cuts?.flatMap((c) => c.locations).find((l) => l.id === source?.id)?.quantity_mm ?? 0,
   );
   function submit() {
     if (issue.isPending || disabled) return;
@@ -99,7 +99,8 @@ export function AdditionalCounterFabric({
         return;
       }
       if (!canIssue) throw new Error("Fabric issue permission required");
-      if (!open || !selected || !scanned) throw new Error("Select an open job and scan its fabric");
+      if (!open || !selected || !scanned || !source)
+        throw new Error("Select an open job and scan its fabric");
       const quantity = quantityInput(metres, "mm");
       if (quantity > available) throw new Error("Requested metres exceed this floor’s stock");
       issue.mutate({
@@ -117,9 +118,13 @@ export function AdditionalCounterFabric({
   return (
     <Panel
       title={
-        work.kind === "customer" ? "Customer tailoring · extra fabric" : "Production · extra fabric"
+        work.kind === "customer" ? "Customer tailoring order loaded" : "Production order loaded"
       }
-      description={`Loaded ${work.code}. Scan a Thaan in the field above, then enter the metres to issue from ${source.name}.`}
+      description={
+        source
+          ? `Enter the extra metres to issue from ${source.name}.`
+          : "Review the order below, then scan a Thaan above. Its showroom floor will be detected automatically."
+      }
     >
       <fieldset className="space-y-3" disabled={frozen || disabled}>
         {work.jobs.length > 1 && (
@@ -179,7 +184,16 @@ export function AdditionalCounterFabric({
         {!canIssue && (
           <p className="text-sm">Your account does not have fabric issue permission.</p>
         )}
-        {scanned && (
+        {selected && open && !scanned && (
+          <p
+            role="status"
+            className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm font-medium"
+          >
+            Next: scan the fabric barcode above, enter the extra metres, then confirm the issue. No
+            stock is issued by opening this order.
+          </p>
+        )}
+        {scanned && source && (
           <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
             <div className="text-sm">
               <strong>{scanned.name}</strong>
@@ -199,7 +213,7 @@ export function AdditionalCounterFabric({
             </label>
           </div>
         )}
-        {scanned && (
+        {scanned && source && (
           <Button disabled={!open || !canIssue || issue.isPending} onClick={submit}>
             Issue extra fabric
           </Button>
