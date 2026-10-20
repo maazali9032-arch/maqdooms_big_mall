@@ -29,6 +29,10 @@ export function definiteDatabaseRejection(error: unknown) {
   const code = (error as { code?: string })?.code;
   return (
     !!code &&
-    (code === "P0001" || code === "42501" || code.startsWith("22") || code.startsWith("23"))
+    (code === "P0001" ||
+      code === "PGRST202" ||
+      code === "42501" ||
+      code.startsWith("22") ||
+      code.startsWith("23"))
   );
 }

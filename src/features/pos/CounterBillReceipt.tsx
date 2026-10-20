@@ -7,7 +7,8 @@ import { Panel } from "@/shared/components/page";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { printFabricLabel } from "@/features/inventory/fabric-label";
-type GstInvoice = {
+import { GstInvoiceSummary, GstTailoringComponents } from "@/features/gst/GstInvoicePresentation";
+export type GstInvoice = {
   invoice_number: string;
   invoice_display: "final_first" | "taxable_first";
   tailoring_display: "separate" | "combined";
@@ -206,16 +207,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
                       ? `Fabric ${reportMoney(line.fabric_amount_paise)} + Stitching ${reportMoney(line.stitching_paise)} · Delivery: ${line.delivery_date}`
                       : `Customer tailoring · Entire job total · Delivery: ${line.delivery_date}`}
                   </p>
-                  {receipt.tax?.tailoring_display === "separate" &&
-                    receipt.tax.lines
-                      .filter((taxLine) => taxLine.source_item_id === line.id)
-                      .map((taxLine) => (
-                        <p key={taxLine.id} className="text-xs">
-                          {taxLine.description} · HSN/SAC {taxLine.classification_code} · Taxable{" "}
-                          {reportMoney(taxLine.taxable_paise)} + GST{" "}
-                          {reportMoney(taxLine.gst_paise)} = {reportMoney(taxLine.final_paise)}
-                        </p>
-                      ))}
+                  {receipt.tax && <GstTailoringComponents tax={receipt.tax} sourceItem={line.id} />}
                   <p className="break-all font-mono text-xs">{line.job_code}</p>
                   {line.design && <p>Design: {line.design}</p>}
                   {line.fabrics?.map((cut, i) => (
@@ -229,38 +221,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
             </div>
           ))}
         </div>
-        {receipt.tax && (
-          <div className="space-y-1 border-t border-dashed pt-2 text-xs">
-            {receipt.tax.invoice_display === "final_first" && (
-              <p className="text-base font-bold">Payable {reportMoney(receipt.tax.final_paise)}</p>
-            )}
-            <div className="flex justify-between">
-              <span>Taxable</span>
-              <span>{reportMoney(receipt.tax.taxable_paise)}</span>
-            </div>
-            {receipt.tax.supply_type === "intra_state" ? (
-              <>
-                <div className="flex justify-between">
-                  <span>CGST</span>
-                  <span>{reportMoney(receipt.tax.cgst_paise)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>SGST</span>
-                  <span>{reportMoney(receipt.tax.sgst_paise)}</span>
-                </div>
-              </>
-            ) : (
-              <div className="flex justify-between">
-                <span>IGST</span>
-                <span>{reportMoney(receipt.tax.igst_paise)}</span>
-              </div>
-            )}
-            <div className="flex justify-between font-semibold">
-              <span>Total GST</span>
-              <span>{reportMoney(receipt.tax.gst_paise)}</span>
-            </div>
-          </div>
-        )}
+        {receipt.tax && <GstInvoiceSummary tax={receipt.tax} />}
         <div className="flex justify-between border-t pt-3">
           <strong>Total {reportMoney(receipt.total_paise)}</strong>
           <strong>

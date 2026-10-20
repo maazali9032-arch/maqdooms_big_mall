@@ -187,5 +187,5 @@ export async function gstPaidRetailCases(db) {
   console.log(
     "PASS: GST cash fabric bill pays 5250 on 5000 base, card/UPI, exact retry, single deduction/payment, unpaid rejection, rollback and private staging permissions.",
   );
-  return { owner, salesperson, mixed, unpaid, bill, assignment };
+  return { owner, salesperson, mixed, unpaid, bill, assignment, item, floor };
 }

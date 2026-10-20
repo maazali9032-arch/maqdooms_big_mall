@@ -3,7 +3,7 @@ import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import {
   calculateTaxPaise,
-  defaultGstRule,
+  selectedGstRule,
   type GstSupplyType,
   type GstTransactionConfiguration,
 } from "@/features/gst/tax";
@@ -166,8 +166,12 @@ export function gstPreview(
       sgst = 0n,
       igst = 0n,
       final = 0n;
-    const add = (amount: bigint, category: "fabric_sale" | "finished_sale" | "tailoring") => {
-      const rule = defaultGstRule(configuration, category);
+    const add = (
+      amount: bigint,
+      category: "fabric_sale" | "finished_sale" | "tailoring",
+      itemRef: string,
+    ) => {
+      const rule = selectedGstRule(configuration, category, itemRef);
       if (!rule) throw new Error(`Configure the default ${category} GST rule`);
       const tax = calculateTaxPaise(amount, rule.rate_bps, config.price_mode, supplyType);
       taxable += tax.taxablePaise;
@@ -178,8 +182,17 @@ export function gstPreview(
       final += tax.finalPaise;
     };
     for (const row of rows)
-      add(rowAmount(row), row.scan.kind === "product" ? "finished_sale" : "fabric_sale");
-    for (const group of groups) add(BigInt(fabricMoneyInput(group.stitching)), "tailoring");
+      add(
+        rowAmount(row),
+        row.scan.kind === "product" ? "finished_sale" : "fabric_sale",
+        `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
+      );
+    for (const group of groups)
+      add(
+        BigInt(fabricMoneyInput(group.stitching)),
+        "tailoring",
+        `SERVICE:${group.garment.trim().toUpperCase()}`,
+      );
     return { taxable, gst, cgst, sgst, igst, final };
   } catch {
     return null;

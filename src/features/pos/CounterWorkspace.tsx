@@ -46,6 +46,7 @@ type BillRequest = {
   p_contact: string;
   p_advance_paise?: number;
   p_tax_context: {
+    configuration_id: string | null;
     customer_gstin: string;
     payment_method: string;
   };
@@ -254,6 +255,7 @@ function CounterContent({
     },
     onError: (e) => {
       if (!billCommitted.current && definiteDatabaseRejection(e)) setPending(null);
+      if (e.message.includes("GST configuration changed")) void gst.refetch();
       toast.error(e.message);
     },
   });
@@ -322,10 +324,14 @@ function CounterContent({
       if (rows.some((r) => r.selected && !r.group))
         throw new Error("Add the selected tailoring job before completing this bill");
       if (!salesperson) throw new Error("Select the credited Salesperson");
+      if (gst.isPending || gst.error)
+        throw new Error("Load the current GST configuration before completing this bill");
       if (businessInvoice && !/^\d{2}[A-Z0-9]{13}$/.test(customerGstin.trim().toUpperCase()))
         throw new Error("Enter the customer's valid GSTIN for a GST business invoice");
       const payload = counterPayload(rows, groups);
       const tax = gstPreview(rows, groups, gst.data, derivedSupplyType);
+      if (gst.data?.configuration?.enabled && !tax)
+        throw new Error("Check the configured GST rules and bill prices");
       const billTotal = tax?.final ?? previewTotal(rows, groups);
       const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
       if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
@@ -343,6 +349,7 @@ function CounterContent({
         p_name: name,
         p_contact: contact,
         p_tax_context: {
+          configuration_id: gst.data?.configuration?.enabled ? gst.data.configuration.id : null,
           customer_gstin: businessInvoice ? customerGstin.trim().toUpperCase() : "",
           payment_method: paymentMethod,
         },
@@ -771,6 +778,14 @@ function CounterContent({
                     Bill total{" "}
                     {total === null ? "Enter quantities and prices" : reportMoney(String(total))}
                   </p>
+                  {gst.error && (
+                    <p role="alert" className="text-sm text-destructive">
+                      Could not load current GST settings.{" "}
+                      <button className="underline" onClick={() => void gst.refetch()}>
+                        Retry
+                      </button>
+                    </p>
+                  )}
                   {gst.data?.configuration?.enabled && taxPreview && !pendingTailoring && (
                     <div className="grid gap-1 rounded-lg bg-muted/30 p-3 text-sm sm:grid-cols-2">
                       <span>Taxable {reportMoney(String(taxPreview.taxable))}</span>
@@ -792,7 +807,9 @@ function CounterContent({
                     </p>
                   )}
                   <Button
-                    disabled={!canSell || bill.isPending || pendingTailoring}
+                    disabled={
+                      !canSell || bill.isPending || pendingTailoring || gst.isPending || !!gst.error
+                    }
                     onClick={submit}
                   >
                     {pending

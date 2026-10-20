@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import { gstConfigurationReloadCases } from "./gst-configuration-reload-cases.mjs";
 import { gstPaidRetailCases } from "./gst-paid-retail-cases.mjs";
 import { unifiedFinishedReceiptCases } from "./unified-finished-receipt-cases.mjs";
+import { gstOptionConsistencyCases } from "./gst-option-consistency-cases.mjs";
 const { PGlite } = await import(pathToFileURL(resolve(process.argv[2])).href);
 const source = await fs.readFile(
   "supabase/migrations/20261019000200_short_document_scan_codes.sql",
@@ -100,6 +101,7 @@ try {
   await gstConfigurationReloadCases(db);
   const receiptFixtures = await gstPaidRetailCases(db);
   await unifiedFinishedReceiptCases(db, receiptFixtures);
+  await gstOptionConsistencyCases(db, receiptFixtures);
 } finally {
   await db.close();
 }

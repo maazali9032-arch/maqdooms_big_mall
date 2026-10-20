@@ -95,6 +95,17 @@ export function defaultGstRule(
   return data?.rules.find((rule) => rule.category === category && !rule.item_ref) ?? null;
 }
 
+export function selectedGstRule(
+  data: GstTransactionConfiguration | undefined,
+  category: GstCategory,
+  itemRef: string,
+) {
+  return (
+    data?.rules.find((rule) => rule.category === category && rule.item_ref === itemRef) ??
+    defaultGstRule(data, category)
+  );
+}
+
 export function formatGstRate(rateBps: number) {
   return `${(rateBps / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}%`;
 }

@@ -39,4 +39,16 @@ The GST page provides period totals, rate/HSN-SAC grouping, supplier reconciliat
 
 ## Verification
 
+### 20 October: stock-entry and option consistency correction
+
+`createStockBatch` routes **No supplier invoice** through the established `create_barcode_batch_with_details` API. It does not omit the required purchase argument from the GST API. Invoice submissions send `p_purchase` explicitly through a bound client method. A schema-cache rejection is a definite rejection, so the form can be corrected and resubmitted; uncertain network outcomes still retain the original request for retry.
+
+Prepared migration `20261020000300_gst_option_consistency.sql` / Drizzle `0070_gst_option_consistency.sql` also accepts omitted/null purchase payloads, fixes each purchase line's Thaan lookup, and prevents calculated GST from becoming ITC/non-creditable-cost evidence when actual supplier GST is absent. It supersedes the estimate-fallback limitation recorded in History Section 64 for future purchases; it does not revise historical documents.
+
+POS and purchase estimates select item overrides before category defaults and round each component consistently with the database. A tailoring job can include several fabrics with different rates: invoice lines now carry `source_cut_ordinal` to preserve each cut separately without changing existing snapshot amounts. Finished-product sales use their product rule. The latest effective disabled configuration stops GST rather than reviving an older enabled version. POS submits the preview configuration ID; a changed version rejects the transaction for refresh instead of silently collecting a different amount.
+
+All four choices remain available. Price mode controls calculation; invoice display controls saved receipt summary order; tailoring display controls saved separate/combined presentation; purchase mode controls the recorded non-creditable-cost adjustment. Reports display the saved purchase mode and cost adjustment, and rate aggregation now qualifies line totals to avoid ambiguous-column errors. Screen and thermal receipts share snapshot presentation components. A future configuration takes effect on its scheduled date; historical reprints retain their original settings.
+
+Verification: `scripts/stock-batch-request-test.mjs`, `scripts/gst-configuration-reader-test.mjs`, and the disposable full migration harness `scripts/short-document-codes-test.mjs <absolute-path-to-pglite-module>` (including `gst-option-consistency-cases.mjs`). Tests cover all 16 option combinations, multi-fabric tailoring, override/default selection, paid totals, rendered preferences, invoice/no-invoice purchase paths, ITC evidence, reports, historical reprints and disabled/stale settings. No live database is used by this harness. Migration 0070 and the application changes still require production rollout and hosted/printer acceptance; they were not deployed by this task.
+
 Run `node --env-file=.env scripts/gst-centralization-test.mjs`. It checks migration parity, applies the complete migration to the connected PostgreSQL database in a transaction, verifies core objects and confirms zero seeded configurations, then rolls everything back.

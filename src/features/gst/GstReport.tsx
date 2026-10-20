@@ -31,6 +31,8 @@ type GstReportData = {
     supplier: string;
     invoice_number: string | null;
     itc_status: string;
+    purchase_mode?: string;
+    inventory_cost_adjustment_paise?: string;
     calculated_taxable_paise: string;
     calculated_gst_paise: string;
     actual_taxable_paise: string | null;
@@ -45,6 +47,7 @@ const summaryCards: [string, string][] = [
   ["Taxable sales", "sales_taxable_paise"],
   ["Output GST", "output_gst_paise"],
   ["Eligible ITC", "eligible_itc_paise"],
+  ["Non-creditable cost adjustment", "inventory_cost_adjustment_paise"],
   ["Estimated liability", "estimated_net_liability_paise"],
 ];
 const rpc = supabase.rpc.bind(supabase) as unknown as (
@@ -180,6 +183,8 @@ export function GstReport() {
                   <th className="p-2">Supplier</th>
                   <th>Invoice</th>
                   <th>ITC</th>
+                  <th>Saved purchase mode</th>
+                  <th>Cost adjustment</th>
                   <th>Calculated GST</th>
                   <th>Actual GST</th>
                   <th>Difference</th>
@@ -191,6 +196,18 @@ export function GstReport() {
                     <td className="p-2">{p.supplier}</td>
                     <td>{p.invoice_number ?? "—"}</td>
                     <td>{p.itc_status}</td>
+                    <td>
+                      {p.purchase_mode === "include_noncreditable"
+                        ? "Non-creditable cost"
+                        : p.purchase_mode === "track_itc"
+                          ? "Separate GST / ITC"
+                          : "—"}
+                    </td>
+                    <td>
+                      {p.inventory_cost_adjustment_paise != null
+                        ? reportMoney(p.inventory_cost_adjustment_paise)
+                        : "—"}
+                    </td>
                     <td>{reportMoney(p.calculated_gst_paise)}</td>
                     <td>{p.actual_gst_paise ? reportMoney(p.actual_gst_paise) : "—"}</td>
                     <td>{p.difference_paise ? reportMoney(p.difference_paise) : "—"}</td>

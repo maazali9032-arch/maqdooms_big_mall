@@ -17,9 +17,12 @@ import { quantityInput } from "./ledger-quantity";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { createStockBatch } from "./stock-batch-request";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   calculateTaxPaise,
   defaultGstRule,
+  selectedGstRule,
   formatGstRate,
   useGstConfiguration,
 } from "@/features/gst/tax";
@@ -225,18 +228,29 @@ export function StockRegistration() {
       : "intra_state";
   const purchaseTotals = (() => {
     try {
-      let base = 0n;
+      let base = 0n,
+        gstTotal = 0n,
+        supplier = 0n;
       for (const row of rows)
         for (let index = 0; index < rowCount(row.quantity); index++) {
           const detail = thaanDetail(row, index);
           if (!detail.length.trim() || !detail.cp.trim()) continue;
-          base +=
+          const amount =
             (BigInt(quantityInput(detail.length, "mm")) * BigInt(fabricMoneyInput(detail.cp)) +
               500n) /
             1000n;
+          const rule = selectedGstRule(
+            gst.data,
+            "purchase",
+            `FABRIC:${row.name.trim().toUpperCase()}`,
+          );
+          if (!rule) throw new Error("Purchase GST rule required");
+          const tax = calculateTaxPaise(amount, rule.rate_bps, "exclusive", purchaseSupply);
+          base += amount;
+          gstTotal += tax.gstPaise;
+          supplier += tax.finalPaise;
         }
-      const tax = calculateTaxPaise(base, purchaseRule?.rate_bps ?? 0, "exclusive", purchaseSupply);
-      return { base, gst: tax.gstPaise, supplier: tax.finalPaise };
+      return { base, gst: gstTotal, supplier };
     } catch {
       return null;
     }
@@ -266,19 +280,7 @@ export function StockRegistration() {
                 })),
               })
             : w.kind === "batch"
-              ? await (
-                  supabase.rpc as unknown as (
-                    name: string,
-                    args: Record<string, unknown>,
-                  ) => Promise<{ data: string | null; error: Error | null }>
-                )("create_barcode_batch_with_gst", {
-                  p_request: args.request,
-                  p_provider: w.provider,
-                  p_arrival_date: w.date,
-                  p_remarks: w.remarks,
-                  p_fabrics: w.fabrics,
-                  p_purchase: w.purchase,
-                })
+              ? await createStockBatch(supabase as unknown as SupabaseClient, args.request, w)
               : w.kind === "details"
                 ? await supabase.rpc("save_registered_thaan_details", {
                     p_request: args.request,
@@ -789,14 +791,18 @@ export function StockRegistration() {
                                   1000n;
                                 const tax = calculateTaxPaise(
                                   base,
-                                  purchaseRule!.rate_bps,
+                                  selectedGstRule(
+                                    gst.data,
+                                    "purchase",
+                                    `FABRIC:${r.name.trim().toUpperCase()}`,
+                                  )!.rate_bps,
                                   "exclusive",
                                   purchaseSupply,
                                 );
                                 return (
                                   <p className="text-[11px] text-muted-foreground sm:col-span-3 lg:col-span-4">
-                                    Base {reportMoney(String(base))} · GST{" "}
-                                    {reportMoney(String(tax.gstPaise))} · Supplier amount{" "}
+                                    Base {reportMoney(String(base))} · Estimated GST{" "}
+                                    {reportMoney(String(tax.gstPaise))} · Estimated supplier amount{" "}
                                     {reportMoney(String(tax.finalPaise))}
                                   </p>
                                 );
@@ -863,8 +869,8 @@ export function StockRegistration() {
               <p>Estimated Barcodes: {total}</p>
               {gstEnabled && supplierInvoiceAvailable === "yes" && purchaseTotals && (
                 <p>
-                  Base {reportMoney(String(purchaseTotals.base))} · GST{" "}
-                  {reportMoney(String(purchaseTotals.gst))} · Supplier total{" "}
+                  Base {reportMoney(String(purchaseTotals.base))} · Estimated GST{" "}
+                  {reportMoney(String(purchaseTotals.gst))} · Estimated supplier total{" "}
                   {reportMoney(String(purchaseTotals.supplier))}
                 </p>
               )}

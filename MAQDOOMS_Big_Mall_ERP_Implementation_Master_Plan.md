@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 20 October 2026, through `f03faa9`:** Sections 64–70 supersede older wording where GST input, configuration loading, printed document identities or finished-garment receiving differ. Recent changes are implemented/tested locally; production rollout of migrations 0065–0069 was not performed by this chat and current externally deployed state has not been independently verified. Implementation, migration preparation and production acceptance are separate milestones. See the matching dated entries in `MAQDOOMS_Big_Mall_ERP_Implementation_History.md`.
+> **Current approved implementation status — 20 October 2026, including Section 71:** Sections 64–71 supersede older wording where GST input, configuration loading, option propagation, printed document identities or finished-garment receiving differ. Recent changes are implemented/tested locally; production rollout of migrations 0065–0070 was not performed by this chat and current externally deployed state has not been independently verified. Implementation, migration preparation and production acceptance are separate milestones. See the matching dated entries in `MAQDOOMS_Big_Mall_ERP_Implementation_History.md`.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -1996,3 +1996,13 @@ Next authorized release must first inspect the current deployed source and migra
 - The requested broad architecture, authorization, concurrency, backup/Storage recovery and reliability audit is not completed by these feature changes; do not infer its completion from the GST input audit.
 
 These are recorded limits, not authorization for unrelated rewrites, new integrations or removal of reports/audit evidence. Earlier approved business rules continue unless explicitly superseded above.
+
+# 71. GST OPTION PROPAGATION AND NO-INVOICE STOCK ENTRY — 20 OCTOBER 2026
+
+Retain every A/B option. Selling-price mode applies consistently to POS previews and server tax for fabric, finished products and tailoring components. Invoice-display and tailoring-display choices are captured in immutable invoice snapshots and honored by shared screen/thermal rendering. Purchase mode is captured per purchase and exposed with its non-creditable-cost adjustment in reconciliation; internal transfers/production continue to carry base CP without adding tax again.
+
+Item overrides precede category defaults in previews and transactions. Multi-fabric tailoring requires a tax component per fabric cut with the actual fabric reference and component rounding. `gst_invoice_lines.source_cut_ordinal` and cut-aware uniqueness permit those lines while existing snapshots retain their original values. The latest effective disabled version stops tax. A POS preview configuration ID must match the active version when completing a new bill; stale requests fail atomically and refresh before resubmission. Previously completed exact retries/reprints retain their saved data.
+
+No supplier invoice uses `create_barcode_batch_with_details`; invoice submissions explicitly pass `p_purchase` to `create_barcode_batch_with_gst`. Schema-cache rejection releases the form, but uncertain results preserve the idempotency request. The GST function also accepts omitted/null purchase payloads after 0070. Actual supplier fields stay optional; missing actual GST must not create ITC or non-creditable-cost evidence from calculated estimates. This corrects the earlier fallback for future purchases without rewriting past accounting records.
+
+Prepared forward migration `20261020000300_gst_option_consistency.sql` / Drizzle `0070_gst_option_consistency.sql`, after 0065–0069, implements database consistency, purchase ordinal correction and qualified report aggregation. No RLS/permission relaxation is introduced. Tests cover all 16 setting combinations, two fabrics in one tailoring job, overrides, preview/server totals, rendered receipts, distinct purchase Thaan links, ITC/cost reports, historical snapshots and disabled/stale settings. TypeScript, targeted lint, routing/reader tests, full disposable migration replay and production build pass. Production application/deployment, hosted desktop/mobile checks and physical print acceptance remain separate pending release tasks. See History Section 70 and `docs/GST_CONFIGURATION.md`.
