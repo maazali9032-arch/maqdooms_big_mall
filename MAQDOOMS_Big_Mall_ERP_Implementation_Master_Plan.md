@@ -4,6 +4,8 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
+> **Current approved implementation status — 20 October 2026, through `f03faa9`:** Sections 64–70 supersede older wording where GST input, configuration loading, printed document identities or finished-garment receiving differ. Recent changes are implemented/tested locally; production rollout of migrations 0065–0069 was not performed by this chat and current externally deployed state has not been independently verified. Implementation, migration preparation and production acceptance are separate milestones. See the matching dated entries in `MAQDOOMS_Big_Mall_ERP_Implementation_History.md`.
+
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
 The six-page owner-facing workflow document is a visual explanation of major workflows. This document covers the **entire software**, including backend rules, inventory, security, barcode behavior, tailoring, production, genealogy, history, and reporting.
@@ -1918,3 +1920,79 @@ Owner Administration contains an effective-dated GST configuration with CA-contr
 Counter records the advance and the remaining balance is calculated. Customer receipts contain prices; a separate tailor work order contains production details and notes without prices. Workshop can scan a customer bill or job, enter the stitched garment's name, size and SP and receive it under a new short barcode. This barcode is for the customer-finished garment only and does not convert purchased fabric into store-owned finished stock.
 
 Forward Supabase migrations `20261016000100`–`20261016000400`, `20261017000100` and `20261017000200`, mirrored by Drizzle `0057`–`0062`, are applied. Dashboard cleanup hides the two legacy-only controls and duplicate lower sales cards while retaining detailed reports. Contract: `docs/POS_TERMINALS_MULTI_FLOOR_AND_CUSTOMER_FINISHING.md`.
+
+# 64. CENTRAL GST INPUT CONTRACT — 19 OCTOBER 2026
+
+Owner GST Configuration is the sole source for business identity, registration state, rates, classifications, overrides and invoice preferences. Do not add duplicate GST defaults to operational modules. Preserve the original four A/B groups: GST-inclusive/exclusive SP; final-price-first/taxable-first invoice display; separate/combined tailoring presentation; separate ITC/non-creditable-cost reporting.
+
+Ordinary Counter billing uses the effective registration state without an intra/inter-state selector or always-visible customer GSTIN/state inputs. **Add GST business invoice details** reveals transaction-specific customer GSTIN; the current service derives its state and tax split against the effective business state. Preserve payment method, customer contact, Salesperson attribution, advance/balance and one multi-floor invoice. These are operational inputs, not business GST setup.
+
+Stock Entry asks **Supplier invoice available?**. No permits receiving without purchase GST/ITC records. Yes reveals optional supplier invoice identity, GSTIN, actual amounts and ITC status for reconciliation. CP remains GST-exclusive. Calculated amounts are estimates, not verified invoice evidence or an automatic filing claim. Current code defaults ITC to pending, but an explicitly chosen eligible/ineligible/reversed status can still fall back to calculated tax when actual GST is absent; further accounting safeguards/acceptance are outstanding. Place-of-supply, required invoice fields, rates/HSN-SAC and ITC treatment require CA confirmation. Floor identifiers alone are not separate state registrations.
+
+Local implementation: `2d8a1a3`. Prepared database change: `20261019000100_gst_operational_input_audit.sql` / Drizzle `0065_gst_operational_input_audit.sql`, revising `gst_snapshot_counter_bill` and `create_barcode_batch_with_gst` without new tables or historical rewrites. Detailed scope and limits: `docs/GST_OPERATIONAL_INPUT_AUDIT.md`, `docs/GST_CONFIGURATION.md`.
+
+# 65. SCANNABLE DOCUMENT IDENTITY CONTRACT — 19 OCTOBER 2026
+
+Internal UUID primary keys, accounting/business references and printed scan identities are distinct. New orders, production jobs and customer tailoring jobs receive unique, immutable, fixed-length 15-character codes: `BL-`, `PJ-` and `TJ-`, each with 12 random characters from `23456789ABCDEFGH`. Collision handling regenerates at the same length under a transaction lock; unique constraints remain the final guard. No global growing sequence is used for these document aliases.
+
+Code 128 is retained. Print the short identity and readable text, preserve the original invoice/job reference, and keep old-code/UUID lookups working. Do not backfill or invalidate old labels. Do not change existing fabric or 12-digit finished-garment codes merely to align their appearance. Stock transfers record movement references and retain the item's barcode.
+
+Barcode identities used by the business are: fabric Thaan; owner production job; each shop finished garment; customer bill; each customer tailoring job; customer-finished garment. Not every purchase passes through all six. Reprinting and moving stock between floors do not generate new item identities.
+
+Local implementation: `e0d4859`. Prepared migration `20261019000200_short_document_scan_codes.sql` / Drizzle `0066_short_document_scan_codes.sql` adds nullable `scan_code` columns, generator/immutability triggers and private alias resolution. Existing authorization remains on operational RPCs. Receipt and production/tailor documents use the short alias when present. Physical printer/scanner acceptance remains required. Contract: `docs/SHORT_DOCUMENT_SCAN_CODES.md`.
+
+# 66. GST SETTINGS PERSISTENCE AND DISPLAY — 19–20 OCTOBER 2026
+
+The four original A/B controls must remain in the Owner editor and load the most recently saved version. Operational tax calculation instead uses the currently effective active configuration, including when an Owner operates POS. A future saved version must be visible to the editor without prematurely affecting transactions. Historical invoice reprints consume their stored preferences and amounts.
+
+Local-time inputs must round-trip without UTC truncation: the prior UTC-to-`datetime-local` conversion backdated India saves by 5½ hours. New edits default to save time; explicit effective dates and existing future schedules are retained. Invoice rendering honors the saved final-first/taxable-first preference and separate/combined customer-tailoring presentation; accounting tax components remain separate in storage.
+
+`1a7f5ef` implements the time/persistence/presentation correction and prepares `20261019000300_gst_configuration_reload.sql` / Drizzle `0067_gst_configuration_reload.sql`. It provides an Owner latest-saved reader and revises `gst_transaction_configuration` to return active effective settings for transaction screens. Existing configuration and invoice history remain immutable.
+
+`b4868ca` supersedes the editor's dependency on that new RPC. `configuration-reader.ts` reads the original configuration/rule tables through existing Owner-only SELECT/RLS policies, verifies the saved version before reporting success and bounds reads to 15 seconds with cancellation/retry errors. The original controls were not removed: a loading failure could prevent the form appearing. This compatibility fix needs no database migration. The separate operational-reader change in 0067 still needs its migration. Tests include all four B choices, India date round-trip, latest-save/effective-date separation, future settings, permission isolation and timeouts. Contract: `docs/GST_CONFIGURATION.md`.
+
+# 67. GST COUNTER TRANSACTION FINALIZATION — 20 OCTOBER 2026
+
+GST calculation must complete before the immutable completed-sale boundary and before payment collection. A paid fabric-only bill must not be routed through a public unpaid-retail operation. The public rule remains: ordinary retail is paid in full; unpaid/advance treatment requires Customer Tailoring. Payment method selection does not change this rule.
+
+`adf2cb1` prepares `20261020000100_gst_paid_retail_bill.sql` / Drizzle `0068_gst_paid_retail_bill.sql`. Private `gst_stage_counter_bill_multi` retains the original role checks, line validation and stock locks, stages a draft, then the GST wrapper calculates tax, completes the bill, captures the correct receipt and collects payment. No staff/anon execute grant exists on staging. Do not disable historical immutability to implement pricing. Failures roll back bill, stock, tax and payment together; exact retries retain one deduction and one payment.
+
+The screenshot case is tested locally: ₹5,000 taxable + ₹250 GST = ₹5,250 collected, zero balance. Card/UPI, unchanged retry, public unpaid rejection, tax-error rollback, mixed retail/tailoring advances and unpaid tailoring also pass. Tests: `scripts/gst-paid-retail-cases.mjs` in the disposable full-chain harness. The migration has not been applied by this chat.
+
+# 68. ONE FINISHED-GARMENT RECEIPT SCANNER — 20 OCTOBER 2026
+
+Finished Products → Receive finished garments must not require a Customer stitching / Shop production mode selection. One scanner accepts a customer bill, customer tailoring job or owner production job. The database classifies exact original codes, UUIDs and short scan aliases; do not infer ownership from a prefix. Show the detected source label and original reference, then open its existing workflow.
+
+- Customer stitching: show linked customer/job/factory/tailor details. Preselect a single job; if a bill contains several jobs, choose the garment that returned. Enter finished name, size and SP before generating its customer-finished barcode. Purchased fabric lines on the same bill are not received as finished store stock.
+- Shop production: open the existing whole-batch Workshop receipt, piece SP and label actions. Classification is read-only; receipt keeps its existing scan-to-receive operation and repeat-scan behavior.
+- Pending/uncertain child operations block replacing the scan. Failed lookups must not remount/repost the previous receipt. Keep existing piece transfer/history available below. Unknown/ambiguous codes and bills without stitching get explicit errors.
+
+`f03faa9` implements the workspace and child-component integration. Prepared migration `20261020000200_unified_finished_receipt_lookup.sql` / Drizzle `0069_unified_finished_receipt_lookup.sql` introduces `resolve_finished_receipt(text)`. Owner or appropriate receiving/pricing permission is required. Authorized Production receivers can resolve customer jobs through this restricted projection without broadening the legacy tailoring-workspace API; CP/bill totals are excluded. It depends on 0066 columns. Existing mutation services retain their safeguards. Contract: `docs/UNIFIED_FINISHED_RECEIPT.md`.
+
+# 69. VERIFICATION AND RELEASE STATUS — 20 OCTOBER 2026
+
+| Revision | Local commit(s) | Database prerequisite | Production status verified in this work |
+| --- | --- | --- | --- |
+| GST operational-input cleanup | `2d8a1a3` | 0065 | Not rolled out by this chat; external state unverified |
+| Compact document scan identities | `e0d4859` | 0066 | Not rolled out by this chat; external state unverified |
+| GST effective-time/operational reader | `1a7f5ef` | 0067 | Not rolled out by this chat; external state unverified |
+| GST editor loading compatibility | `b4868ca` | Original GST tables/RLS; no new RPC | Local source verified; hosted acceptance pending |
+| Paid retail GST completion | `adf2cb1` | 0068 | Not rolled out by this chat; external state unverified |
+| Automatic receipt-source detection | `f03faa9` | 0069, after 0066 | Not rolled out by this chat; external state unverified |
+
+Prepared Supabase files, in order: `20261019000100_gst_operational_input_audit.sql`, `20261019000200_short_document_scan_codes.sql`, `20261019000300_gst_configuration_reload.sql`, `20261020000100_gst_paid_retail_bill.sql`, `20261020000200_unified_finished_receipt_lookup.sql`. Each has a byte-identical Drizzle 0065–0069 mirror and journal entry. Applied historical migration bytes were not rewritten.
+
+Recorded local verification: TypeScript, targeted ESLint and production build; complete disposable PostgreSQL replay; 300 compact generated identities; legacy/short/UUID lookups and permissions; all four GST preference/date/load cases; paid/mixed/unpaid-tailoring/rollback billing cases; customer/production classification, receiving-role permissions and no stock writes during detection. Scripts: `short-document-codes-test.mjs`, `gst-configuration-reload-cases.mjs`, `gst-configuration-reader-test.mjs`, `gst-paid-retail-cases.mjs`, `unified-finished-receipt-cases.mjs`. No physical printer/scanner or authenticated hosted acceptance was performed. A build success does not establish a production deployment.
+
+Next authorized release must first inspect the current deployed source and migration execution records, review pending SQL against the actual database, and preserve already-applied versions. Apply dependency migrations before dependent frontend code; then run authorized read-only rollout verification and hosted acceptance. Do not treat earlier screenshots or Section 63's dated zero-GST-config observation as current database evidence. Do not deploy or change production settings solely to synchronize documentation.
+
+# 70. EXPLICIT OUTSTANDING WORK
+
+- Customer-finished garment barcodes are generated and linked to jobs, but general POS/dedicated finished-customer-item scanning remains unimplemented.
+- Owner mobile barcode inspection still needs new short document-alias and direct customer-tailoring-job roots. The unified receiving lookup does not automatically update other scanners.
+- CA review of invoice/place-of-supply requirements and actual-versus-estimated supplier tax/ITC evidence remains necessary. Do not label estimates as verified purchase tax.
+- Physical 58/80 mm/TSC printer acceptance, scanner compatibility and authenticated hosted desktop/mobile receiving/billing checks remain release tasks.
+- Current external deployment/database status and production rollback readiness were not verified during these local revisions. Pending migrations are not marked live.
+- The requested broad architecture, authorization, concurrency, backup/Storage recovery and reliability audit is not completed by these feature changes; do not infer its completion from the GST input audit.
+
+These are recorded limits, not authorization for unrelated rewrites, new integrations or removal of reports/audit evidence. Earlier approved business rules continue unless explicitly superseded above.
