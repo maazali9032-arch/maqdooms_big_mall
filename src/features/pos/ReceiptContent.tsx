@@ -7,10 +7,14 @@ import type { CounterReceipt } from "./CounterBillReceipt";
 
 /** Customer presentation deliberately excludes internal location/operator/job identifiers. */
 export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt }) {
+  const tradingName = receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall";
+  const mallBrand = / big mall$/i.test(tradingName);
+  const fabricOnly = receipt.lines.every((line) => line.kind === "fabric");
   const tailoring = receipt.lines.some((line) => line.kind === "tailoring");
   const received = receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0");
   const balance =
     receipt.balance_paise ?? (BigInt(receipt.total_paise) - BigInt(received)).toString();
+  const priceMode = receipt.tax?.price_mode ?? "inclusive";
   const payment = receipt.tax?.payment_method?.replaceAll("_", " ");
   const paymentStatus =
     BigInt(balance) === 0n ? "Paid" : BigInt(received) > 0n ? "Partially paid" : "Unpaid";
@@ -36,39 +40,48 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   );
   return (
     <>
-      <h2 className="invoice-heading text-center text-base font-semibold">
-        {receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall"}
-      </h2>
-      {receipt.tax && (
-        <p className="invoice-business text-center text-[10px]">
-          {receipt.tax.business.address}
-          <br />
-          GSTIN: {receipt.tax.business.gstin}
-          <br />
-          {receipt.tax.business.contact}
+      <header className="invoice-brand text-center">
+        <h2 className="invoice-heading font-semibold">
+          {mallBrand ? (
+            <>
+              {tradingName.replace(/ big mall$/i, "")}
+              <span className="invoice-brand-subtitle">BIG MALL</span>
+            </>
+          ) : (
+            tradingName
+          )}
+        </h2>
+        {receipt.tax && (
+          <p className="invoice-business">
+            {receipt.tax.business.address}
+            <br />
+            GSTIN: {receipt.tax.business.gstin}
+            {receipt.tax.business.contact && (
+              <>
+                <br />
+                {receipt.tax.business.contact}
+              </>
+            )}
+          </p>
+        )}
+        <h3 className="invoice-title">{receipt.tax ? "TAX INVOICE" : "SALES RECEIPT"}</h3>
+      </header>
+      <div className="invoice-identification">
+        <p className="invoice-bill-number">
+          Bill No: <strong>{receipt.scan_code ?? receipt.code}</strong>
         </p>
-      )}
-      <p className="invoice-heading text-center font-semibold">
-        {receipt.tax ? "TAX INVOICE" : "SALES RECEIPT"}
-      </p>
-      <p className="invoice-heading text-center font-semibold">
-        Bill reference: {receipt.scan_code ?? receipt.code}
-      </p>
-      <BarcodeGraphic code={receipt.scan_code ?? receipt.code} />
-      <p className="invoice-reference break-all font-mono text-xs">
-        Invoice number: {receipt.tax?.invoice_number ?? receipt.code}
-      </p>
-      <p className="invoice-meta text-xs">
-        Date:{" "}
-        {new Date(receipt.created_at).toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </p>
+        <p className="invoice-date">
+          Date:{" "}
+          {new Date(receipt.created_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}
+          <br />
+          Time:{" "}
+          {new Date(receipt.created_at).toLocaleTimeString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      </div>
       {(receipt.customer?.name || receipt.customer?.phone) && (
         <p className="invoice-meta text-xs">
           Customer: {receipt.customer.name}
@@ -78,84 +91,136 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
       {receipt.tax?.customer.gstin && (
         <p className="text-xs">Customer GSTIN: {receipt.tax.customer.gstin}</p>
       )}
-      <div>
-        {receipt.lines.map((line) => {
-          const components =
-            receipt.tax?.lines.filter((tax) => tax.source_item_id === line.id) ?? [];
-          const amount = components.length
-            ? components.reduce((sum, tax) => sum + BigInt(tax.final_paise), 0n).toString()
-            : line.amount_paise;
-          return (
-            <section
-              key={line.id}
-              className="invoice-line space-y-1 border-t border-dashed py-2 text-xs"
-            >
-              <div className="invoice-row flex justify-between gap-2 font-semibold">
-                <strong>{line.name}</strong>
-                <strong>{reportMoney(amount)}</strong>
-              </div>
-              {line.kind === "fabric" && (
-                <>
-                  <p className="break-all">Fabric ref: {line.barcode ?? "Not recorded"}</p>
-                  <p>
-                    {reportQuantity(line.quantity, line.unit)} × {reportMoney(line.price_paise!)} /
-                    m
-                    {receipt.tax
-                      ? receipt.tax.price_mode === "inclusive"
-                        ? " (incl. GST)"
-                        : " (before GST)"
-                      : ""}
-                  </p>
-                </>
-              )}
-              {line.size && (
-                <p>
-                  Size: {line.size}
-                  {line.design ? ` · ${line.design}` : ""}
-                </p>
-              )}
-              {line.kind === "tailoring" && (
-                <>
-                  {line.delivery_date && <p>Delivery: {deliveryDate(line.delivery_date)}</p>}
-                  {line.fabrics?.map((fabric, index) => (
-                    <p key={index}>
-                      {fabric.name} · {reportQuantity(fabric.quantity_mm, "mm")} for stitching
-                      <br />
-                      <span className="break-all">Fabric ref: {fabric.barcode}</span>
-                    </p>
-                  ))}
-                  {receipt.tax ? (
-                    <GstTailoringComponents tax={receipt.tax} sourceItem={line.id} />
-                  ) : (
-                    line.fabric_amount_paise != null &&
-                    line.stitching_paise != null && (
-                      <p>
-                        Fabric {reportMoney(line.fabric_amount_paise)} + Stitching{" "}
-                        {reportMoney(line.stitching_paise)}
-                      </p>
-                    )
-                  )}
-                </>
-              )}
-              {line.kind !== "tailoring" &&
-                components.map((tax) => (
-                  <p key={tax.id}>
-                    HSN/SAC {tax.classification_code} · GST {tax.rate_bps / 100}%
-                  </p>
-                ))}
-            </section>
-          );
-        })}
+      <div className="invoice-barcode">
+        <BarcodeGraphic code={receipt.scan_code ?? receipt.code} />
+        <p>{receipt.scan_code ?? receipt.code}</p>
       </div>
+      <details className="screen-only invoice-accounting-reference">
+        <summary>Accounting invoice reference</summary>
+        {receipt.tax?.invoice_number ?? receipt.code}
+      </details>
+      <table className="invoice-items">
+        <colgroup>
+          <col className="item-number" />
+          <col className="item-description" />
+          <col className="item-quantity" />
+          <col className="item-rate" />
+          <col className="item-amount" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Item</th>
+            <th scope="col">{fabricOnly ? "Qty (m)" : "Qty"}</th>
+            <th scope="col">Rate (₹)</th>
+            <th scope="col">Amount (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {receipt.lines.map((line, index) => {
+            const components =
+              receipt.tax?.lines.filter((tax) => tax.source_item_id === line.id) ?? [];
+            const amount = components.length
+              ? components
+                  .reduce(
+                    (sum, tax) =>
+                      sum + BigInt(priceMode === "exclusive" ? tax.taxable_paise : tax.final_paise),
+                    0n,
+                  )
+                  .toString()
+              : line.amount_paise;
+            return (
+              <Fragment key={line.id}>
+                <tr className="invoice-line">
+                  <td>{index + 1}</td>
+                  <td className="invoice-item-details">
+                    <strong>{line.name}</strong>
+                    {line.kind === "fabric" && (
+                      <p className="break-all invoice-fabric-reference">
+                        <span className="sr-only">Fabric ref: </span>
+                        {line.barcode ?? "Not recorded"}
+                      </p>
+                    )}
+                    {line.size && (
+                      <p>
+                        Size: {line.size}
+                        {line.design ? ` · ${line.design}` : ""}
+                      </p>
+                    )}
+                    {line.kind !== "tailoring" &&
+                      components.map((tax) => (
+                        <p key={tax.id}>
+                          HSN/SAC {tax.classification_code} · GST {tax.rate_bps / 100}%
+                        </p>
+                      ))}
+                  </td>
+                  <td className="invoice-numeric">
+                    {line.kind === "tailoring"
+                      ? "—"
+                      : line.unit === "mm"
+                        ? fabricOnly
+                          ? reportQuantity(line.quantity, line.unit).replace(/ m$/, "")
+                          : reportQuantity(line.quantity, line.unit)
+                        : `${line.quantity} ${line.unit}`}
+                  </td>
+                  <td className="invoice-numeric">
+                    {line.kind === "tailoring" || line.price_paise == null
+                      ? "—"
+                      : reportMoney(line.price_paise).replace("₹", "")}
+                  </td>
+                  <td className="invoice-numeric invoice-line-amount">
+                    {reportMoney(amount).replace("₹", "")}
+                  </td>
+                </tr>
+                {line.kind === "tailoring" && (
+                  <tr className="invoice-tailoring-detail">
+                    <td></td>
+                    <td colSpan={4}>
+                      {" "}
+                      {line.kind === "tailoring" && (
+                        <>
+                          {line.delivery_date && (
+                            <p>Delivery: {deliveryDate(line.delivery_date)}</p>
+                          )}
+                          {line.fabrics?.map((fabric, index) => (
+                            <p key={index}>
+                              {fabric.name} · {reportQuantity(fabric.quantity_mm, "mm")} for
+                              stitching
+                              <br />
+                              <span className="break-all">Fabric ref: {fabric.barcode}</span>
+                            </p>
+                          ))}
+                          {receipt.tax ? (
+                            <GstTailoringComponents tax={receipt.tax} sourceItem={line.id} />
+                          ) : (
+                            line.fabric_amount_paise != null &&
+                            line.stitching_paise != null && (
+                              <p>
+                                Fabric {reportMoney(line.fabric_amount_paise)} + Stitching{" "}
+                                {reportMoney(line.stitching_paise)}
+                              </p>
+                            )
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      {receipt.tax && (
+        <p className="invoice-price-basis">
+          Item rates and amounts {priceMode === "inclusive" ? "include GST" : "exclude GST"}.
+        </p>
+      )}
       {tailoring && (
         <div className="invoice-cost-summary space-y-1 border-t pt-2 text-xs">
           <p className="font-semibold">
             Sale summary
-            {receipt.tax?.price_mode === "inclusive"
-              ? " (including GST)"
-              : receipt.tax
-                ? " (before GST)"
-                : ""}
+            {priceMode === "inclusive" ? " (including GST)" : receipt.tax ? " (before GST)" : ""}
           </p>
           <div className="invoice-row flex justify-between">
             <span>Fabric</span>
@@ -182,10 +247,6 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         </div>
       )}
       <div className="invoice-payment space-y-1 border-t pt-2 text-xs">
-        <div className="invoice-row flex justify-between font-semibold">
-          <span>Payment status</span>
-          <span>{paymentStatus}</span>
-        </div>
         <div className="invoice-row flex justify-between">
           <span>Amount paid</span>
           <strong>{reportMoney(received)}</strong>
@@ -194,10 +255,10 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           <strong>Balance due</strong>
           <strong>{reportMoney(balance)}</strong>
         </div>
-        {payment && <p className="capitalize">Payment: {payment}</p>}
+        {payment && <p className="capitalize">Payment Mode: {payment}</p>}
         {BigInt(received) > 0n && receipt.paid_at && (
           <p>
-            Payment date:{" "}
+            Paid On:{" "}
             {new Date(receipt.paid_at).toLocaleString("en-IN", {
               timeZone: "Asia/Kolkata",
               day: "numeric",
@@ -208,7 +269,20 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
             })}
           </p>
         )}
+        <div className="invoice-row flex justify-between font-semibold">
+          <span>Payment status</span>
+          <span
+            className={`invoice-status ${paymentStatus === "Paid" ? "is-paid" : "is-outstanding"}`}
+          >
+            {paymentStatus}
+          </span>
+        </div>
       </div>
+      <footer className="invoice-footer">
+        Thank you for shopping at
+        <br />
+        <strong>{receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall"}</strong>
+      </footer>
     </>
   );
 }

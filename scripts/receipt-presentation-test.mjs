@@ -112,6 +112,37 @@ try {
   for (const hidden of ["Showroom", "F3-POS1", "Stock source", "Advance"])
     assert(!retail.includes(hidden), `Retail customer receipt exposes ${hidden}`);
   assert.equal(retail.match(/Invoice total/g).length, 1);
+  assert(retail.includes('<table class="invoice-items">') && retail.includes("Qty (m)"));
+  assert(retail.includes("CGST (2.5%)") && retail.includes("SGST (2.5%)"));
+  assert(retail.includes('invoice-line-amount">2,250.00'));
+  assert(retail.includes("Bill No:") && retail.includes("Thank you for shopping"));
+  const inclusive = render({ ...base, tax: { ...tax, price_mode: "inclusive" } });
+  assert(inclusive.includes('invoice-line-amount">2,362.50'));
+  const interstate = render({
+    ...base,
+    tax: {
+      ...tax,
+      supply_type: "inter_state",
+      cgst_paise: "0",
+      sgst_paise: "0",
+      igst_paise: "11250",
+    },
+  });
+  assert(interstate.includes("IGST (5%)") && !interstate.includes("CGST ("));
+  const mixedRates = render({
+    ...base,
+    tax: {
+      ...tax,
+      lines: [
+        ...tax.lines,
+        { ...tax.lines[0], id: "different-rate", source_item_id: "other", rate_bps: 1200 },
+      ],
+    },
+  });
+  assert(
+    !mixedRates.includes("CGST ("),
+    "Mixed rates must not display a misleading single percentage",
+  );
   assert(retail.includes("BILL-accounting-reference"), "Keep the accounting invoice number");
   const stitched = {
     ...base,
@@ -220,7 +251,11 @@ try {
     const folder = await fs.mkdtemp(join(os.tmpdir(), "maqdooms-receipt-preview-"));
     for (const [name, content, width] of [
       ["retail", retail, 58],
+      ["retail-80", retail, 80],
       ["tailoring", tailoring, 58],
+      ["tailoring-80", tailoring, 80],
+      ["combined", combined, 58],
+      ["interstate", interstate, 80],
       ["tailor-work-order", tailor, 80],
     ]) {
       const page = await browser.newPage({
@@ -234,6 +269,13 @@ try {
         .locator("body")
         .evaluate((el) => el.scrollWidth > el.clientWidth + 1);
       assert.equal(overflow, false, `${name} overflows paper`);
+      assert.equal(
+        await page
+          .locator(".invoice-items td")
+          .evaluateAll((cells) => cells.some((cell) => cell.scrollWidth > cell.clientWidth + 1)),
+        false,
+        `${name} has overflowing item cells`,
+      );
       await page.locator("body").screenshot({ path: join(folder, `${name}.png`) });
       await page.close();
     }

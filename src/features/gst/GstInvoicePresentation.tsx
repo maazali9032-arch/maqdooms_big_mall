@@ -3,6 +3,10 @@ import type { GstInvoice } from "@/features/pos/CounterBillReceipt";
 
 /** Both screen and thermal printing render these fields from the immutable invoice, never live config. */
 export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
+  const rates = [...new Set(tax.lines.map((line) => line.rate_bps))];
+  const rate = rates.length === 1 ? rates[0] : undefined;
+  const taxLabel = (name: string, divisor: number) =>
+    rate == null ? name : `${name} (${rate / divisor}%)`;
   const payable = (
     <div className="invoice-row invoice-grand-total flex justify-between gap-2 text-base font-bold">
       <span>Invoice total</span>
@@ -19,17 +23,17 @@ export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
       {tax.supply_type === "intra_state" ? (
         <>
           <div className="flex justify-between">
-            <span>CGST</span>
+            <span>{taxLabel("CGST", 200)}</span>
             <span>{reportMoney(tax.cgst_paise)}</span>
           </div>
           <div className="flex justify-between">
-            <span>SGST</span>
+            <span>{taxLabel("SGST", 200)}</span>
             <span>{reportMoney(tax.sgst_paise)}</span>
           </div>
         </>
       ) : (
         <div className="flex justify-between">
-          <span>IGST</span>
+          <span>{taxLabel("IGST", 100)}</span>
           <span>{reportMoney(tax.igst_paise)}</span>
         </div>
       )}

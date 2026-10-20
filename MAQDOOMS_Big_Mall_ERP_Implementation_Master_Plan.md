@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 21 October 2026, including Section 78:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
+> **Current approved implementation status — 21 October 2026, including Section 79:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -2056,3 +2056,10 @@ Use the purchase contents to adapt the customer invoice. Fabric-only bills show 
 The separate workshop copy is structured into references, scannable job identity, garment/fabric/assignment/delivery/current-status details and recorded tailoring instructions. Exclude every financial field. Do not claim nonexistent measurement/component data. Migration `20261021000100_tailor_work_order_status.sql` / Drizzle `0073_tailor_work_order_status.sql` adds only recorded status to the existing price-free API. Permissions, pricing, payment entry and extra-fabric rules stay unchanged. History Section 77 and `docs/COUNTER_RECEIPTS.md` record the implementation and verification.
 
 0073 is applied live after actual-schema dry-run rollback and post-commit checks; existing business fingerprints matched. TypeScript, scoped lint, build, full disposable regression chain and visual receipt previews passed. Physical printer/user acceptance remains separate.
+
+
+# 79. TABULAR THERMAL CUSTOMER BILL — 21 OCTOBER 2026
+
+Customer receipts follow the supplied table-based reference with compact branding/business details, recorded short bill alias and unchanged barcode, India date/time and optional customer, numbered item/quantity/rate/amount columns, immutable tax breakdown, highlighted invoice total, amount paid, balance due, recorded method/date, status badge and thank-you footer. Use a wider 80 mm screen preview and preserve both thermal print widths. Tailoring details span the item table; retail omits tailoring. The full accounting reference is available in a collapsed screen-only disclosure. Do not fabricate a sequential bill number or change stored identities.
+
+Exclusive table amounts come from saved taxable values; inclusive amounts from saved final values. All saved GST display options remain authoritative. Show summary tax percentages only for a single saved GST rate; mixed rates retain item-level detail. Shared CSS must style both screen and isolated popup printing. No database, authorization, function or location changes. Receipt browser/SSR, TypeScript, scoped lint and build checks passed; physical printer acceptance remains separate. See History Section 78 and `docs/COUNTER_RECEIPTS.md`.

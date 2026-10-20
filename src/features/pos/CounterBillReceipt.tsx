@@ -1,3 +1,4 @@
+import "./customer-invoice.css";
 import { receiptPrintStyles } from "./receipt-format";
 import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -139,7 +140,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
     >
       <div
         ref={printable}
-        className="thermal-invoice mx-auto max-w-[58mm] space-y-2 border bg-white p-2 text-black shadow-sm"
+        className="thermal-invoice mx-auto customer-invoice max-w-[80mm] space-y-2 rounded border bg-white p-3 text-black shadow-sm"
       >
         <CustomerReceiptContent receipt={receipt} />
       </div>
