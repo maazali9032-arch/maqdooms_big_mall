@@ -253,6 +253,42 @@ export async function gstOptionConsistencyCases(db, fixture) {
             combinations++;
           }
     assert.equal(combinations, 16);
+    // The tailor's own job alias must resolve to the same customer job before an extra issue.
+    const [customerJob] = await q(
+      "select j.id,j.code,j.scan_code from customer_tailoring_jobs j join counter_tailoring_details d on d.job_id=j.id where d.bill_id=$1",
+      [fixture.mixed],
+    );
+    for (const code of [customerJob.code, customerJob.scan_code]) {
+      const jobs = await one("select customer_tailoring_work($1)", [code]);
+      assert.equal(jobs.length, 1);
+      assert.equal(jobs[0].id, customerJob.id);
+    }
+    const originalReceipt = await one("select counter_bill($1)", [fixture.mixed]);
+    const priorStock = Number(
+      await one("select inventory_balance($1,$2)", [cottonItem, fixture.floor]),
+    );
+    const extraRequest = randomUUID();
+    const extraArgs = [extraRequest, customerJob.id, fixture.floor, entries[0].code, 100];
+    const extraCall = "select issue_additional_customer_fabric($1,$2,$3,$4,$5)";
+    assert.equal(
+      await one(extraCall, extraArgs),
+      await one(extraCall, extraArgs),
+      "Retry must not issue extra fabric twice",
+    );
+    assert.equal(
+      Number(await one("select inventory_balance($1,$2)", [cottonItem, fixture.floor])),
+      priorStock - 100,
+    );
+    const afterExtra = await one("select counter_bill($1)", [fixture.mixed]);
+    assert.equal(afterExtra.total_paise, originalReceipt.total_paise);
+    assert.equal(afterExtra.balance_paise, originalReceipt.balance_paise);
+    const workOrder = await one("select tailor_work_order($1)", [fixture.mixed]);
+    assert(
+      workOrder[0].fabrics.some(
+        (f) => f.barcode === entries[0].code && Number(f.quantity_mm) === 100,
+      ),
+      "Reprinted tailor sheet includes extra fabric",
+    );
     const outdated = await save({});
     await save({ price_mode: "inclusive" });
     const beforeStale = await one("select inventory_balance($1,$2)", [fixture.item, fixture.floor]);

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { counterPayment } from "../src/features/pos/counter-payment.ts";
 
 export async function gstPaidRetailCases(db) {
   await db.exec("reset role");
@@ -184,6 +185,25 @@ export async function gstPaidRetailCases(db) {
     ],
   );
   assert.equal((await one("select counter_bill($1)", [unpaid])).paid, false);
+  for (const amount of ["0", "750", "1575"]) {
+    const payment = counterPayment(157500n, true, amount);
+    const id = await one(
+      "select complete_counter_bill_gst($1,'[]'::jsonb,$2::jsonb,$3,$4,$5,null,null,$6::jsonb)",
+      [
+        randomUUID(),
+        group,
+        payment.paid,
+        payment.advancePaise ?? null,
+        salesperson,
+        JSON.stringify({ payment_method: "cash" }),
+      ],
+    );
+    const result = await one("select counter_bill($1)", [id]);
+    assert.equal(result.total_paise, "157500");
+    assert.equal(result.paid, payment.paid);
+    assert.equal(result.paid_amount_paise, payment.received.toString());
+    assert.equal(result.balance_paise, payment.balance.toString());
+  }
   console.log(
     "PASS: GST cash fabric bill pays 5250 on 5000 base, card/UPI, exact retry, single deduction/payment, unpaid rejection, rollback and private staging permissions.",
   );

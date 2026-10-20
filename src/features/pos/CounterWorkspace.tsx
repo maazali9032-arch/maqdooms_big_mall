@@ -19,10 +19,10 @@ import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
-import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
+import { counterPayment } from "./counter-payment";
 import { resolveCounterBarcode, type CounterWork } from "./counter-barcode";
 import {
   reserveTotals,
@@ -95,8 +95,7 @@ function CounterContent({
   const [salesperson, setSalesperson] = useState(""),
     [name, setName] = useState(""),
     [contact, setContact] = useState(""),
-    [paid, setPaid] = useState(true),
-    [advance, setAdvance] = useState("");
+    [advance, setAdvance] = useState("0");
   const [businessInvoice, setBusinessInvoice] = useState(false);
   const [customerGstin, setCustomerGstin] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -246,8 +245,7 @@ function CounterContent({
       setForm(blankGroup());
       setName("");
       setContact("");
-      setPaid(true);
-      setAdvance("");
+      setAdvance("0");
       setBusinessInvoice(false);
       setCustomerGstin("");
       void qc.invalidateQueries();
@@ -333,18 +331,12 @@ function CounterContent({
       if (gst.data?.configuration?.enabled && !tax)
         throw new Error("Check the configured GST rules and bill prices");
       const billTotal = tax?.final ?? previewTotal(rows, groups);
-      const advancePaise = groups.length && advance.trim() ? fabricMoneyInput(advance) : null;
-      if (advancePaise !== null && (billTotal === null || BigInt(advancePaise) > billTotal))
-        throw new Error("Advance cannot exceed the bill total");
+      const payment = counterPayment(billTotal, !!groups.length, advance);
       bill.mutate({
         p_request: crypto.randomUUID(),
         p_items: payload.items,
         p_tailoring: payload.tailoring,
-        p_paid: groups.length
-          ? advancePaise === null
-            ? paid
-            : billTotal === BigInt(advancePaise)
-          : true,
+        p_paid: payment.paid,
         p_salesperson: salesperson,
         p_name: name,
         p_contact: contact,
@@ -353,9 +345,7 @@ function CounterContent({
           customer_gstin: businessInvoice ? customerGstin.trim().toUpperCase() : "",
           payment_method: paymentMethod,
         },
-        ...(groups.length && advancePaise !== null && billTotal !== BigInt(advancePaise)
-          ? { p_advance_paise: advancePaise }
-          : {}),
+        ...(payment.advancePaise !== undefined ? { p_advance_paise: payment.advancePaise } : {}),
       });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Check the bill");
@@ -377,7 +367,7 @@ function CounterContent({
   return (
     <div className="space-y-4">
       <Panel
-        title="Scan item, customer bill or Production ID"
+        title="Scan item, customer bill, tailor work order or Production ID"
         description={
           work
             ? `Extra fabric for ${work.code}`
@@ -413,8 +403,8 @@ function CounterContent({
           label="Counter barcode"
           placeholder={
             work
-              ? "Scan a Thaan to issue, or another bill / Production ID"
-              : "Scan or type an item, customer bill or Production ID"
+              ? "Scan a Thaan to issue, or another work order / bill / Production ID"
+              : "Scan an item, customer bill, tailor work order or Production ID"
           }
           disabled={frozen || scan.isPending}
         />
@@ -739,39 +729,26 @@ function CounterContent({
                           aria-label="Advance received"
                           inputMode="decimal"
                           value={advance}
-                          onChange={(event) => {
-                            setAdvance(event.target.value);
-                            setPaid(false);
-                          }}
+                          onChange={(event) => setAdvance(event.target.value)}
                           placeholder="Enter amount paid now"
                         />
                       </label>
                       <div className="self-end rounded-lg border bg-muted/30 p-3 text-sm">
-                        Balance ₹{" "}
+                        Balance due{" "}
                         {(() => {
                           try {
-                            const received = advance.trim()
-                              ? BigInt(fabricMoneyInput(advance))
-                              : 0n;
-                            return total === null ? "—" : reportMoney(String(total - received));
+                            return reportMoney(
+                              String(counterPayment(total, true, advance).balance),
+                            );
                           } catch {
                             return "—";
                           }
                         })()}
                       </div>
-                      <label className="block text-sm">
-                        Or payment status
-                        <select
-                          aria-label="Bill payment status"
-                          className="ml-3 min-h-11 rounded border bg-background p-2"
-                          value={paid ? "paid" : "unpaid"}
-                          disabled={!!advance.trim()}
-                          onChange={(e) => setPaid(e.target.value === "paid")}
-                        >
-                          <option value="paid">Paid in full</option>
-                          <option value="unpaid">No advance yet</option>
-                        </select>
-                      </label>
+                      <p className="text-xs text-muted-foreground sm:col-span-2">
+                        Enter the amount collected now. Use 0 for no payment, or the bill total for
+                        full payment. Balance is calculated automatically.
+                      </p>
                     </div>
                   )}
                   <p className="font-semibold">

@@ -449,8 +449,8 @@ export function FinishedProductInventory() {
             {selected.length} whole pieces selected. Total stock remains unchanged by a transfer.
           </p>
           <Input
-            aria-label="Finished Product transfer reason"
-            placeholder="Reason / reference"
+            aria-label="Finished Product transfer note (optional)"
+            placeholder="Note / reference (optional)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             disabled={frozen}
@@ -465,12 +465,7 @@ export function FinishedProductInventory() {
             disabled={
               transfer.isPending ||
               scanPiece.isPending ||
-              (!pending &&
-                (Boolean(loadingError) ||
-                  !selected.length ||
-                  !source ||
-                  !destination ||
-                  !reason.trim()))
+              (!pending && (Boolean(loadingError) || !selected.length || !source || !destination))
             }
             onClick={() => transfer.mutate()}
           >

@@ -5,7 +5,7 @@ import type { GstInvoice } from "@/features/pos/CounterBillReceipt";
 export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
   const payable = <p className="text-base font-bold">Payable {reportMoney(tax.final_paise)}</p>;
   return (
-    <div className="space-y-1 border-t border-dashed pt-2 text-xs">
+    <div className="invoice-tax-summary space-y-1 border-t border-dashed pt-2 text-xs">
       {tax.invoice_display === "final_first" && payable}
       <div className="flex justify-between">
         <span>Taxable</span>
@@ -50,11 +50,18 @@ export function GstTailoringComponents({
       {tax.lines
         .filter((line) => line.source_item_id === sourceItem)
         .map((line) => (
-          <p key={line.id} className="text-xs">
-            {line.description} · HSN/SAC {line.classification_code} · Taxable{" "}
-            {reportMoney(line.taxable_paise)} + GST {reportMoney(line.gst_paise)} ={" "}
-            {reportMoney(line.final_paise)}
-          </p>
+          <div key={line.id} className="invoice-component text-xs">
+            <div className="invoice-row flex justify-between gap-2">
+              <span>{line.description}</span>
+              <span>{reportMoney(line.final_paise)}</span>
+            </div>
+            <p>
+              HSN/SAC {line.classification_code} · GST {line.rate_bps / 100}%
+            </p>
+            <p>
+              Taxable {reportMoney(line.taxable_paise)} · GST {reportMoney(line.gst_paise)}
+            </p>
+          </div>
         ))}
     </>
   );

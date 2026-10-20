@@ -10,7 +10,7 @@ function PosPage() {
     <>
       <PageHeader
         title="Counter / POS"
-        description="Choose your Showroom floor, then scan an item to sell or an existing bill / Production ID to issue extra fabric."
+        description="Scan an item from any showroom floor to sell, or scan a customer bill, tailor work order or Production ID to issue extra fabric."
       />
       <CounterWorkspace />
     </>
