@@ -245,6 +245,7 @@ export type Database = {
       };
       listings: {
         Row: {
+          archived_at: string | null;
           category: string | null;
           collection: string | null;
           created_at: string;
@@ -262,6 +263,7 @@ export type Database = {
           title: string;
         };
         Insert: {
+          archived_at?: string | null;
           category?: string | null;
           collection?: string | null;
           created_at?: string;
@@ -279,6 +281,7 @@ export type Database = {
           title: string;
         };
         Update: {
+          archived_at?: string | null;
           category?: string | null;
           collection?: string | null;
           created_at?: string;
@@ -1243,6 +1246,12 @@ export type Database = {
       receive_production_barcode: {
         Args: { p_request: string; p_code: string };
         Returns: string;
+      };
+      ecommerce_scan_stock: { Args: { p_barcode: string }; Returns: Json };
+      ecommerce_listing_links: { Args: { p_listing: string }; Returns: Json };
+      save_ecommerce_listing_details: {
+        Args: { p_listing: string; p_details: Json; p_stock?: Json };
+        Returns: undefined;
       };
       showroom_stock: { Args: { p_kind?: string | null }; Returns: Json };
       ecommerce_listing_stock: { Args: Record<PropertyKey, never>; Returns: Json };

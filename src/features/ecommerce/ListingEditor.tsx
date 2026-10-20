@@ -1,6 +1,10 @@
+import { useMutation } from "@tanstack/react-query";
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
+import { BarcodeCamera } from "@/shared/components/barcode-camera";
+import { useSession } from "@/app/providers/session";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +32,9 @@ import {
   useListingImageUrls,
   useSaveListing,
   type ListingInput,
+  type ShowroomItem,
+  useListingStockLinks,
+  scanShowroomItem,
 } from "./index";
 
 export type EditableListing = {
@@ -48,7 +55,7 @@ export type EditableListing = {
 
 const rupees = (p: number | null) => (p === null ? "" : String(p / 100));
 
-/** Create an online-only product (listing === null) or edit an existing listing. */
+/** Descriptive online fields stay separate from physical stock; scans select eligible showroom links. */
 export function ListingEditor({
   listing,
   onClose,
@@ -57,6 +64,47 @@ export function ListingEditor({
   onClose: () => void;
 }) {
   const save = useSaveListing();
+  const { can } = useSession();
+  const links = useListingStockLinks(listing?.id);
+  const [selected, setSelected] = useState<ShowroomItem[] | null>(null);
+  const stock = selected ?? links.data ?? [];
+  const [barcode, setBarcode] = useState("");
+  const [camera, setCamera] = useState(false);
+  const scan = useMutation({
+    mutationFn: scanShowroomItem,
+    onSuccess: (item) => {
+      setCamera(false);
+      if (stock.some((row) => row.id === item.id)) {
+        toast.info("This barcode is already selected");
+        return;
+      }
+      if (stock.some((row) => row.kind !== item.kind)) {
+        toast.error("Use separate listings for fabric metres and finished pieces");
+        return;
+      }
+      if (stock.length >= 200) {
+        toast.error("Maximum 200 linked barcodes per listing");
+        return;
+      }
+      setSelected([...stock, item]);
+      setForm((previous) => ({
+        ...previous,
+        stock_mode: "linked",
+        title: previous.title || item.name,
+        price:
+          previous.price ||
+          (item.kind === "product" && item.sp_paise ? rupees(Number(item.sp_paise)) : ""),
+      }));
+      setBarcode("");
+      toast.success("Showroom barcode added to this listing");
+    },
+    onError: (error) => {
+      setCamera(false);
+      toast.error(error.message);
+    },
+  });
+  const linksLoading = !!listing?.id && links.isPending;
+
   const isNew = listing === null;
   const [form, setForm] = useState({
     title: listing?.title ?? "",
@@ -122,6 +170,9 @@ export function ListingEditor({
         newImages: files,
         variants,
         removedVariantIds,
+        ...(form.stock_mode === "linked" && selected !== null
+          ? { stockLinks: selected.map(({ id, kind }) => ({ id, kind })) }
+          : {}),
       });
       toast.success(isNew ? "Online product created (unpublished)" : "Listing saved");
       onClose();
@@ -134,200 +185,311 @@ export function ListingEditor({
     setForm({ ...form, [k]: e.target.value });
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && !save.isPending && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isNew ? "New online-only product" : `Edit listing — ${listing.title}`}
+            {isNew ? "New online listing" : `Edit listing — ${listing.title}`}
           </DialogTitle>
           <DialogDescription>
             Online details only. Counter prices, laagat and physical stock are never changed here.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="l-title">Product name</Label>
-            <Input id="l-title" value={form.title} onChange={set("title")} className="h-11" />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="l-desc">Description</Label>
-            <Textarea id="l-desc" rows={3} value={form.description} onChange={set("description")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-price">
-              Online price (₹{form.stock_mode === "linked" ? "/m" : ""})
-            </Label>
-            <Input
-              id="l-price"
-              inputMode="decimal"
-              value={form.price}
-              onChange={set("price")}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-sale">Sale price (optional)</Label>
-            <Input
-              id="l-sale"
-              inputMode="decimal"
-              value={form.sale}
-              onChange={set("sale")}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-cat">Category</Label>
-            <Input id="l-cat" value={form.category} onChange={set("category")} className="h-11" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-col">Collection</Label>
-            <Input
-              id="l-col"
-              value={form.collection}
-              onChange={set("collection")}
-              className="h-11"
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="l-tags">Tags (comma separated)</Label>
-            <Input id="l-tags" value={form.tags} onChange={set("tags")} className="h-11" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-seo">SEO title</Label>
-            <Input id="l-seo" value={form.seo_title} onChange={set("seo_title")} className="h-11" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="l-seod">SEO description</Label>
-            <Input
-              id="l-seod"
-              value={form.seo_description}
-              onChange={set("seo_description")}
-              className="h-11"
-            />
+        <fieldset disabled={save.isPending} className="contents">
+          {form.stock_mode === "linked" && (
+            <section
+              className="space-y-3 rounded-lg border p-3"
+              aria-label="Showroom barcode selection"
+            >
+              <h3 className="font-semibold">Scan showroom stock</h3>
+              <p className="text-xs text-muted-foreground">
+                Scan a fabric Thaan or a finished piece from Showroom F1, F2 or F3. Fabric needs no
+                saved SP; enter its online price below. Finished pieces need their saved SP.
+              </p>
+              {linksLoading && <p role="status">Loading linked barcodes…</p>}
+              {links.error && (
+                <p role="alert">
+                  Linked barcodes could not load.{" "}
+                  <button type="button" onClick={() => void links.refetch()}>
+                    Retry
+                  </button>
+                </p>
+              )}
+              {can("ecommerce.link_stock") && (
+                <>
+                  {camera && (
+                    <BarcodeCamera
+                      onScan={(code) => {
+                        if (!scan.isPending) scan.mutate(code);
+                      }}
+                      onStop={() => setCamera(false)}
+                    />
+                  )}
+                  <BarcodeEntry
+                    value={barcode}
+                    onChange={setBarcode}
+                    onScan={(code) => scan.mutate(code)}
+                    label="Scan showroom barcode for listing"
+                    action={scan.isPending ? "Checking…" : "Add barcode"}
+                    disabled={scan.isPending || linksLoading || !!links.error || save.isPending}
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={scan.isPending || linksLoading || !!links.error || save.isPending}
+                      onClick={() => setCamera(!camera)}
+                    >
+                      <Camera className="size-4" />
+                      {camera ? "Close camera" : "Scan with camera"}
+                    </Button>
+                  </BarcodeEntry>
+                </>
+              )}
+              {stock.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-start justify-between gap-2 rounded border p-2 text-sm"
+                >
+                  <div>
+                    <strong>{item.name}</strong>
+                    <p className="break-all font-mono text-xs">{item.barcode}</p>
+                    <p className="text-xs">
+                      {item.kind === "fabric"
+                        ? "Fabric · price per metre"
+                        : "Finished product · price per piece"}
+                      {item.locations?.length
+                        ? ` · ${item.locations.map((l) => l.name).join(" / ")}`
+                        : ""}
+                    </p>
+                  </div>
+                  {can("ecommerce.link_stock") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove barcode ${item.barcode}`}
+                      disabled={save.isPending || scan.isPending}
+                      onClick={() => setSelected(stock.filter((row) => row.id !== item.id))}
+                    >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {!stock.length && (
+                <p className="text-xs text-muted-foreground">No showroom barcodes selected yet.</p>
+              )}
+            </section>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="l-title">Product name</Label>
+              <Input id="l-title" value={form.title} onChange={set("title")} className="h-11" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="l-desc">Description</Label>
+              <Textarea
+                id="l-desc"
+                rows={3}
+                value={form.description}
+                onChange={set("description")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-price">
+                Online price (₹
+                {form.stock_mode === "linked"
+                  ? stock[0]?.kind === "product"
+                    ? "/piece"
+                    : "/m"
+                  : ""}
+                )
+              </Label>
+              <Input
+                id="l-price"
+                inputMode="decimal"
+                value={form.price}
+                onChange={set("price")}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-sale">Sale price (optional)</Label>
+              <Input
+                id="l-sale"
+                inputMode="decimal"
+                value={form.sale}
+                onChange={set("sale")}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-cat">Category</Label>
+              <Input id="l-cat" value={form.category} onChange={set("category")} className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-col">Collection</Label>
+              <Input
+                id="l-col"
+                value={form.collection}
+                onChange={set("collection")}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="l-tags">Tags (comma separated)</Label>
+              <Input id="l-tags" value={form.tags} onChange={set("tags")} className="h-11" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-seo">SEO title</Label>
+              <Input
+                id="l-seo"
+                value={form.seo_title}
+                onChange={set("seo_title")}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="l-seod">SEO description</Label>
+              <Input
+                id="l-seod"
+                value={form.seo_description}
+                onChange={set("seo_description")}
+                className="h-11"
+              />
+            </div>
+
+            {isNew ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Product type</Label>
+                <Select
+                  value={form.stock_mode}
+                  onValueChange={(v) =>
+                    setForm({ ...form, stock_mode: v as ListingInput["stock_mode"] })
+                  }
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="linked">Linked Showroom stock</SelectItem>
+                    <SelectItem value="manual">Manual quantity (sizes)</SelectItem>
+                    <SelectItem value="untracked">Untracked (showcase / enquiry)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Scan barcodes above, or link stock from Showroom Fabric or Showroom Finished
+                  Products after saving.
+                </p>
+              </div>
+            ) : null}
           </div>
 
-          {isNew ? (
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label>Product type</Label>
-              <Select
-                value={form.stock_mode}
-                onValueChange={(v) =>
-                  setForm({ ...form, stock_mode: v as ListingInput["stock_mode"] })
-                }
+          {form.stock_mode === "manual" ? (
+            <div className="space-y-2">
+              <Label>Sizes and quantity</Label>
+              {variants.map((v, i) => (
+                <div key={v.id ?? `new-${i}`} className="flex gap-2">
+                  <Input
+                    placeholder="Size (e.g. M)"
+                    value={v.label}
+                    onChange={(e) =>
+                      setVariants(
+                        variants.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)),
+                      )
+                    }
+                    className="h-10"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={v.qty}
+                    onChange={(e) =>
+                      setVariants(
+                        variants.map((x, j) =>
+                          j === i ? { ...x, qty: Number(e.target.value) } : x,
+                        ),
+                      )
+                    }
+                    className="numeric h-10 w-24"
+                    aria-label="Quantity"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove size"
+                    onClick={() => {
+                      if (v.id) setRemovedVariantIds([...removedVariantIds, v.id]);
+                      setVariants(variants.filter((_, j) => j !== i));
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVariants([...variants, { label: "", qty: 0 }])}
               >
-                <SelectTrigger className="h-11">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="linked">Linked Showroom stock</SelectItem>
-                  <SelectItem value="manual">Manual quantity (sizes)</SelectItem>
-                  <SelectItem value="untracked">Untracked (showcase / enquiry)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Link actual stock from Showroom Fabric or Showroom Finished Products after saving.
-              </p>
+                Add size
+              </Button>
             </div>
           ) : null}
-        </div>
 
-        {form.stock_mode === "manual" ? (
           <div className="space-y-2">
-            <Label>Sizes and quantity</Label>
-            {variants.map((v, i) => (
-              <div key={v.id ?? `new-${i}`} className="flex gap-2">
-                <Input
-                  placeholder="Size (e.g. M)"
-                  value={v.label}
-                  onChange={(e) =>
-                    setVariants(
-                      variants.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)),
-                    )
-                  }
-                  className="h-10"
+            <Label>
+              Images{" "}
+              <span className="numeric text-muted-foreground">
+                ({total}/{MAX_LISTING_IMAGES})
+              </span>
+            </Label>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {kept.map((img, i) => (
+                <Thumb
+                  key={img}
+                  src={keptUrls.data?.[i]}
+                  onRemove={() => setKept(kept.filter((k) => k !== img))}
                 />
-                <Input
-                  type="number"
-                  min={0}
-                  value={v.qty}
-                  onChange={(e) =>
-                    setVariants(
-                      variants.map((x, j) => (j === i ? { ...x, qty: Number(e.target.value) } : x)),
-                    )
-                  }
-                  className="numeric h-10 w-24"
-                  aria-label="Quantity"
+              ))}
+              {filePreviews.map((src, i) => (
+                <Thumb
+                  key={src}
+                  src={src}
+                  isNew
+                  onRemove={() => setFiles(files.filter((_, j) => j !== i))}
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Remove size"
-                  onClick={() => {
-                    if (v.id) setRemovedVariantIds([...removedVariantIds, v.id]);
-                    setVariants(variants.filter((_, j) => j !== i));
-                  }}
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setVariants([...variants, { label: "", qty: 0 }])}
-            >
-              Add size
-            </Button>
-          </div>
-        ) : null}
-
-        <div className="space-y-2">
-          <Label>
-            Images{" "}
-            <span className="numeric text-muted-foreground">
-              ({total}/{MAX_LISTING_IMAGES})
-            </span>
-          </Label>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {kept.map((img, i) => (
-              <Thumb
-                key={img}
-                src={keptUrls.data?.[i]}
-                onRemove={() => setKept(kept.filter((k) => k !== img))}
+              ))}
+            </div>
+            {total < MAX_LISTING_IMAGES ? (
+              <Input
+                type="file"
+                accept={LISTING_IMAGE_TYPES.join(",")}
+                multiple
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  e.target.value = "";
+                }}
               />
-            ))}
-            {filePreviews.map((src, i) => (
-              <Thumb
-                key={src}
-                src={src}
-                isNew
-                onRemove={() => setFiles(files.filter((_, j) => j !== i))}
-              />
-            ))}
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Maximum reached — remove an image to replace it.
+              </p>
+            )}
           </div>
-          {total < MAX_LISTING_IMAGES ? (
-            <Input
-              type="file"
-              accept={LISTING_IMAGE_TYPES.join(",")}
-              multiple
-              onChange={(e) => {
-                addFiles(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Maximum reached — remove an image to replace it.
-            </p>
-          )}
-        </div>
-
+        </fieldset>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={save.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={save.isPending}>
+          <Button
+            onClick={() => {
+              setCamera(false);
+              void submit();
+            }}
+            disabled={save.isPending || scan.isPending || linksLoading || !!links.error}
+          >
             {save.isPending ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>

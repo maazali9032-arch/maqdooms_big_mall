@@ -512,6 +512,13 @@
       "when": 1792540800000,
       "tag": "0073_tailor_work_order_status",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1792540860000,
+      "tag": "0074_ecommerce_showroom_scanning",
+      "breakpoints": true
     }
   ]
 }

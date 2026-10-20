@@ -1,3 +1,4 @@
+import { ecommerceShowroomCases } from "./ecommerce-showroom-cases.mjs";
 import { productionPricedReceiptCases } from "./production-priced-receipt-cases.mjs";
 import { customerFinishedReceiverCases } from "./customer-finished-receiver-cases.mjs";
 /** Disposable PostgreSQL only. No .env, network database or production settings. */
@@ -106,6 +107,7 @@ try {
   await gstOptionConsistencyCases(db, receiptFixtures);
   await customerFinishedReceiverCases(db, receiptFixtures);
   await productionPricedReceiptCases(db, receiptFixtures);
+  await ecommerceShowroomCases(db, receiptFixtures);
 } finally {
   await db.close();
 }

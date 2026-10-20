@@ -4,7 +4,7 @@
 
 This is the implementation source of truth for the complete MAQDOOM'S Big Mall ERP.
 
-> **Current approved implementation status — 21 October 2026, including Section 80:** Migrations 0065–0073 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
+> **Current approved implementation status — 21 October 2026, including Section 81:** Migrations 0065–0074 are applied live after dry-run and post-commit checks. Hosted POS/receipt assets serve the Section 73 presentation/payment changes. Section 74 aligns the stock receiver's generated-barcode reader with its existing receiving permission. No live test bill or customer garment receipt was posted. Authenticated workflow and physical printer/scanner acceptance remain separate milestones. See the matching dated history entries.
 
 Codex must implement the software **phase by phase, in the exact dependency order below**. Do not build the whole ERP in one uncontrolled pass.
 
@@ -2068,3 +2068,10 @@ Exclusive table amounts come from saved taxable values; inclusive amounts from s
 # 80. ALL-SCREEN OWNER BARCODE INSPECTOR — 21 OCTOBER 2026
 
 Display the existing floating Global Barcode Inspector on Owner dashboards at all screen sizes and input-device types. Do not restrict by phone user agent, coarse pointer, width or height. Keep open inspection state through resizing. Preserve Dashboard-only placement, Owner-only backend authorization, read-only data access, camera cleanup and manual/keyboard scanner support. No database or permission changes are required. The 32-check actual-component browser suite, TypeScript, scoped lint and production build passed. See History Section 79 and `docs/OWNER_BARCODE_INSPECTOR.md`. This supersedes historical phone-only display requirements; physical-camera acceptance remains separate.
+
+
+# 81. ACTIVE SHOWROOM CATALOG AND SCAN-ASSISTED AUTHORING — 21 OCTOBER 2026
+
+Use actual active showroom floor stock for e-commerce associations. A fabric Thaan can be scanned without saved SP; staff set an independent online metre price. A finished shop piece must have positive latest saved SP and available stock; prefill its independent online piece price. Preserve all existing listing descriptive, image, sale-price and alternate product-type options. Support shared camera and keyboard/manual entry on all screens, safe editing/removal of links and atomic metadata/link save. Reject duplicate, ambiguous, unavailable and mixed fabric/piece inputs. Preserve physical stock and financial records.
+
+0074 archives/unpublishes the four exact original demo listings without deleting their historical records, adds active-catalog filtering and safe permission-checked barcode/link APIs, and aligns availability with active showroom-ledger stock. No CP or workshop/customer garment stock is exposed. Existing sales/transfer changes continue to determine availability. The SQL replay, real editor browser tests, TypeScript, scoped lint/build, live dry run, applied migration/hash records and post-commit read-only staff scans passed. All unrelated business fields were fingerprint-preserved. See History Section 80 and `docs/ECOMMERCE_SHOWROOM_LISTINGS.md`; physical hardware acceptance remains separate.

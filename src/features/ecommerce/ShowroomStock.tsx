@@ -55,6 +55,8 @@ export function ShowroomStock({
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["listings"] });
       await qc.invalidateQueries({ queryKey: ["listing-availability"] });
+      await qc.invalidateQueries({ queryKey: ["listing-showroom-stock"] });
+      await qc.invalidateQueries({ queryKey: ["ecommerce-listing-links"] });
       toast.success("Showroom stock linked to listing");
     },
     onError: (error) => toast.error(error.message),

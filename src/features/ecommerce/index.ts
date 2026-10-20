@@ -10,6 +10,7 @@ export function useListings() {
         .select(
           "*, listing_variants(id, label, qty), listing_thaan_links(thaan_id, thaans(barcode))",
         )
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -149,6 +150,7 @@ export type ListingInput = {
   newImages: File[];
   variants: { id?: string; label: string; qty: number }[];
   removedVariantIds: string[];
+  stockLinks?: { id: string; kind: "fabric" | "product" }[];
 };
 
 /**
@@ -209,10 +211,11 @@ export function useSaveListing() {
           if (error) throw error;
           uploaded.push(path);
         }
-        const { error: updError } = await supabase
-          .from("listings")
-          .update({ ...fields, images: [...input.keptImages, ...uploaded] })
-          .eq("id", id);
+        const { error: updError } = await supabase.rpc("save_ecommerce_listing_details", {
+          p_listing: id,
+          p_details: { ...fields, images: [...input.keptImages, ...uploaded] },
+          ...(input.stockLinks ? { p_stock: input.stockLinks } : {}),
+        });
         if (updError) throw updError;
       } catch (error) {
         if (uploaded.length) await supabase.storage.from(IMAGE_BUCKET).remove(uploaded);
@@ -254,6 +257,38 @@ export function useSaveListing() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["listings"] });
       void qc.invalidateQueries({ queryKey: ["listing-availability"] });
+      void qc.invalidateQueries({ queryKey: ["listing-showroom-stock"] });
+      void qc.invalidateQueries({ queryKey: ["ecommerce-listing-links"] });
     },
   });
+}
+
+export type ShowroomItem = {
+  id: string;
+  kind: "fabric" | "product";
+  name: string;
+  barcode: string;
+  colour?: string | null;
+  design?: string;
+  size?: string;
+  sp_paise?: string;
+  available_mm?: number;
+  available_pieces?: number;
+  locations?: { name: string; quantity_mm?: number; quantity?: number }[];
+};
+export function useListingStockLinks(id?: string) {
+  return useQuery({
+    queryKey: ["ecommerce-listing-links", id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("ecommerce_listing_links", { p_listing: id! });
+      if (error) throw error;
+      return data as unknown as ShowroomItem[];
+    },
+  });
+}
+export async function scanShowroomItem(barcode: string) {
+  const { data, error } = await supabase.rpc("ecommerce_scan_stock", { p_barcode: barcode });
+  if (error) throw error;
+  return data as unknown as ShowroomItem;
 }
