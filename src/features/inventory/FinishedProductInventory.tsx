@@ -380,9 +380,13 @@ export function FinishedProductInventory() {
               </thead>
               <tbody>
                 {filtered.map((p) => (
-                  <tr key={p.id} className="border-t">
+                  <tr
+                    key={p.id}
+                    className={`border-t ${selected.includes(p.id) ? "bg-primary/5" : ""}`}
+                  >
                     <td>
                       <input
+                        id={`${formId}-piece-${p.id}`}
                         type="checkbox"
                         aria-label={`Move ${p.barcode}`}
                         checked={selected.includes(p.id)}
@@ -402,9 +406,14 @@ export function FinishedProductInventory() {
                         }
                       />
                     </td>
-                    <td className="break-all py-2">
-                      {p.barcode}
-                      <p>Piece {p.piece_number}</p>
+                    <td className="break-all">
+                      <label
+                        htmlFor={`${formId}-piece-${p.id}`}
+                        className="block min-h-11 cursor-pointer rounded px-2 py-2 hover:bg-muted/50"
+                      >
+                        {p.barcode}
+                        <span className="block">Piece {p.piece_number}</span>
+                      </label>
                     </td>
                     <td>
                       {p.product} / {p.design}

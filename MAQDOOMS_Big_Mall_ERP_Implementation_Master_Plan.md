@@ -2036,3 +2036,7 @@ Stock Entry already has `production.receive` by default. Customer-garment receip
 Scanning an existing Production ID or customer stitching document must immediately display the loaded order below the scanner, before requiring another fabric scan. Show the production document or customer job details and an explicit next-step prompt. A source floor is only required when fabric is selected and issued; floor-independent document display must not be gated by it.
 
 The loaded panel remains mounted across floor changes, clears quantities when fabric changes, preserves uncertain-result request locks and prevents issues on closed jobs. Opening the document never deducts stock or exposes Counter CP. No backend rules or migration change is required. Verified through the real Counter components in a synthetic browser fixture at mobile/desktop widths, including source changes and exact retries. See History Section 74 and `scripts/counter-loaded-order-ui-test.mjs`.
+
+# 76. FINISHED-PIECE TRANSFER SELECTION — 20 OCTOBER 2026
+
+The barcode/piece cell is a padded native label for that row's Move checkbox, so staff can select/deselect several pieces by clicking their barcode areas. Preserve other selections, disabled/pending protections, keyboard access and the 200-piece cap. Highlight selected rows; History remains an independent action. This is a frontend-only interaction change with no migration. See History Section 75.

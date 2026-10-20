@@ -6863,3 +6863,7 @@ Previously the POS loaded a production/customer work record but rendered `Additi
 The loaded-order component retains a stable key across source-floor changes. Fabric changes clear entered metres; pending/uncertain issues keep the scanner and document changes locked and reuse the same request. Closed jobs remain read-only. Opening an ID posts no issue, CP remains hidden from Counter, and permissions/mutation services are unchanged. No migration or database reset was performed.
 
 `scripts/counter-loaded-order-ui-test.mjs` exercises the real Counter components with synthetic RPCs: immediate production/customer details before any stock scan, zero automatic movements, responsive widths 320/390/768/1280, source changes, closed jobs and uncertain-result exact retries without duplication. Screenshot visually inspected. TypeScript, scoped lint and production build passed. Both implementation documents and `docs/COUNTER_RECEIPTS.md` updated.
+
+# 75. FINISHED-PIECE SELECTION CLICK AREA — 20 OCTOBER 2026
+
+`FinishedProductInventory.tsx` links each barcode/piece label to its native Move checkbox with a unique component-scoped ID. Clicking the padded barcode/piece area toggles that piece while retaining other selected pieces; selected rows have a subtle highlight. Native keyboard/disabled behavior, the 200-piece limit, pending-operation locks and independent History buttons remain. No database or transfer-posting changes are involved. TypeScript and scoped lint passed.
