@@ -104,7 +104,7 @@ export async function productionPricedReceiptCases(db, fixture) {
   assert.equal(pieces.length, 3);
   for (const p of pieces) {
     assert.equal(Number(p.sp_paise), prices[p.piece_number - 1].sp_paise);
-    assert.match(p.barcode, /^\d{12}$/);
+    assert.match(p.barcode, /^F[0-9A-Z]{5}$/);
   }
   assert.equal(
     await one(

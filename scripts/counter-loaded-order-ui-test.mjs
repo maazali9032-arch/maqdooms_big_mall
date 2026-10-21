@@ -21,13 +21,13 @@ await fs.writeFile(
   path.join(folder, "client.ts"),
   `
 const calls=window.testCalls=[], issues=window.testIssues=[],posted=new Set();let lost=false;
-const doc={id:'production',code:'PROD-1',product:'Suit',design:'Embroidery',size:'40',quantity:2,status:'open',tailors:[{code:'T1',name:'Nadeem'}],fabrics:[{name:'Cotton',barcode:'TH-1',source:'Workshop',quantity_mm:5000,issue_type:'required'}],cp_total_paise:987654321};
+const doc={id:'production',code:'PROD-1',scan_code:'P00001',product:'Suit',design:'Embroidery',size:'40',quantity:2,status:'open',tailors:[{code:'T1',name:'Nadeem'}],fabrics:[{name:'Cotton',barcode:'TH-1',source:'Workshop',quantity_mm:5000,issue_type:'required'}],cp_total_paise:987654321};
 export const supabase={rpc(name,args={}){
  calls.push({name,args});let data=null,error=null;
  if(name==='gst_transaction_configuration')data={configuration:null,rules:[]};
  else if(name==='tailoring_work_catalog')data={products:[],designs:[]};
  else if(name==='salesperson_options'||name==='tailoring_assignment_options')data=[];
- else if(name==='production_job_document') data=['PROD-1','PROD-CLOSED'].includes(args.p_code)?{...doc,code:args.p_code,status:args.p_code==='PROD-CLOSED'?'completed':'open'}:null;
+ else if(name==='production_job_document') data=['PROD-1','P00001','PROD-CLOSED'].includes(args.p_code)?{...doc,code:args.p_code==='P00001'?'PROD-1':args.p_code,status:args.p_code==='PROD-CLOSED'?'completed':'open'}:null;
  else if(name==='counter_bill')data=null;
  else if(name==='customer_tailoring_work')data=args.p_code==='TJ-1'?[{id:'customer',code:'TJ-1',garment:'Customer kurta',status:'open',factory:'Factory B',tailor:'Nadeem',fabrics:[]}]:[];
  else if(name==='counter_scan_barcode_any') data=['TH-1','TH-2'].includes(args.p_barcode)?{kind:'fabric',name:'Cotton',barcode:args.p_barcode,cuts:[{inventory_item_id:'fabric',locations:[{id:args.p_barcode==='TH-1'?'floor1':'floor2',name:args.p_barcode==='TH-1'?'Showroom F1':'Showroom F2',kind:'showroom_sublocation',quantity_mm:10000}]}]}:null;
@@ -83,9 +83,9 @@ try {
     );
   };
   await page.goto("http://127.0.0.1:5207");
-  await scan("PROD-1");
+  await scan("P00001");
   await page.getByRole("heading", { name: "Production order loaded", exact: true }).waitFor();
-  await page.getByRole("heading", { name: "Production ID · PROD-1", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Production ID · P00001", exact: true }).waitFor();
   assert(await page.getByText("Next: scan the fabric barcode above", { exact: false }).isVisible());
   assert.equal(
     await page.getByRole("button", { name: "Issue extra fabric", exact: true }).count(),

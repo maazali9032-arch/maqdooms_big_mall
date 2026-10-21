@@ -519,6 +519,20 @@
       "when": 1792540860000,
       "tag": "0074_ecommerce_showroom_scanning",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1792540920000,
+      "tag": "0075_six_character_barcode_identities",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1792540980000,
+      "tag": "0076_six_character_work_references",
+      "breakpoints": true
     }
   ]
 }

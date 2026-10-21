@@ -13,6 +13,8 @@ import { CounterBillReceipt, type CounterReceipt } from "@/features/pos/CounterB
 type Job = {
   id: string;
   code: string;
+  scan_code?: string | null;
+  bill_scan_code?: string | null;
   bill_id: string | null;
   bill_code: string | null;
   garment: string;
@@ -84,8 +86,8 @@ export function CustomerTailoringWork() {
   });
   if (!allowed) return <p>Customer Tailoring access required.</p>;
   const rows = (query.data ?? []).filter((j) =>
-    [j.code, j.bill_code, j.customer, j.contact, j.garment].some((v) =>
-      v?.toLowerCase().includes(search.toLowerCase()),
+    [j.code, j.scan_code, j.bill_code, j.bill_scan_code, j.customer, j.contact, j.garment].some(
+      (v) => v?.toLowerCase().includes(search.toLowerCase()),
     ),
   );
   const job = query.data?.find((j) => j.id === selected);
@@ -121,8 +123,10 @@ export function CustomerTailoringWork() {
               <span>
                 <strong>{j.garment}</strong>
                 <span className="block break-all font-mono text-xs">
-                  {j.code}
-                  {j.bill_code ? " · " + j.bill_code : ""}
+                  {j.scan_code ?? j.code}
+                  {(j.bill_scan_code ?? j.bill_code)
+                    ? " · " + (j.bill_scan_code ?? j.bill_code)
+                    : ""}
                 </span>
               </span>
               <span>
@@ -138,7 +142,7 @@ export function CustomerTailoringWork() {
       </Panel>
       {job && (
         <Panel
-          title={job.code}
+          title={job.scan_code ?? job.code}
           description={`${job.garment}${job.design ? " · " + job.design : ""}`}
         >
           <div className="space-y-3 text-sm">

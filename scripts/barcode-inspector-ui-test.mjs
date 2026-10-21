@@ -192,6 +192,19 @@ try {
     await tp.getByRole("button", { name: "Open Global Barcode Inspector" }).isVisible(),
     "Tablet shows floating icon",
   );
+  for (const code of ["T00001", "P00001", "F00001", "B00001", "J00001", "C00001"]) {
+    await page.goto(base + "?camera=scan&barcode=" + code);
+    await page.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
+    await page.getByText("₹400.00", { exact: true }).waitFor({ timeout: 30000 });
+    check(
+      (await page.getByLabel("Inspect barcode", { exact: true }).inputValue()) === code,
+      "Camera decodes exactly six characters: " + code,
+    );
+    check(
+      await page.evaluate(() => window.cameraStops > 0),
+      "Six-character detection stops camera",
+    );
+  }
   check(errors.length === 0, "No browser runtime errors: " + errors.join(","));
   await fs.writeFile(
     path.join(artifacts, "verification.json"),

@@ -48,7 +48,7 @@ export async function customerFinishedReceiverCases(db, fixture) {
   assert.equal(result.name, "Pathani Kurta Pajama");
   assert.equal(result.size, "36");
   assert.equal(result.sp_paise, "250000");
-  assert.match(result.barcode, /^\d{12}$/);
+  assert.match(result.barcode, /^C[0-9A-Z]{5}$/);
   assert.equal((await one(call, args)).id, result.id, "Exact retry returns same barcode");
   assert.equal(
     (await one(call, [randomUUID(), ...args.slice(1)])).id,

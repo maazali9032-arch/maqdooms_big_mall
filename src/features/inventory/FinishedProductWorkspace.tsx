@@ -89,7 +89,7 @@ export function FinishedProductWorkspace() {
               <strong>
                 {match.kind === "customer" ? "Customer stitching" : "Shop production"}
               </strong>
-              <p className="break-all font-mono text-xs">{match.code}</p>
+              <p className="break-all font-mono text-xs">{match.scan_code ?? match.code}</p>
               {match.kind === "production" && (
                 <p>
                   {match.name} · {match.status}

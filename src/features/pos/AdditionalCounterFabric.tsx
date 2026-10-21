@@ -142,7 +142,7 @@ export function AdditionalCounterFabric({
               <option value="">Select the customer tailoring job</option>
               {work.jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.garment} · {j.code} · {j.status}
+                  {j.garment} · {j.scan_code ?? j.code} · {j.status}
                 </option>
               ))}
             </select>

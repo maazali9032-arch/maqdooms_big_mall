@@ -1,6 +1,8 @@
 export type ReceiptJob = {
   id: string;
   code: string;
+  scan_code?: string | null;
+  bill_scan_code?: string | null;
   bill_code: string | null;
   garment: string;
   status: string;
@@ -10,5 +12,12 @@ export type ReceiptJob = {
   tailor?: string;
 };
 export type FinishedReceiptMatch =
-  | { kind: "customer"; id: string; code: string; jobs: ReceiptJob[] }
-  | { kind: "production"; id: string; code: string; status: string; name: string };
+  | { kind: "customer"; id: string; code: string; scan_code?: string | null; jobs: ReceiptJob[] }
+  | {
+      kind: "production";
+      id: string;
+      code: string;
+      scan_code?: string | null;
+      status: string;
+      name: string;
+    };

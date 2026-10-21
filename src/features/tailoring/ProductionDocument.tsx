@@ -76,7 +76,7 @@ export function ProductionDocument({ code }: { code: string }) {
   return (
     <div className="space-y-2 rounded border p-3">
       <div ref={print}>
-        <h3 className="font-semibold">Production ID · {job.code}</h3>
+        <h3 className="font-semibold">Production ID · {job.scan_code ?? job.code}</h3>
         <BarcodeGraphic code={job.scan_code ?? job.code} />
         {job.scan_code && <p className="text-center font-mono text-xs">{job.scan_code}</p>}
         <p>

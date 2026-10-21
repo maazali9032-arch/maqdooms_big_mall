@@ -6,6 +6,7 @@ import type { ProductionRecord } from "@/features/tailoring/ProductionDocument";
 export type CounterJob = {
   id: string;
   code: string;
+  scan_code?: string | null;
   garment?: string;
   product?: string;
   status: string;

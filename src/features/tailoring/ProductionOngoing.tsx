@@ -73,7 +73,7 @@ export function ProductionOngoing() {
                 <strong>
                   {j.product} · {j.quantity} pieces
                 </strong>
-                <p className="break-all font-mono text-xs">{j.code}</p>
+                <p className="break-all font-mono text-xs">{j.scan_code ?? j.code}</p>
                 <p className="text-xs">
                   {j.tailors?.map((t) => t.name).join(", ")} · {j.status.replace("_", " ")}
                 </p>

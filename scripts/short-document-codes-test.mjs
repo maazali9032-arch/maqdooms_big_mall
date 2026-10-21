@@ -1,3 +1,4 @@
+import { sixCharacterBarcodeCases } from "./six-character-barcode-cases.mjs";
 import { ecommerceShowroomCases } from "./ecommerce-showroom-cases.mjs";
 import { productionPricedReceiptCases } from "./production-priced-receipt-cases.mjs";
 import { customerFinishedReceiverCases } from "./customer-finished-receiver-cases.mjs";
@@ -24,6 +25,7 @@ assert.equal(
   await fs.readFile("drizzle/migrations/0067_gst_configuration_reload.sql", "utf8"),
 );
 const db = new PGlite();
+let previousSixFixture;
 assert.equal(
   await fs.readFile("supabase/migrations/20261020000100_gst_paid_retail_bill.sql", "utf8"),
   await fs.readFile("drizzle/migrations/0068_gst_paid_retail_bill.sql", "utf8"),
@@ -44,6 +46,14 @@ try {
           `insert into public.orders(code,kind,source_location_id) values('BILL-preexisting','counter_bill',(select id from locations where kind='workshop' limit 1))`,
         );
       }
+      if (file === "20261021000300_six_character_barcode_identities.sql") {
+        await db.exec(
+          `insert into orders(code,kind,source_location_id) values('BILL-before-six','counter_bill',(select id from locations where kind='workshop' limit 1)); insert into barcodes(code,kind) values('T00000','fabric'),('809999999999','product');`,
+        );
+        previousSixFixture = (
+          await db.query("select id,code,scan_code from orders where code='BILL-before-six'")
+        ).rows[0];
+      }
       await db.exec(await fs.readFile(`supabase/migrations/${file}`, "utf8"));
     } catch (e) {
       throw new Error(`${file}: ${e.message}`);
@@ -54,7 +64,7 @@ try {
     `insert into public.orders(code,kind,source_location_id) values('BILL-original-reference','counter_bill',(select id from locations where kind='workshop' limit 1)) returning id,code,scan_code`,
   );
   assert.equal(bill.code, "BILL-original-reference");
-  assert.match(bill.scan_code, /^BL-[23456789ABCDEFGH]{12}$/);
+  assert.match(bill.scan_code, /^B[0-9A-Z]{5}$/);
   const [resolved] = await q(`select public.resolve_document_scan_code($1) value`, [
     bill.scan_code,
   ]);
@@ -72,13 +82,15 @@ try {
   );
   // Exercise actual trigger generation on disposable tables using exactly the same trigger.
   for (const [table, prefix] of [
-    ["orders", "BL"],
-    ["production_jobs", "PJ"],
-    ["customer_tailoring_jobs", "TJ"],
+    ["orders", "B"],
+    ["production_jobs", "P"],
+    ["customer_tailoring_jobs", "J"],
   ]) {
     const old = await q(`select id,code,scan_code from public.${table}`);
     assert(
-      old.filter((r) => r.id !== bill.id).every((r) => r.scan_code === null),
+      old
+        .filter((r) => r.id !== bill.id)
+        .every((r) => r.scan_code === null || r.id === previousSixFixture.id),
       "Historical documents must remain untouched",
     );
     await db.exec(`create schema if not exists scan_test;create table scan_test.${table}(id uuid primary key default gen_random_uuid(),code text unique,scan_code text unique);
@@ -87,7 +99,7 @@ try {
       `insert into scan_test.${table}(code) select 'test-'||g from generate_series(1,100) g returning code,scan_code`,
     );
     assert.equal(new Set(codes.map((r) => r.scan_code)).size, 100);
-    assert(codes.every((r) => new RegExp(`^${prefix}-[23456789ABCDEFGH]{12}$`).test(r.scan_code)));
+    assert(codes.every((r) => new RegExp(`^${prefix}[0-9A-Z]{5}$`).test(r.scan_code)));
   }
   const defs = await q(
     `select proname,pg_get_functiondef(p.oid) definition from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and proname in ('counter_bill','customer_tailoring_work','production_job_document','tailor_work_order','receive_production_barcode','issue_additional_production_fabric')`,
@@ -108,6 +120,7 @@ try {
   await customerFinishedReceiverCases(db, receiptFixtures);
   await productionPricedReceiptCases(db, receiptFixtures);
   await ecommerceShowroomCases(db, receiptFixtures);
+  await sixCharacterBarcodeCases(db, receiptFixtures, previousSixFixture);
 } finally {
   await db.close();
 }

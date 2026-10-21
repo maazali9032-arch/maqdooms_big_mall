@@ -101,6 +101,8 @@ try {
   };
   const render = (receipt) =>
     renderToStaticMarkup(createElement(CustomerReceiptContent, { receipt }));
+  const sixReceipt = render({ ...base, scan_code: "B00001" });
+  assert(sixReceipt.includes('aria-label="Barcode B00001"') && sixReceipt.includes("Bill No:"));
   const retail = render(base);
   assert(
     retail.includes("Payment status") &&
@@ -228,6 +230,13 @@ try {
   const tailor = renderToStaticMarkup(
     createElement(TailorWorkOrderContent, { receipt: stitched, jobs }),
   );
+  const sixTailor = renderToStaticMarkup(
+    createElement(TailorWorkOrderContent, {
+      receipt: { ...stitched, scan_code: "B00001" },
+      jobs: [{ ...jobs[0], scan_code: "J00001" }],
+    }),
+  );
+  assert(sixTailor.includes('aria-label="Barcode J00001"') && sixTailor.includes("B00001"));
   for (const required of [
     "Customer stitching work order",
     "Workshop copy",

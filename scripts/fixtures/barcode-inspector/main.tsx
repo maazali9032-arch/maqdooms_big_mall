@@ -18,7 +18,7 @@ navigator.mediaDevices.getUserMedia = async () => {
     throw new DOMException("Denied", "NotAllowedError");
   if (params.get("camera") === "delay") await new Promise((resolve) => setTimeout(resolve, 500));
   const canvas = document.createElement("canvas");
-  JsBarcode(canvas, "AND-909558881", {
+  JsBarcode(canvas, params.get("barcode") ?? "AND-909558881", {
     format: "CODE128",
     width: 3,
     height: 180,

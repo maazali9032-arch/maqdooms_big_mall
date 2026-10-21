@@ -131,14 +131,15 @@ export function CustomerTailoringReceipt({
           <option value="">Choose the stitched garment</option>
           {jobRows.map((job) => (
             <option key={job.id} value={job.id}>
-              {job.code} · {job.garment} · {job.customer || "Customer not recorded"}
+              {job.scan_code ?? job.code} · {job.garment} ·{" "}
+              {job.customer || "Customer not recorded"}
             </option>
           ))}
         </select>
       )}
       {selected && (
         <p className="text-sm text-muted-foreground">
-          {selected.code} · {selected.status}
+          {selected.scan_code ?? selected.code} · {selected.status}
           {selected.factory ? ` · Factory: ${selected.factory}` : ""}
           {selected.tailor ? ` · Tailor: ${selected.tailor}` : ""}
         </p>
