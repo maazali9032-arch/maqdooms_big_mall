@@ -50,11 +50,20 @@ try {
   );
   await page.getByLabel("Inspect barcode", { exact: true }).fill("AND-909558881");
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
-  await page.getByText("₹400.00", { exact: true }).waitFor();
+  await page.getByLabel("Barcode summary").getByText("₹400.00", { exact: true }).waitFor();
+  check(
+    (await page.locator("details[open]").count()) === 0,
+    "Inspection starts with the detail sections collapsed",
+  );
+  check(
+    await page.getByLabel("Barcode summary").getByText("10.000 m", { exact: true }).isVisible(),
+    "Summary uses metres for millimetre stock",
+  );
   check(
     await page.getByRole("heading", { name: "Current stock & location" }).isVisible(),
     "Current balance distinct from lifecycle",
   );
+  await page.getByRole("heading", { name: "Recorded lifecycle (2)" }).click();
   await page.getByRole("button", { name: "Load older events" }).click();
   await page.getByText("INWARD", { exact: true }).waitFor();
   check(
@@ -84,14 +93,39 @@ try {
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
   await page.getByText("No recorded barcode matches", { exact: false }).waitFor();
   check(
-    (await page.getByText("₹400.00", { exact: true }).count()) === 0,
+    (await page.getByLabel("Barcode summary").getByText("₹400.00", { exact: true }).count()) === 0,
     "Unknown clears previous CP and evidence",
   );
   await page.getByLabel("Inspect barcode", { exact: true }).fill("ERROR");
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
   await page.getByRole("button", { name: "Retry inspection" }).click();
-  await page.getByText("₹400.00", { exact: true }).waitFor();
+  await page.getByLabel("Barcode summary").getByText("₹400.00", { exact: true }).waitFor();
   check(true, "Network failure supports retry");
+  await page.getByLabel("Inspect barcode", { exact: true }).fill("MIXED");
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await page.getByLabel("Barcode summary").getByText("Mixed units", { exact: true }).waitFor();
+  check(
+    await page
+      .getByLabel("Barcode summary")
+      .getByText("Not recorded", { exact: true })
+      .first()
+      .isVisible(),
+    "Mixed stock units never produce a false combined quantity",
+  );
+  await page.getByLabel("Inspect barcode", { exact: true }).fill("B00001");
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await page
+    .getByLabel("Barcode summary")
+    .getByText("Customer bill", { exact: true })
+    .first()
+    .waitFor();
+  check(
+    await page
+      .getByLabel("Barcode summary")
+      .getByText("Related stock", { exact: true })
+      .isVisible(),
+    "Document scan labels linked stock as related rather than its own stock",
+  );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.setViewportSize({ width: 768, height: 1024 });
@@ -135,7 +169,10 @@ try {
   }
   await page.goto(base + "?camera=scan");
   await page.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
-  await page.getByText("₹400.00", { exact: true }).waitFor({ timeout: 30000 });
+  await page
+    .getByLabel("Barcode summary")
+    .getByText("₹400.00", { exact: true })
+    .waitFor({ timeout: 30000 });
   check(
     (await page.getByLabel("Inspect barcode", { exact: true }).inputValue()) === "AND-909558881",
     "Actual camera CODE128 decoded through shared lookup",
@@ -166,7 +203,7 @@ try {
   await desktop.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
   await desktop.getByLabel("Inspect barcode", { exact: true }).fill("AND-909558881");
   await desktop.getByLabel("Inspect barcode", { exact: true }).press("Enter");
-  await desktop.getByText("₹400.00", { exact: true }).waitFor();
+  await desktop.getByLabel("Barcode summary").getByText("₹400.00", { exact: true }).waitFor();
   check(
     await desktop.getByRole("heading", { name: "Current stock & location" }).isVisible(),
     "Desktop keyboard scanner/manual entry opens recorded stock",
@@ -195,7 +232,10 @@ try {
   for (const code of ["T00001", "P00001", "F00001", "B00001", "J00001", "C00001"]) {
     await page.goto(base + "?camera=scan&barcode=" + code);
     await page.getByRole("button", { name: "Open Global Barcode Inspector" }).click();
-    await page.getByText("₹400.00", { exact: true }).waitFor({ timeout: 30000 });
+    await page
+      .getByLabel("Barcode summary")
+      .getByText("₹400.00", { exact: true })
+      .waitFor({ timeout: 30000 });
     check(
       (await page.getByLabel("Inspect barcode", { exact: true }).inputValue()) === code,
       "Camera decodes exactly six characters: " + code,
