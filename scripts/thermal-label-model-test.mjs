@@ -102,8 +102,10 @@ check(
 const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
   css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
-    css.includes("grid-template-columns:repeat(2,50.8mm)"),
-  "Print CSS uses the original four-by-six TSC layout with no browser page margin",
+    css.includes("grid-template-columns:repeat(2,50.8mm)") &&
+    css.includes(".sticker svg{width:100%;height:9.5mm") &&
+    css.includes(".sticker .code{text-align:center"),
+  "Print CSS fills each sticker safely with a full-width barcode and readable code",
 );
 await fs.writeFile(
   "docs/THERMAL_LABEL_MODEL_VERIFICATION.json",

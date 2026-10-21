@@ -45,7 +45,6 @@ function ThermalLabels({ labels, profile }: { labels: Sticker[]; profile: LabelP
                   preserveAspectRatio="none"
                   aria-label={`Barcode ${l.code}`}
                   viewBox={`0 0 ${symbol.modules} 54`}
-                  style={{ width: `${symbol.width}mm` }}
                 >
                   <rect width="100%" height="100%" fill="white" />
                   {[...symbol.bars].map((b, j) =>

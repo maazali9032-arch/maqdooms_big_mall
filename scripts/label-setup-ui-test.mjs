@@ -98,6 +98,18 @@ try {
       .textContent(),
     "T00001",
   );
+  const previewBarcode = page
+    .frameLocator('iframe[title="Barcode label preview"]')
+    .locator('svg[aria-label="Barcode T00001"]');
+  assert.equal(
+    await previewBarcode.evaluate((svg) => {
+      const label = svg.closest(".sticker");
+      if (!label) return false;
+      return svg.getBoundingClientRect().width >= label.getBoundingClientRect().width * 0.9;
+    }),
+    true,
+    "Preview barcode uses the sticker's safe printable width",
+  );
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     assert.equal(
