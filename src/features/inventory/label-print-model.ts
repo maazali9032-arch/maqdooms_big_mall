@@ -46,7 +46,10 @@ export function normalizeProfile(profile: Partial<LabelProfile> | null | undefin
   return {
     ...STARTING_LABEL_PROFILE,
     ...profile,
-    mode: profile?.mode === "sheet" ? "sheet" : "roll",
+    mode:
+      profile?.mode === "sheet" || profile?.mode === "roll"
+        ? profile.mode
+        : STARTING_LABEL_PROFILE.mode,
   };
 }
 

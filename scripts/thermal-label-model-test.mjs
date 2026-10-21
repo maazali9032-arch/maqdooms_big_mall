@@ -3,14 +3,23 @@ import fs from "node:fs/promises";
 import { createServer } from "vite";
 
 const vite = await createServer({ configFile: false, server: { middlewareMode: true } });
-const { STARTING_LABEL_PROFILE, labelPages, labelPrintCSS, labelRows, symbolSize, validProfile } =
-  await vite.ssrLoadModule("/src/features/inventory/label-print-model.ts");
+const {
+  STARTING_LABEL_PROFILE,
+  normalizeProfile,
+  labelPages,
+  labelPrintCSS,
+  labelRows,
+  symbolSize,
+  validProfile,
+} = await vite.ssrLoadModule("/src/features/inventory/label-print-model.ts");
 
 let checks = 0;
 const check = (value, label) => {
   assert(value, label);
   checks++;
 };
+check(normalizeProfile(null).mode === "sheet", "First-use setup preserves the showroom sheet mode");
+check(normalizeProfile({ mode: "roll" }).mode === "roll", "Saved roll calibration is preserved");
 const labels = Array.from({ length: 5 }, (_, index) => ({
   code: `80000000000${index + 1}`,
   name: "Sherwani",
