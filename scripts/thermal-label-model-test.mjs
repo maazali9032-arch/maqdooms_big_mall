@@ -105,7 +105,7 @@ check(
     css.includes("grid-template-columns:repeat(2,50.8mm)") &&
     css.includes("padding:1.2mm 4mm") &&
     css.includes(".label-content{min-width:0;display:flex") &&
-    css.includes("transform:translateY(-4mm)") &&
+    css.includes("transform:translate(1.5mm,-5mm)") &&
     css.includes("text-align:center") &&
     css.includes(".sticker svg{max-width:100%;height:7mm") &&
     css.includes(".sticker .code{text-align:center"),

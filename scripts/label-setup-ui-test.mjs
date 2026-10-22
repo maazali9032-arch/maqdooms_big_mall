@@ -110,11 +110,14 @@ try {
       return (
         svgBox.width >= labelBox.width * 0.75 &&
         svgBox.width <= labelBox.width * 0.85 &&
-        Math.abs((svgBox.left + svgBox.right) / 2 - (labelBox.left + labelBox.right) / 2) <= 1
+        Math.abs(
+          (svgBox.left + svgBox.right) / 2 -
+            ((labelBox.left + labelBox.right) / 2 + (1.5 * 96) / 25.4),
+        ) <= 1
       );
     }),
     true,
-    "Preview barcode keeps its natural scanner-safe width and is horizontally centred",
+    "Preview barcode keeps its natural scanner-safe width and the calibrated right offset",
   );
   assert.deepEqual(
     await page

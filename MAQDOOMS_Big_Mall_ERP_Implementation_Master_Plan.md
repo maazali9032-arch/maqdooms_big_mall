@@ -1971,14 +1971,14 @@ Finished Products → Receive finished garments must not require a Customer stit
 
 # 69. VERIFICATION AND RELEASE STATUS — 20 OCTOBER 2026
 
-| Revision | Local commit(s) | Database prerequisite | Production status verified in this work |
-| --- | --- | --- | --- |
-| GST operational-input cleanup | `2d8a1a3` | 0065 | Not rolled out by this chat; external state unverified |
-| Compact document scan identities | `e0d4859` | 0066 | Not rolled out by this chat; external state unverified |
-| GST effective-time/operational reader | `1a7f5ef` | 0067 | Not rolled out by this chat; external state unverified |
-| GST editor loading compatibility | `b4868ca` | Original GST tables/RLS; no new RPC | Local source verified; hosted acceptance pending |
-| Paid retail GST completion | `adf2cb1` | 0068 | Not rolled out by this chat; external state unverified |
-| Automatic receipt-source detection | `f03faa9` | 0069, after 0066 | Not rolled out by this chat; external state unverified |
+| Revision                              | Local commit(s) | Database prerequisite               | Production status verified in this work                |
+| ------------------------------------- | --------------- | ----------------------------------- | ------------------------------------------------------ |
+| GST operational-input cleanup         | `2d8a1a3`       | 0065                                | Not rolled out by this chat; external state unverified |
+| Compact document scan identities      | `e0d4859`       | 0066                                | Not rolled out by this chat; external state unverified |
+| GST effective-time/operational reader | `1a7f5ef`       | 0067                                | Not rolled out by this chat; external state unverified |
+| GST editor loading compatibility      | `b4868ca`       | Original GST tables/RLS; no new RPC | Local source verified; hosted acceptance pending       |
+| Paid retail GST completion            | `adf2cb1`       | 0068                                | Not rolled out by this chat; external state unverified |
+| Automatic receipt-source detection    | `f03faa9`       | 0069, after 0066                    | Not rolled out by this chat; external state unverified |
 
 Prepared Supabase files, in order: `20261019000100_gst_operational_input_audit.sql`, `20261019000200_short_document_scan_codes.sql`, `20261019000300_gst_configuration_reload.sql`, `20261020000100_gst_paid_retail_bill.sql`, `20261020000200_unified_finished_receipt_lookup.sql`. Each has a byte-identical Drizzle 0065–0069 mirror and journal entry. Applied historical migration bytes were not rewritten.
 
@@ -2057,18 +2057,15 @@ The separate workshop copy is structured into references, scannable job identity
 
 0073 is applied live after actual-schema dry-run rollback and post-commit checks; existing business fingerprints matched. TypeScript, scoped lint, build, full disposable regression chain and visual receipt previews passed. Physical printer/user acceptance remains separate.
 
-
 # 79. TABULAR THERMAL CUSTOMER BILL — 21 OCTOBER 2026
 
 Customer receipts follow the supplied table-based reference with compact branding/business details, recorded short bill alias and unchanged barcode, India date/time and optional customer, numbered item/quantity/rate/amount columns, immutable tax breakdown, highlighted invoice total, amount paid, balance due, recorded method/date, status badge and thank-you footer. Use a wider 80 mm screen preview and preserve both thermal print widths. Tailoring details span the item table; retail omits tailoring. The full accounting reference is available in a collapsed screen-only disclosure. Do not fabricate a sequential bill number or change stored identities.
 
 Exclusive table amounts come from saved taxable values; inclusive amounts from saved final values. All saved GST display options remain authoritative. Show summary tax percentages only for a single saved GST rate; mixed rates retain item-level detail. Shared CSS must style both screen and isolated popup printing. No database, authorization, function or location changes. Receipt browser/SSR, TypeScript, scoped lint and build checks passed; physical printer acceptance remains separate. See History Section 78 and `docs/COUNTER_RECEIPTS.md`.
 
-
 # 80. ALL-SCREEN OWNER BARCODE INSPECTOR — 21 OCTOBER 2026
 
 Display the existing floating Global Barcode Inspector on Owner dashboards at all screen sizes and input-device types. Do not restrict by phone user agent, coarse pointer, width or height. Keep open inspection state through resizing. Preserve Dashboard-only placement, Owner-only backend authorization, read-only data access, camera cleanup and manual/keyboard scanner support. No database or permission changes are required. The 32-check actual-component browser suite, TypeScript, scoped lint and production build passed. See History Section 79 and `docs/OWNER_BARCODE_INSPECTOR.md`. This supersedes historical phone-only display requirements; physical-camera acceptance remains separate.
-
 
 # 81. ACTIVE SHOWROOM CATALOG AND SCAN-ASSISTED AUTHORING — 21 OCTOBER 2026
 
@@ -2076,13 +2073,11 @@ Use actual active showroom floor stock for e-commerce associations. A fabric Tha
 
 0074 archives/unpublishes the four exact original demo listings without deleting their historical records, adds active-catalog filtering and safe permission-checked barcode/link APIs, and aligns availability with active showroom-ledger stock. No CP or workshop/customer garment stock is exposed. Existing sales/transfer changes continue to determine availability. The SQL replay, real editor browser tests, TypeScript, scoped lint/build, live dry run, applied migration/hash records and post-commit read-only staff scans passed. All unrelated business fields were fingerprint-preserved. See History Section 80 and `docs/ECOMMERCE_SHOWROOM_LISTINGS.md`; physical hardware acceptance remains separate.
 
-
 # 82. SIX-CHARACTER SCANNER IDENTITIES — 21 OCTOBER 2026
 
 For new records use type letter plus five base-36 characters: T fabric Thaan, P production document, F shop piece, B customer bill, J customer stitching job, C customer finished garment. Encode only that recorded identity and print it unchanged beneath CODE128 bars. Keep UUIDs/relationships/internal business references. Preserve existing long labels and aliases on scans/reprints; never truncate/backfill them or reset business data merely for the format transition.
 
 0075 supplies private per-type noncycling database sequences, exact encoding, permanent reservation/mapping history and identity guards. Handle exhaustion explicitly; no reuse or sequence reset after cancellation/deletion. Existing positive-SP, atomic receiving/payment/transfer and authorization rules remain. 0076 adds recorded aliases to work/receiving projections and short-ID display/search without changing operation arguments. Both are applied live with hash/native records; historical business fingerprints were preserved. Disposable regression, camera decoding/receipt/UI, real two-session concurrent allocation, TypeScript/scoped lint/build checks passed. Backup/restore must retain sequence high-water marks and identity history. See History Section 81 and `docs/SIX_CHARACTER_BARCODES.md`; physical hardware acceptance remains separate.
-
 
 # 83. SHOWROOM LABEL PRINTING OPERATOR CONTROLS — 21 OCTOBER 2026
 
@@ -2125,3 +2120,7 @@ Customer-bill CODE128 output must encode the exact existing short bill identity 
 The 80 mm popup must preserve the complete customer-invoice container, not only its child markup, so the 4 mm left print-safety inset is present on physical receipts. Keep the right boundary and 80 mm page format unchanged.
 
 For compact six-character showroom labels, use three whole thermal dots per module when safe in the fixed 50.8 mm cell and print a 7 mm bar height. Preserve the centred identity group, 4 mm side insets, 2 × 6 page pitch, exact barcode identity and all inventory behavior. Recheck the physical receipt and label scanner results after deployment. See History Section 88.
+
+# 90. CALIBRATE COMPACT LABEL POSITION FROM PHYSICAL OUTPUT — 22 OCTOBER 2026
+
+Move the complete unpriced fabric-label group 1.5 mm right and 5 mm upward; move priced finished-label groups 1.5 mm right and 3 mm upward. Keep all four printed elements aligned as a group. Preserve the three-dot, 7 mm barcode geometry, sticker safe boundaries, sheet pitch and every business behavior. Verify containment and calibrated position in the browser test, then confirm with a new physical print. See History Section 89.
