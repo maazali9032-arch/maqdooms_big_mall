@@ -157,7 +157,8 @@ export function StockRegistration() {
   const qc = useQueryClient();
   const suppliers = useSuppliers();
   const gst = useGstConfiguration();
-  const [stage, setStage] = useState<"home" | "create" | "labels" | "vendor">("home");
+  const [stage, setStage] = useState<"home" | "create" | "labels">("home");
+  const [batchType, setBatchType] = useState<"fabric" | "vendor_finished">("fabric");
   const [provider, setProvider] = useState("");
   const [date, setDate] = useState(() =>
     new Intl.DateTimeFormat("en-CA", {
@@ -346,7 +347,10 @@ export function StockRegistration() {
             >
               <Button
                 disabled={frozen || !can("stock.generate_labels")}
-                onClick={() => setStage("create")}
+                onClick={() => {
+                  setBatchType("fabric");
+                  setStage("create");
+                }}
               >
                 Create Batch
               </Button>
@@ -354,17 +358,6 @@ export function StockRegistration() {
                 Colour, actual length and CP can be entered during creation or after attaching
                 labels.
               </p>
-            </Panel>
-            <Panel
-              title="Receive Vendor Readymade"
-              description="Enter purchased garments by product, size, piece count, CP and SP. Each piece receives an F barcode."
-            >
-              <Button
-                disabled={frozen || !can("stock.price_finished")}
-                onClick={() => setStage("vendor")}
-              >
-                Vendor readymade entry
-              </Button>
             </Panel>
           </div>
           <Panel title="Previous batches">
@@ -401,581 +394,619 @@ export function StockRegistration() {
           </Panel>
         </>
       )}
-      {stage === "vendor" && <VendorReadymadeRegistration onBack={() => setStage("home")} />}
       {stage === "create" && (
         <>
-          <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-            <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-            <div>
-              <p className="text-sm font-medium">
-                Optional: enter actual details now or leave blank and complete by scanning.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Positive actual length and CP are required before stock becomes available. Colour is
-                optional. Details can be added later.
-              </p>
+          <Panel
+            title="Batch type"
+            description="Choose what this stock batch contains. Every received item remains grouped under this batch."
+          >
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant={batchType === "fabric" ? "default" : "outline"}
+                disabled={frozen}
+                onClick={() => setBatchType("fabric")}
+              >
+                Fabric Thaans
+              </Button>
+              <Button
+                type="button"
+                variant={batchType === "vendor_finished" ? "default" : "outline"}
+                disabled={frozen || !can("stock.price_finished")}
+                onClick={() => setBatchType("vendor_finished")}
+              >
+                Vendor Readymade Garments
+              </Button>
             </div>
-          </div>
-          <Panel
-            title="Batch Information"
-            actions={<FileText className="size-5 text-primary" aria-hidden="true" />}
-          >
-            <fieldset disabled={frozen} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div>
-                <Label>Batch ID</Label>
-                <Input className="h-11 bg-muted/30" value="Auto-generated on save" readOnly />
-              </div>
-              <div>
-                <Label htmlFor="arrival-date">Arrival date</Label>
-                <Input
-                  id="arrival-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="provider-name">Supplier / provider</Label>
-                <PickOrTypeInput
-                  id="provider-name"
-                  value={provider}
-                  onChange={setProvider}
-                  options={names}
-                />
-              </div>
-              <div>
-                <Label htmlFor="batch-remarks">Remarks (optional)</Label>
-                <Input
-                  id="batch-remarks"
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                />
-              </div>
-            </fieldset>
           </Panel>
-          {gstEnabled && (
-            <Panel
-              title="Supplier invoice available?"
-              description="CP remains the base cost excluding GST. Record supplier-invoice values only when you have the invoice."
-            >
-              <fieldset disabled={frozen} className="space-y-3">
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="radiogroup"
-                  aria-label="Supplier invoice available"
-                >
-                  <Button
-                    type="button"
-                    variant={supplierInvoiceAvailable === "no" ? "default" : "outline"}
-                    onClick={() => setSupplierInvoiceAvailable("no")}
-                  >
-                    No
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={supplierInvoiceAvailable === "yes" ? "default" : "outline"}
-                    onClick={() => setSupplierInvoiceAvailable("yes")}
-                  >
-                    Yes
-                  </Button>
-                </div>
-                {supplierInvoiceAvailable === "no" ? (
-                  <p className="text-sm text-muted-foreground">
-                    Stock can be received without a supplier invoice. No purchase GST or ITC record
-                    will be created.
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-sm text-muted-foreground">
-                      The active purchase rule is {formatGstRate(purchaseRule!.rate_bps)} (
-                      {purchaseRule!.classification_code}). Supplier values are optional and
-                      reconcile the calculated estimate; they do not claim ITC automatically.
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <Input
-                        aria-label="Supplier GSTIN"
-                        placeholder="Supplier GSTIN (optional)"
-                        value={supplierGstin}
-                        onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                      />
-                      <Input
-                        aria-label="Supplier invoice number"
-                        placeholder="Supplier invoice number"
-                        value={supplierInvoice}
-                        onChange={(e) => setSupplierInvoice(e.target.value)}
-                      />
-                      <Input
-                        aria-label="Supplier invoice date"
-                        type="date"
-                        value={supplierInvoiceDate}
-                        onChange={(e) => setSupplierInvoiceDate(e.target.value)}
-                      />
-                      <select
-                        aria-label="Input tax credit status"
-                        className="h-11 rounded border bg-background p-2"
-                        value={itcStatus}
-                        onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
-                      >
-                        <option value="pending">ITC pending review</option>
-                        <option value="eligible">ITC eligible</option>
-                        <option value="ineligible">ITC ineligible</option>
-                        <option value="reversed">ITC reversed</option>
-                      </select>
-                      <Input
-                        aria-label="Actual taxable amount"
-                        inputMode="decimal"
-                        placeholder="Invoice taxable ₹ (optional)"
-                        value={actualTaxable}
-                        onChange={(e) => setActualTaxable(e.target.value)}
-                      />
-                      <Input
-                        aria-label="Actual GST amount"
-                        inputMode="decimal"
-                        placeholder="Invoice GST ₹ (optional)"
-                        value={actualGst}
-                        onChange={(e) => setActualGst(e.target.value)}
-                      />
-                      <Input
-                        aria-label="Actual supplier total"
-                        inputMode="decimal"
-                        placeholder="Supplier total ₹ (optional)"
-                        value={actualSupplier}
-                        onChange={(e) => setActualSupplier(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
-              </fieldset>
-            </Panel>
+          {batchType === "vendor_finished" && (
+            <VendorReadymadeRegistration onCancel={() => setStage("home")} />
           )}
-          <Panel
-            title="Fabric Types & Quantities"
-            description="Choose your fabrics and the number of physical Thaans for each."
-          >
-            <fieldset disabled={frozen} className="space-y-3">
-              <div className="rounded-lg bg-primary/5 p-3" aria-label="Batch hierarchy">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <FileText className="size-5 text-primary" />
-                  <span>New Batch — {provider.trim() || "Select a provider"}</span>
+          {batchType === "fabric" && (
+            <>
+              <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
+                <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Optional: enter actual details now or leave blank and complete by scanning.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Positive actual length and CP are required before stock becomes available.
+                    Colour is optional. Details can be added later.
+                  </p>
                 </div>
-                <p className="ml-7 mt-1 text-xs text-muted-foreground">
-                  Batch ID and individual barcode identities are generated on save.
-                </p>
               </div>
-              <div className="ml-2 space-y-5 border-l-2 border-primary/25 pl-3 sm:ml-4 sm:pl-5">
-                {rows.map((r, i) => (
-                  <section
-                    key={r.id}
-                    aria-label={"Fabric group " + (i + 1)}
-                    className="relative min-w-0 before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-primary/25 sm:before:-left-5 sm:before:w-5"
-                  >
-                    <div className="rounded-lg border bg-muted/20 p-3">
-                      <div className="mb-3 flex items-center justify-between gap-2">
-                        <h3 className="flex items-center gap-2 text-sm font-semibold">
-                          <Layers className="size-4 text-primary" />
-                          Fabric Type {i + 1}
-                          {r.name.trim() ? " — " + r.name : ""}
-                        </h3>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          aria-label={"Remove Fabric Type " + (i + 1)}
-                          disabled={rows.length === 1}
-                          onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
-                        >
-                          <Trash2 className="size-3.5" />
-                          <span className="sr-only sm:not-sr-only">Remove</span>
-                        </Button>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_7rem_1fr_1fr]">
-                        <div className="min-w-0">
-                          <Label htmlFor={"type-" + r.id}>Fabric Type {i + 1}</Label>
-                          <PickOrTypeInput
-                            id={"type-" + r.id}
-                            value={r.name}
-                            options={fabricNames}
-                            placeholder="Choose or type a fabric"
-                            onChange={(name) =>
-                              setRows((old) =>
-                                old.map((row) => (row.id === r.id ? { ...row, name } : row)),
-                              )
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={"count-" + r.id}>Thaan count {i + 1}</Label>
-                          <Input
-                            id={"count-" + r.id}
-                            value={r.quantity}
-                            placeholder="e.g. 10"
-                            inputMode="numeric"
-                            onChange={(e) =>
-                              setRows((old) =>
-                                old.map((row) =>
-                                  row.id === r.id ? { ...row, quantity: e.target.value } : row,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={"bulk-length-" + r.id}>Length for all (m)</Label>
-                          <Input
-                            id={"bulk-length-" + r.id}
-                            aria-label={"Length for all fabric " + (i + 1)}
-                            inputMode="decimal"
-                            placeholder="Optional metres"
-                            value={r.sharedLength}
-                            disabled={!can("stock.measure_thaan")}
-                            onChange={(e) =>
-                              setRows((old) =>
-                                old.map((row) =>
-                                  row.id === r.id ? { ...row, sharedLength: e.target.value } : row,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={"bulk-cp-" + r.id}>
-                            Base CP for all / metre, excluding GST (₹)
-                          </Label>
-                          <Input
-                            id={"bulk-cp-" + r.id}
-                            aria-label={"CP for all fabric " + (i + 1)}
-                            inputMode="decimal"
-                            placeholder="Optional CP"
-                            value={r.sharedCp}
-                            disabled={
-                              !can("stock.measure_thaan") || !can("inventory.view_registered_cp")
-                            }
-                            onChange={(e) =>
-                              setRows((old) =>
-                                old.map((row) =>
-                                  row.id === r.id ? { ...row, sharedCp: e.target.value } : row,
-                                ),
-                              )
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          Defaults apply to new rows. Individual rows can have different values.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          disabled={
-                            !rowCount(r.quantity) ||
-                            !can("stock.measure_thaan") ||
-                            (!r.sharedLength.trim() && !r.sharedCp.trim())
-                          }
-                          onClick={() => {
-                            try {
-                              if (r.sharedLength.trim()) quantityInput(r.sharedLength, "mm");
-                              if (r.sharedCp.trim()) fabricMoneyInput(r.sharedCp);
-                              setRows((old) =>
-                                old.map((row) =>
-                                  row.id !== r.id
-                                    ? row
-                                    : {
-                                        ...row,
-                                        details: Array.from(
-                                          {
-                                            length: Math.max(
-                                              rowCount(row.quantity),
-                                              row.details.length,
-                                            ),
-                                          },
-                                          (_, n) =>
-                                            n >= rowCount(row.quantity)
-                                              ? row.details[n]!
-                                              : {
-                                                  ...thaanDetail(row, n),
-                                                  ...(row.sharedLength.trim()
-                                                    ? { length: row.sharedLength }
-                                                    : {}),
-                                                  ...(row.sharedCp.trim()
-                                                    ? { cp: row.sharedCp }
-                                                    : {}),
-                                                },
-                                        ),
-                                      },
-                                ),
-                              );
-                            } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Check default values");
-                            }
-                          }}
-                        >
-                          Apply to all {rowCount(r.quantity) || ""} Thaans
-                        </Button>
-                      </div>
-                    </div>
+              <Panel
+                title="Batch Information"
+                actions={<FileText className="size-5 text-primary" aria-hidden="true" />}
+              >
+                <fieldset disabled={frozen} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <div>
+                    <Label>Batch ID</Label>
+                    <Input className="h-11 bg-muted/30" value="Auto-generated on save" readOnly />
+                  </div>
+                  <div>
+                    <Label htmlFor="arrival-date">Arrival date</Label>
+                    <Input
+                      id="arrival-date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="provider-name">Supplier / provider</Label>
+                    <PickOrTypeInput
+                      id="provider-name"
+                      value={provider}
+                      onChange={setProvider}
+                      options={names}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="batch-remarks">Remarks (optional)</Label>
+                    <Input
+                      id="batch-remarks"
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                    />
+                  </div>
+                </fieldset>
+              </Panel>
+              {gstEnabled && (
+                <Panel
+                  title="Supplier invoice available?"
+                  description="CP remains the base cost excluding GST. Record supplier-invoice values only when you have the invoice."
+                >
+                  <fieldset disabled={frozen} className="space-y-3">
                     <div
-                      className="ml-2 mt-3 space-y-2 border-l border-primary/25 pl-3 sm:ml-4 sm:pl-4"
-                      aria-label={"Thaan rows for fabric " + (i + 1)}
+                      className="flex flex-wrap gap-2"
+                      role="radiogroup"
+                      aria-label="Supplier invoice available"
                     >
-                      {!rowCount(r.quantity) && (
-                        <p className="py-2 text-xs text-muted-foreground">
-                          Enter 1–500 Thaans to show their rows.
+                      <Button
+                        type="button"
+                        variant={supplierInvoiceAvailable === "no" ? "default" : "outline"}
+                        onClick={() => setSupplierInvoiceAvailable("no")}
+                      >
+                        No
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={supplierInvoiceAvailable === "yes" ? "default" : "outline"}
+                        onClick={() => setSupplierInvoiceAvailable("yes")}
+                      >
+                        Yes
+                      </Button>
+                    </div>
+                    {supplierInvoiceAvailable === "no" ? (
+                      <p className="text-sm text-muted-foreground">
+                        Stock can be received without a supplier invoice. No purchase GST or ITC
+                        record will be created.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          The active purchase rule is {formatGstRate(purchaseRule!.rate_bps)} (
+                          {purchaseRule!.classification_code}). Supplier values are optional and
+                          reconcile the calculated estimate; they do not claim ITC automatically.
                         </p>
-                      )}
-                      {Array.from({ length: rowCount(r.quantity) }, (_, n) => (
-                        <div
-                          key={n}
-                          className="relative grid min-w-0 gap-2 rounded-md border bg-card p-3 before:absolute before:-left-3 before:top-5 before:w-3 before:border-t before:border-primary/25 sm:grid-cols-3 lg:grid-cols-[minmax(6rem,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] sm:before:-left-4 sm:before:w-4"
-                        >
-                          <div className="flex items-center gap-2 sm:col-span-3 lg:col-span-1">
-                            <Barcode className="size-4 shrink-0 text-primary" />
-                            <div>
-                              <p className="text-xs font-semibold">
-                                Thaan {String(n + 1).padStart(2, "0")}
-                              </p>
-                              <p className="text-[10px] text-muted-foreground">
-                                Barcode generated on save
-                              </p>
-                            </div>
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <Input
+                            aria-label="Supplier GSTIN"
+                            placeholder="Supplier GSTIN (optional)"
+                            value={supplierGstin}
+                            onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                          />
+                          <Input
+                            aria-label="Supplier invoice number"
+                            placeholder="Supplier invoice number"
+                            value={supplierInvoice}
+                            onChange={(e) => setSupplierInvoice(e.target.value)}
+                          />
+                          <Input
+                            aria-label="Supplier invoice date"
+                            type="date"
+                            value={supplierInvoiceDate}
+                            onChange={(e) => setSupplierInvoiceDate(e.target.value)}
+                          />
+                          <select
+                            aria-label="Input tax credit status"
+                            className="h-11 rounded border bg-background p-2"
+                            value={itcStatus}
+                            onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
+                          >
+                            <option value="pending">ITC pending review</option>
+                            <option value="eligible">ITC eligible</option>
+                            <option value="ineligible">ITC ineligible</option>
+                            <option value="reversed">ITC reversed</option>
+                          </select>
+                          <Input
+                            aria-label="Actual taxable amount"
+                            inputMode="decimal"
+                            placeholder="Invoice taxable ₹ (optional)"
+                            value={actualTaxable}
+                            onChange={(e) => setActualTaxable(e.target.value)}
+                          />
+                          <Input
+                            aria-label="Actual GST amount"
+                            inputMode="decimal"
+                            placeholder="Invoice GST ₹ (optional)"
+                            value={actualGst}
+                            onChange={(e) => setActualGst(e.target.value)}
+                          />
+                          <Input
+                            aria-label="Actual supplier total"
+                            inputMode="decimal"
+                            placeholder="Supplier total ₹ (optional)"
+                            value={actualSupplier}
+                            onChange={(e) => setActualSupplier(e.target.value)}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </fieldset>
+                </Panel>
+              )}
+              <Panel
+                title="Fabric Types & Quantities"
+                description="Choose your fabrics and the number of physical Thaans for each."
+              >
+                <fieldset disabled={frozen} className="space-y-3">
+                  <div className="rounded-lg bg-primary/5 p-3" aria-label="Batch hierarchy">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <FileText className="size-5 text-primary" />
+                      <span>New Batch — {provider.trim() || "Select a provider"}</span>
+                    </div>
+                    <p className="ml-7 mt-1 text-xs text-muted-foreground">
+                      Batch ID and individual barcode identities are generated on save.
+                    </p>
+                  </div>
+                  <div className="ml-2 space-y-5 border-l-2 border-primary/25 pl-3 sm:ml-4 sm:pl-5">
+                    {rows.map((r, i) => (
+                      <section
+                        key={r.id}
+                        aria-label={"Fabric group " + (i + 1)}
+                        className="relative min-w-0 before:absolute before:-left-3 before:top-6 before:w-3 before:border-t-2 before:border-primary/25 sm:before:-left-5 sm:before:w-5"
+                      >
+                        <div className="rounded-lg border bg-muted/20 p-3">
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <h3 className="flex items-center gap-2 text-sm font-semibold">
+                              <Layers className="size-4 text-primary" />
+                              Fabric Type {i + 1}
+                              {r.name.trim() ? " — " + r.name : ""}
+                            </h3>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              aria-label={"Remove Fabric Type " + (i + 1)}
+                              disabled={rows.length === 1}
+                              onClick={() => setRows((old) => old.filter((row) => row.id !== r.id))}
+                            >
+                              <Trash2 className="size-3.5" />
+                              <span className="sr-only sm:not-sr-only">Remove</span>
+                            </Button>
                           </div>
-                          {(
-                            [
-                              ["colour", "Colour (optional)"],
-                              ["length", "Length (metres)"],
-                              ["cp", "Base CP per metre, excluding GST (optional)"],
-                            ] as const
-                          ).map(([field, label]) => (
-                            <div key={field} className="min-w-0">
-                              <Label
-                                htmlFor={r.id + "-" + n + "-" + field}
-                                className="mb-1 block text-[11px] text-muted-foreground"
-                              >
-                                {label}
-                                <span className="sr-only">
-                                  {" "}
-                                  - fabric {i + 1}, Thaan {n + 1}
-                                </span>
-                              </Label>
-                              <Input
-                                id={r.id + "-" + n + "-" + field}
-                                className="h-9"
-                                value={thaanDetail(r, n)[field]}
-                                inputMode={field === "colour" ? "text" : "decimal"}
-                                disabled={
-                                  !can("stock.measure_thaan") ||
-                                  (field === "cp" && !can("inventory.view_registered_cp"))
-                                }
-                                placeholder={
-                                  field === "colour"
-                                    ? "Optional colour"
-                                    : field === "length"
-                                      ? "Metres"
-                                      : "Optional CP"
-                                }
-                                onChange={(e) =>
+                          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_7rem_1fr_1fr]">
+                            <div className="min-w-0">
+                              <Label htmlFor={"type-" + r.id}>Fabric Type {i + 1}</Label>
+                              <PickOrTypeInput
+                                id={"type-" + r.id}
+                                value={r.name}
+                                options={fabricNames}
+                                placeholder="Choose or type a fabric"
+                                onChange={(name) =>
                                   setRows((old) =>
-                                    old.map((row) => {
-                                      if (row.id !== r.id) return row;
-                                      const details = [...row.details];
-                                      details[n] = {
-                                        ...thaanDetail(row, n),
-                                        [field]: e.target.value,
-                                      };
-                                      return { ...row, details };
-                                    }),
+                                    old.map((row) => (row.id === r.id ? { ...row, name } : row)),
                                   )
                                 }
                               />
                             </div>
-                          ))}
-                          {gstEnabled &&
-                            supplierInvoiceAvailable === "yes" &&
-                            (() => {
-                              try {
-                                const detail = thaanDetail(r, n);
-                                if (!detail.length.trim() || !detail.cp.trim()) return null;
-                                const base =
-                                  (BigInt(quantityInput(detail.length, "mm")) *
-                                    BigInt(fabricMoneyInput(detail.cp)) +
-                                    500n) /
-                                  1000n;
-                                const tax = calculateTaxPaise(
-                                  base,
-                                  selectedGstRule(
-                                    gst.data,
-                                    "purchase",
-                                    `FABRIC:${r.name.trim().toUpperCase()}`,
-                                  )!.rate_bps,
-                                  "exclusive",
-                                  purchaseSupply,
-                                );
-                                return (
-                                  <p className="text-[11px] text-muted-foreground sm:col-span-3 lg:col-span-4">
-                                    Base {reportMoney(String(base))} · Estimated GST{" "}
-                                    {reportMoney(String(tax.gstPaise))} · Estimated supplier amount{" "}
-                                    {reportMoney(String(tax.finalPaise))}
-                                  </p>
-                                );
-                              } catch {
-                                return null;
+                            <div>
+                              <Label htmlFor={"count-" + r.id}>Thaan count {i + 1}</Label>
+                              <Input
+                                id={"count-" + r.id}
+                                value={r.quantity}
+                                placeholder="e.g. 10"
+                                inputMode="numeric"
+                                onChange={(e) =>
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id === r.id ? { ...row, quantity: e.target.value } : row,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={"bulk-length-" + r.id}>Length for all (m)</Label>
+                              <Input
+                                id={"bulk-length-" + r.id}
+                                aria-label={"Length for all fabric " + (i + 1)}
+                                inputMode="decimal"
+                                placeholder="Optional metres"
+                                value={r.sharedLength}
+                                disabled={!can("stock.measure_thaan")}
+                                onChange={(e) =>
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id === r.id
+                                        ? { ...row, sharedLength: e.target.value }
+                                        : row,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={"bulk-cp-" + r.id}>
+                                Base CP for all / metre, excluding GST (₹)
+                              </Label>
+                              <Input
+                                id={"bulk-cp-" + r.id}
+                                aria-label={"CP for all fabric " + (i + 1)}
+                                inputMode="decimal"
+                                placeholder="Optional CP"
+                                value={r.sharedCp}
+                                disabled={
+                                  !can("stock.measure_thaan") ||
+                                  !can("inventory.view_registered_cp")
+                                }
+                                onChange={(e) =>
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id === r.id ? { ...row, sharedCp: e.target.value } : row,
+                                    ),
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs text-muted-foreground">
+                              Defaults apply to new rows. Individual rows can have different values.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={
+                                !rowCount(r.quantity) ||
+                                !can("stock.measure_thaan") ||
+                                (!r.sharedLength.trim() && !r.sharedCp.trim())
                               }
-                            })()}
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-8 justify-self-end text-destructive sm:col-span-3 lg:col-span-1"
-                            aria-label={"Remove Thaan " + (n + 1) + " from Fabric Type " + (i + 1)}
-                            disabled={rowCount(r.quantity) <= 1}
-                            onClick={() =>
-                              setRows((old) =>
-                                old.map((row) =>
-                                  row.id !== r.id
-                                    ? row
-                                    : {
-                                        ...row,
-                                        quantity: String(rowCount(row.quantity) - 1),
-                                        details: Array.from(
-                                          {
-                                            length: Math.max(
-                                              rowCount(row.quantity),
-                                              row.details.length,
+                              onClick={() => {
+                                try {
+                                  if (r.sharedLength.trim()) quantityInput(r.sharedLength, "mm");
+                                  if (r.sharedCp.trim()) fabricMoneyInput(r.sharedCp);
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id !== r.id
+                                        ? row
+                                        : {
+                                            ...row,
+                                            details: Array.from(
+                                              {
+                                                length: Math.max(
+                                                  rowCount(row.quantity),
+                                                  row.details.length,
+                                                ),
+                                              },
+                                              (_, n) =>
+                                                n >= rowCount(row.quantity)
+                                                  ? row.details[n]!
+                                                  : {
+                                                      ...thaanDetail(row, n),
+                                                      ...(row.sharedLength.trim()
+                                                        ? { length: row.sharedLength }
+                                                        : {}),
+                                                      ...(row.sharedCp.trim()
+                                                        ? { cp: row.sharedCp }
+                                                        : {}),
+                                                    },
                                             ),
                                           },
-                                          (_, index) => thaanDetail(row, index),
-                                        ).filter((_, index) => index !== n),
-                                      },
-                                ),
-                              )
-                            }
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
+                                    ),
+                                  );
+                                } catch (e) {
+                                  toast.error(
+                                    e instanceof Error ? e.message : "Check default values",
+                                  );
+                                }
+                              }}
+                            >
+                              Apply to all {rowCount(r.quantity) || ""} Thaans
+                            </Button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 w-full justify-start gap-2 border-primary/10 bg-primary/5 text-primary hover:bg-primary/10"
-                disabled={rows.length >= 100}
-                onClick={() => setRows((old) => [...old, emptyRow()])}
+                        <div
+                          className="ml-2 mt-3 space-y-2 border-l border-primary/25 pl-3 sm:ml-4 sm:pl-4"
+                          aria-label={"Thaan rows for fabric " + (i + 1)}
+                        >
+                          {!rowCount(r.quantity) && (
+                            <p className="py-2 text-xs text-muted-foreground">
+                              Enter 1–500 Thaans to show their rows.
+                            </p>
+                          )}
+                          {Array.from({ length: rowCount(r.quantity) }, (_, n) => (
+                            <div
+                              key={n}
+                              className="relative grid min-w-0 gap-2 rounded-md border bg-card p-3 before:absolute before:-left-3 before:top-5 before:w-3 before:border-t before:border-primary/25 sm:grid-cols-3 lg:grid-cols-[minmax(6rem,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] sm:before:-left-4 sm:before:w-4"
+                            >
+                              <div className="flex items-center gap-2 sm:col-span-3 lg:col-span-1">
+                                <Barcode className="size-4 shrink-0 text-primary" />
+                                <div>
+                                  <p className="text-xs font-semibold">
+                                    Thaan {String(n + 1).padStart(2, "0")}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    Barcode generated on save
+                                  </p>
+                                </div>
+                              </div>
+                              {(
+                                [
+                                  ["colour", "Colour (optional)"],
+                                  ["length", "Length (metres)"],
+                                  ["cp", "Base CP per metre, excluding GST (optional)"],
+                                ] as const
+                              ).map(([field, label]) => (
+                                <div key={field} className="min-w-0">
+                                  <Label
+                                    htmlFor={r.id + "-" + n + "-" + field}
+                                    className="mb-1 block text-[11px] text-muted-foreground"
+                                  >
+                                    {label}
+                                    <span className="sr-only">
+                                      {" "}
+                                      - fabric {i + 1}, Thaan {n + 1}
+                                    </span>
+                                  </Label>
+                                  <Input
+                                    id={r.id + "-" + n + "-" + field}
+                                    className="h-9"
+                                    value={thaanDetail(r, n)[field]}
+                                    inputMode={field === "colour" ? "text" : "decimal"}
+                                    disabled={
+                                      !can("stock.measure_thaan") ||
+                                      (field === "cp" && !can("inventory.view_registered_cp"))
+                                    }
+                                    placeholder={
+                                      field === "colour"
+                                        ? "Optional colour"
+                                        : field === "length"
+                                          ? "Metres"
+                                          : "Optional CP"
+                                    }
+                                    onChange={(e) =>
+                                      setRows((old) =>
+                                        old.map((row) => {
+                                          if (row.id !== r.id) return row;
+                                          const details = [...row.details];
+                                          details[n] = {
+                                            ...thaanDetail(row, n),
+                                            [field]: e.target.value,
+                                          };
+                                          return { ...row, details };
+                                        }),
+                                      )
+                                    }
+                                  />
+                                </div>
+                              ))}
+                              {gstEnabled &&
+                                supplierInvoiceAvailable === "yes" &&
+                                (() => {
+                                  try {
+                                    const detail = thaanDetail(r, n);
+                                    if (!detail.length.trim() || !detail.cp.trim()) return null;
+                                    const base =
+                                      (BigInt(quantityInput(detail.length, "mm")) *
+                                        BigInt(fabricMoneyInput(detail.cp)) +
+                                        500n) /
+                                      1000n;
+                                    const tax = calculateTaxPaise(
+                                      base,
+                                      selectedGstRule(
+                                        gst.data,
+                                        "purchase",
+                                        `FABRIC:${r.name.trim().toUpperCase()}`,
+                                      )!.rate_bps,
+                                      "exclusive",
+                                      purchaseSupply,
+                                    );
+                                    return (
+                                      <p className="text-[11px] text-muted-foreground sm:col-span-3 lg:col-span-4">
+                                        Base {reportMoney(String(base))} · Estimated GST{" "}
+                                        {reportMoney(String(tax.gstPaise))} · Estimated supplier
+                                        amount {reportMoney(String(tax.finalPaise))}
+                                      </p>
+                                    );
+                                  } catch {
+                                    return null;
+                                  }
+                                })()}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="size-8 justify-self-end text-destructive sm:col-span-3 lg:col-span-1"
+                                aria-label={
+                                  "Remove Thaan " + (n + 1) + " from Fabric Type " + (i + 1)
+                                }
+                                disabled={rowCount(r.quantity) <= 1}
+                                onClick={() =>
+                                  setRows((old) =>
+                                    old.map((row) =>
+                                      row.id !== r.id
+                                        ? row
+                                        : {
+                                            ...row,
+                                            quantity: String(rowCount(row.quantity) - 1),
+                                            details: Array.from(
+                                              {
+                                                length: Math.max(
+                                                  rowCount(row.quantity),
+                                                  row.details.length,
+                                                ),
+                                              },
+                                              (_, index) => thaanDetail(row, index),
+                                            ).filter((_, index) => index !== n),
+                                          },
+                                    ),
+                                  )
+                                }
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 w-full justify-start gap-2 border-primary/10 bg-primary/5 text-primary hover:bg-primary/10"
+                    disabled={rows.length >= 100}
+                    onClick={() => setRows((old) => [...old, emptyRow()])}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    Add Another Fabric Type
+                  </Button>
+                </fieldset>
+              </Panel>
+              <Panel
+                bodyClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                className="border-primary/15"
               >
-                <Plus className="size-4" aria-hidden="true" />
-                Add Another Fabric Type
-              </Button>
-            </fieldset>
-          </Panel>
-          <Panel
-            bodyClassName="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-            className="border-primary/15"
-          >
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
-              <p>Total Thaans: {total}</p>
-              <p>Fabric Types: {rows.length}</p>
-              <p>Estimated Barcodes: {total}</p>
-              {gstEnabled && supplierInvoiceAvailable === "yes" && purchaseTotals && (
-                <p>
-                  Base {reportMoney(String(purchaseTotals.base))} · Estimated GST{" "}
-                  {reportMoney(String(purchaseTotals.gst))} · Estimated supplier total{" "}
-                  {reportMoney(String(purchaseTotals.supplier))}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 sm:shrink-0">
-              <Button
-                className="min-w-24"
-                variant="outline"
-                disabled={frozen}
-                onClick={() => setStage("home")}
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={
-                  frozen || !can("stock.generate_labels") || !provider.trim() || !date || !total
-                }
-                onClick={() => {
-                  try {
-                    if (
-                      rows.some(
-                        (r) =>
-                          !r.name.trim() ||
-                          !/^[1-9]\d*$/.test(r.quantity) ||
-                          Number(r.quantity) > 500,
-                      ) ||
-                      total > 5000
-                    ) {
-                      toast.error(
-                        "Enter a fabric name and 1-500 Thaans for every row; up to 5000 labels per batch submission",
-                      );
-                      return;
+                <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                  <p>Total Thaans: {total}</p>
+                  <p>Fabric Types: {rows.length}</p>
+                  <p>Estimated Barcodes: {total}</p>
+                  {gstEnabled && supplierInvoiceAvailable === "yes" && purchaseTotals && (
+                    <p>
+                      Base {reportMoney(String(purchaseTotals.base))} · Estimated GST{" "}
+                      {reportMoney(String(purchaseTotals.gst))} · Estimated supplier total{" "}
+                      {reportMoney(String(purchaseTotals.supplier))}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 sm:shrink-0">
+                  <Button
+                    className="min-w-24"
+                    variant="outline"
+                    disabled={frozen}
+                    onClick={() => setStage("home")}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    disabled={
+                      frozen || !can("stock.generate_labels") || !provider.trim() || !date || !total
                     }
-                    if (
-                      rows.some((r) =>
-                        r.details
-                          .slice(Number(r.quantity))
-                          .some((d) => d && (d.colour.trim() || d.length.trim() || d.cp.trim())),
-                      )
-                    )
-                      throw new Error(
-                        "Thaan count would discard entered details; restore the count or clear those rows first",
-                      );
-                    run({
-                      kind: "batch",
-                      provider: provider.trim(),
-                      date,
-                      remarks: remarks.trim() || null,
-                      fabrics: rows.map((r) => ({
-                        name: r.name.trim(),
-                        quantity: Number(r.quantity),
-                        rows: Array.from({ length: Number(r.quantity) }, (_, n) => ({
-                          colour: thaanDetail(r, n).colour.trim() || null,
-                          length_mm: thaanDetail(r, n).length.trim()
-                            ? quantityInput(thaanDetail(r, n).length, "mm")
-                            : null,
-                          cp_paise_per_m: thaanDetail(r, n).cp.trim()
-                            ? fabricMoneyInput(thaanDetail(r, n).cp)
-                            : null,
-                        })),
-                      })),
-                      ...(supplierInvoiceAvailable === "yes"
-                        ? {
-                            purchase: {
-                              supplier_gstin: supplierGstin.trim(),
-                              invoice_number: supplierInvoice.trim(),
-                              invoice_date: supplierInvoiceDate,
-                              itc_status: itcStatus,
-                              actual_taxable_paise: actualTaxable.trim()
-                                ? fabricMoneyInput(actualTaxable)
+                    onClick={() => {
+                      try {
+                        if (
+                          rows.some(
+                            (r) =>
+                              !r.name.trim() ||
+                              !/^[1-9]\d*$/.test(r.quantity) ||
+                              Number(r.quantity) > 500,
+                          ) ||
+                          total > 5000
+                        ) {
+                          toast.error(
+                            "Enter a fabric name and 1-500 Thaans for every row; up to 5000 labels per batch submission",
+                          );
+                          return;
+                        }
+                        if (
+                          rows.some((r) =>
+                            r.details
+                              .slice(Number(r.quantity))
+                              .some(
+                                (d) => d && (d.colour.trim() || d.length.trim() || d.cp.trim()),
+                              ),
+                          )
+                        )
+                          throw new Error(
+                            "Thaan count would discard entered details; restore the count or clear those rows first",
+                          );
+                        run({
+                          kind: "batch",
+                          provider: provider.trim(),
+                          date,
+                          remarks: remarks.trim() || null,
+                          fabrics: rows.map((r) => ({
+                            name: r.name.trim(),
+                            quantity: Number(r.quantity),
+                            rows: Array.from({ length: Number(r.quantity) }, (_, n) => ({
+                              colour: thaanDetail(r, n).colour.trim() || null,
+                              length_mm: thaanDetail(r, n).length.trim()
+                                ? quantityInput(thaanDetail(r, n).length, "mm")
                                 : null,
-                              actual_gst_paise: actualGst.trim()
-                                ? fabricMoneyInput(actualGst)
+                              cp_paise_per_m: thaanDetail(r, n).cp.trim()
+                                ? fabricMoneyInput(thaanDetail(r, n).cp)
                                 : null,
-                              actual_supplier_paise: actualSupplier.trim()
-                                ? fabricMoneyInput(actualSupplier)
-                                : null,
-                            },
-                          }
-                        : {}),
-                    });
-                  } catch (error) {
-                    toast.error(
-                      error instanceof Error ? error.message : "Check actual Thaan details",
-                    );
-                  }
-                }}
-              >
-                Generate All Barcodes <ArrowRight className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-          </Panel>
+                            })),
+                          })),
+                          ...(supplierInvoiceAvailable === "yes"
+                            ? {
+                                purchase: {
+                                  supplier_gstin: supplierGstin.trim(),
+                                  invoice_number: supplierInvoice.trim(),
+                                  invoice_date: supplierInvoiceDate,
+                                  itc_status: itcStatus,
+                                  actual_taxable_paise: actualTaxable.trim()
+                                    ? fabricMoneyInput(actualTaxable)
+                                    : null,
+                                  actual_gst_paise: actualGst.trim()
+                                    ? fabricMoneyInput(actualGst)
+                                    : null,
+                                  actual_supplier_paise: actualSupplier.trim()
+                                    ? fabricMoneyInput(actualSupplier)
+                                    : null,
+                                },
+                              }
+                            : {}),
+                        });
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : "Check actual Thaan details",
+                        );
+                      }
+                    }}
+                  >
+                    Generate All Barcodes <ArrowRight className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              </Panel>
+            </>
+          )}
         </>
       )}
       {stage === "labels" && (
