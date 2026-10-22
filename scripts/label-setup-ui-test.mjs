@@ -83,7 +83,7 @@ try {
   );
   assert.match(
     await page.getByRole("status").first().textContent(),
-    /13 labels · 2 print pages\. 2 labels across/,
+    /13 labels · 7 print pages\. 2 labels across/,
   );
   await page
     .frameLocator('iframe[title="Barcode label preview"]')
@@ -108,8 +108,8 @@ try {
       const labelBox = label.getBoundingClientRect();
       const svgBox = svg.getBoundingClientRect();
       return (
-        svgBox.width >= labelBox.width * 0.75 &&
-        svgBox.width <= labelBox.width * 0.85 &&
+        svgBox.width >= labelBox.width * 0.6 &&
+        svgBox.width <= labelBox.width * 0.8 &&
         Math.abs((svgBox.left + svgBox.right) / 2 - (labelBox.left + labelBox.right) / 2) <= 1
       );
     }),
@@ -194,9 +194,9 @@ try {
     await page.getByRole("status").first().textContent(),
     /13 print pages\. 1 label across/,
   );
-  await page.getByRole("button", { name: "Use showroom 4 × 6 layout", exact: true }).click();
-  assert.equal(await page.getByLabel("Labels down per page", { exact: true }).inputValue(), "6");
-  assert.equal(await page.getByLabel("Label media type", { exact: true }).inputValue(), "sheet");
+  await page.getByRole("button", { name: "Use showroom 40 × 30 roll", exact: true }).click();
+  assert.equal(await page.getByLabel("Labels across", { exact: true }).inputValue(), "2");
+  assert.equal(await page.getByLabel("Label media type", { exact: true }).inputValue(), "roll");
   await page.getByText("Advanced settings", { exact: true }).click();
   await page.getByRole("button", { name: "Print test page", exact: true }).click();
   await page.waitForFunction(() => window.printed.length === 1);
@@ -205,8 +205,8 @@ try {
   assert.deepEqual(
     await page.evaluate(() => window.printed.map((p) => [p.codes.length, p.pages])),
     [
-      [12, 1],
-      [13, 2],
+      [2, 1],
+      [13, 7],
     ],
   );
   assert.equal(await page.evaluate(() => window.printed[1].codes.at(-1)), "T00013");
@@ -214,7 +214,7 @@ try {
   await page.getByRole("heading", { name: "Print barcode labels" }).waitFor();
   assert.match(
     await page.getByRole("status").first().textContent(),
-    /2 print pages\. 2 labels across/,
+    /7 print pages\. 2 labels across/,
   );
   assert.deepEqual(errors, []);
   console.log(

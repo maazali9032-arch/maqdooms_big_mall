@@ -19,8 +19,8 @@ import {
   type LabelProfile,
   type Sticker,
 } from "./label-print-model";
-// Versioned so previously saved experimental layouts cannot override the original 4 × 6 setup.
-const PROFILE_KEY = "maqdooms.barcode-label-profile.v3";
+// Versioned so the measured 40 × 30 mm showroom roll replaces prior experimental profiles.
+const PROFILE_KEY = "maqdooms.barcode-label-profile.v4";
 function profileFromStorage() {
   try {
     const p = normalizeProfile(JSON.parse(localStorage.getItem(PROFILE_KEY) ?? "null"));
@@ -83,9 +83,9 @@ export function LabelPrintDialog({
   const tooLong = symbols.some((s) => s.dots < 1),
     dense = symbols.some((s) => s.dots === 1);
   const pages = valid ? labelPages(labels, profile).length : 0;
-  const applyPreset = (preset: "tsc-4x6" | "thermal-1" | "a4-2x7" | "a4-3x8") => {
+  const applyPreset = (preset: "showroom-roll" | "thermal-1" | "a4-2x7" | "a4-3x8") => {
     const presets: Record<typeof preset, LabelProfile> = {
-      "tsc-4x6": STARTING_LABEL_PROFILE,
+      "showroom-roll": STARTING_LABEL_PROFILE,
       "thermal-1": {
         mode: "roll",
         width: 101.6,
@@ -154,8 +154,8 @@ export function LabelPrintDialog({
               {profile.mode === "sheet" ? ` · ${profile.rows} rows` : ""}
             </p>
           </div>
-          <Button type="button" variant="outline" onClick={() => applyPreset("tsc-4x6")}>
-            Use showroom 4 × 6 layout
+          <Button type="button" variant="outline" onClick={() => applyPreset("showroom-roll")}>
+            Use showroom 40 × 30 roll
           </Button>
         </div>
         <details className="rounded-lg border p-3">
