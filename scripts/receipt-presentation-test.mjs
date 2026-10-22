@@ -36,7 +36,21 @@ try {
   const { CustomerReceiptContent, TailorWorkOrderContent } = await server.ssrLoadModule(
     "/src/features/pos/ReceiptContent.tsx",
   );
-  const { receiptPrintStyles } = await server.ssrLoadModule("/src/features/pos/receipt-format.ts");
+  const { receiptBarcodeGeometry, receiptPrintStyles } = await server.ssrLoadModule(
+    "/src/features/pos/receipt-format.ts",
+  );
+  const receiptSource = await fs.readFile(
+    resolve("src/features/pos/CounterBillReceipt.tsx"),
+    "utf8",
+  );
+  assert(receiptSource.includes("Print 80 mm bill"));
+  assert(!receiptSource.includes("Print 58 mm") && !receiptSource.includes("Print 56 mm"));
+  const printCss = receiptPrintStyles();
+  assert(printCss.includes("@page{size:80mm auto") && printCss.includes("padding-left:4mm"));
+  const billBarcode = receiptBarcodeGeometry("B00007");
+  assert.equal(billBarcode.bars.length, 90);
+  assert.equal(billBarcode.modules, 110);
+  assert(Math.abs(billBarcode.widthMm - 41.29064039408867) < 0.000001);
   const tax = {
     invoice_number: "BILL-accounting-reference",
     price_mode: "exclusive",
@@ -103,6 +117,7 @@ try {
     renderToStaticMarkup(createElement(CustomerReceiptContent, { receipt }));
   const sixReceipt = render({ ...base, scan_code: "B00001" });
   assert(sixReceipt.includes('aria-label="Barcode B00001"') && sixReceipt.includes("Bill No:"));
+  assert(sixReceipt.includes('style="width:41.29064039408867mm"'));
   const retail = render(base);
   assert(
     retail.includes("Payment status") &&
@@ -258,21 +273,24 @@ try {
     const { chromium } = await import(pathToFileURL(resolve(process.argv[2])).href);
     browser = await chromium.launch({ headless: true });
     const folder = await fs.mkdtemp(join(os.tmpdir(), "maqdooms-receipt-preview-"));
-    for (const [name, content, width] of [
-      ["retail", retail, 58],
-      ["retail-80", retail, 80],
-      ["tailoring", tailoring, 58],
-      ["tailoring-80", tailoring, 80],
-      ["combined", combined, 58],
-      ["interstate", interstate, 80],
-      ["tailor-work-order", tailor, 80],
+    for (const [name, content] of [
+      ["six-character-80", sixReceipt],
+      ["retail-80", retail],
+      ["tailoring-80", tailoring],
+      ["combined-80", combined],
+      ["interstate-80", interstate],
+      ["tailor-work-order-80", tailor],
     ]) {
       const page = await browser.newPage({
         viewport: { width: 340, height: 900 },
         deviceScaleFactor: 2,
       });
+      const printableContent =
+        name === "tailor-work-order-80"
+          ? content
+          : `<div class="customer-invoice">${content}</div>`;
       await page.setContent(
-        `<html><head><meta charset="utf-8"><style>${receiptPrintStyles(width)}body{margin:12px;border:1px solid #ddd;padding:8px;width:${width}mm}</style></head><body>${content}</body></html>`,
+        `<html><head><meta charset="utf-8"><style>${receiptPrintStyles()}body{margin:12px;border:1px solid #ddd}</style></head><body>${printableContent}</body></html>`,
       );
       const overflow = await page
         .locator("body")
@@ -285,6 +303,22 @@ try {
         false,
         `${name} has overflowing item cells`,
       );
+      if (name !== "tailor-work-order-80") {
+        if (name === "six-character-80") {
+          const barcodeWidth = await page
+            .locator(".invoice-barcode-symbol")
+            .evaluate((element) => Number.parseFloat(getComputedStyle(element).width));
+          const expectedPixels = (billBarcode.widthMm * 96) / 25.4;
+          assert(
+            Math.abs(barcodeWidth - expectedPixels) < 1,
+            `${name} bill barcode width ${barcodeWidth}px must match ${expectedPixels}px`,
+          );
+        }
+        const inset = await page
+          .locator(".customer-invoice")
+          .evaluate((element) => Number.parseFloat(getComputedStyle(element).paddingLeft));
+        assert(Math.abs(inset - (4 * 96) / 25.4) < 1, `${name} must protect the left print edge`);
+      }
       await page.locator("body").screenshot({ path: join(folder, `${name}.png`) });
       await page.close();
     }

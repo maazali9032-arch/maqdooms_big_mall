@@ -84,11 +84,11 @@ export type CounterReceipt = {
   }[];
   tax?: GstInvoice | null;
 };
-function printThermal(node: HTMLElement, title: string, width: 58 | 80) {
+function printThermal(node: HTMLElement, title: string) {
   const popup = window.open("", "_blank", "width=520,height=760");
   if (!popup) throw new Error("Allow pop-ups to print the invoice");
   popup.document.write(
-    `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>]/g, "")}</title><style>${receiptPrintStyles(width)}</style></head><body>${node.innerHTML}</body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>]/g, "")}</title><style>${receiptPrintStyles()}</style></head><body>${node.innerHTML}</body></html>`,
   );
   popup.document.close();
   popup.focus();
@@ -117,25 +117,13 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
     <Panel
       title="Customer bill"
       actions={
-        <div className="flex gap-2">
-          <Button
-            onClick={() =>
-              printable.current &&
-              printThermal(printable.current, "Tax invoice " + receipt.code, 58)
-            }
-          >
-            Print 58 mm
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() =>
-              printable.current &&
-              printThermal(printable.current, "Tax invoice " + receipt.code, 80)
-            }
-          >
-            Print 80 mm
-          </Button>
-        </div>
+        <Button
+          onClick={() =>
+            printable.current && printThermal(printable.current, "Tax invoice " + receipt.code)
+          }
+        >
+          Print 80 mm bill
+        </Button>
       }
     >
       <div
@@ -171,7 +159,6 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
                   printThermal(
                     tailorPrintable.current,
                     `Tailor work order ${receipt.scan_code ?? receipt.code}`,
-                    80,
                   )
                 }
               >

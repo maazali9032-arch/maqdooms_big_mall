@@ -2113,3 +2113,9 @@ The maximum-content label—name, description, bars, printed ID, detail and opti
 For the two-inch showroom fabric label, print exactly this central identity group: batch/supplier, fabric type/name, CODE128 symbol and exact human-readable barcode. Centre all text and the natural-width symbol horizontally. Omit colour/length detail from the small physical sticker; preserve it in the scanned inventory record. Apply the printer-evidenced upward correction inside the sticker cell—4 mm for unpriced fabric labels and 2 mm for priced finished labels—without changing sheet pitch or dimensions.
 
 The actual dialog test must assert the exact line order, barcode centring, bottom clearance and containment of every printed element. Preserve the 2 × 6 sheet, one print per selected identity, page calibration, database identities and stock behavior. A new physical test print remains the final acceptance evidence. See History Section 86 and `docs/LABEL_PRINT_SETUP.md`.
+
+# 88. SINGLE 80 MM CUSTOMER BILL PRINT AND SCANNER-SAFE SYMBOL — 22 OCTOBER 2026
+
+Use one **Print 80 mm bill** action for customer invoices. Remove the smaller paper option. Retain the 80 mm page and right boundary, but apply a 4 mm internal left safety inset to prevent the demonstrated printer from cutting off left-side labels.
+
+Customer-bill CODE128 output must encode the exact existing short bill identity and render at a fixed integer-dot geometry: 203 DPI, three dots per module, 10 quiet modules on each side, and 15 mm bar height. Do not fluidly stretch the SVG. A six-character bill such as `B00007` must be approximately 41.29 mm wide. Preserve all database mappings, manual/scanner lookup behavior, reprint identity, GST content, permissions and billing transactions. Update `docs/COUNTER_RECEIPTS.md`; test the 80 mm receipt layout and a physical barcode scan after deployment. See History Section 87.

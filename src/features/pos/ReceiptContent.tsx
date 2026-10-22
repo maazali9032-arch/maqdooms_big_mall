@@ -1,9 +1,29 @@
-import { deliveryDate } from "./receipt-format";
+import { deliveryDate, receiptBarcodeGeometry } from "./receipt-format";
 import { Fragment } from "react";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { GstInvoiceSummary, GstTailoringComponents } from "@/features/gst/GstInvoicePresentation";
 import type { CounterReceipt } from "./CounterBillReceipt";
+
+function CustomerBillBarcode({ code }: { code: string }) {
+  const { bars, modules, widthMm } = receiptBarcodeGeometry(code);
+  return (
+    <svg
+      role="img"
+      aria-label={`Barcode ${code}`}
+      viewBox={`0 0 ${modules} 60`}
+      preserveAspectRatio="none"
+      className="invoice-barcode-symbol"
+      style={{ width: `${widthMm}mm` }}
+      shapeRendering="crispEdges"
+    >
+      <rect width="100%" height="100%" fill="white" />
+      {[...bars].map((bit, index) =>
+        bit === "1" ? <rect key={index} x={index + 10} width="1" height="60" fill="black" /> : null,
+      )}
+    </svg>
+  );
+}
 
 /** Customer presentation deliberately excludes internal location/operator/job identifiers. */
 export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt }) {
@@ -92,7 +112,7 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <p className="text-xs">Customer GSTIN: {receipt.tax.customer.gstin}</p>
       )}
       <div className="invoice-barcode">
-        <BarcodeGraphic code={receipt.scan_code ?? receipt.code} />
+        <CustomerBillBarcode code={receipt.scan_code ?? receipt.code} />
         <p>{receipt.scan_code ?? receipt.code}</p>
       </div>
       <details className="screen-only invoice-accounting-reference">
