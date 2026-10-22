@@ -91,8 +91,8 @@ check(
 );
 const short = symbolSize(labels[0].code, STARTING_LABEL_PROFILE);
 check(
-  short.dots >= 2 && short.width <= STARTING_LABEL_PROFILE.width - 4,
-  "Short numeric piece barcode has readable module width",
+  short.dots >= 2 && short.width <= STARTING_LABEL_PROFILE.width - 12,
+  "Short numeric piece barcode has readable modules without stretching across the sticker",
 );
 const legacy = symbolSize("PRD-0fd2d3fb-3b6e-425e-9c58-4da18ca665c5", STARTING_LABEL_PROFILE);
 check(
@@ -103,9 +103,11 @@ const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
   css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
     css.includes("grid-template-columns:repeat(2,50.8mm)") &&
-    css.includes(".sticker svg{width:100%;height:9.5mm") &&
+    css.includes("padding:1.2mm 4mm") &&
+    css.includes("justify-content:center") &&
+    css.includes(".sticker svg{max-width:100%;height:6.5mm") &&
     css.includes(".sticker .code{text-align:center"),
-  "Print CSS fills each sticker safely with a full-width barcode and readable code",
+  "Print CSS keeps compact label content within safe physical sticker insets",
 );
 await fs.writeFile(
   "docs/THERMAL_LABEL_MODEL_VERIFICATION.json",

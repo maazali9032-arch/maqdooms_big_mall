@@ -6944,3 +6944,11 @@ The showroom 4 × 6 sheet profile remains two 50.8 × 25.4 mm labels across by s
 `LabelPrintDialog.tsx` and the print CSS now use the full safe sticker width between the established 2 mm side margins, increase the CODE128 height to 9.5 mm, and centre the recorded six-character identity beneath it in a readable 7.5 pt weight. Existing barcode geometry/density validation, immutable label identity, sheet pagination and printer setup remain. The inline calculated barcode width no longer makes a short six-character barcode look unnecessarily small.
 
 The actual dialog browser test now measures the rendered barcode against the sticker width, alongside existing responsive, preset, print-output and reload coverage. Thermal-model checks verify the final CSS. TypeScript, scoped lint and production build passed. The physical printer still needs one refreshed **Print test page** and scanner check before batch printing. See `docs/LABEL_PRINT_SETUP.md`.
+
+# 85. PHYSICAL BARCODE SIZE AND CENTRING CORRECTION — 22 OCTOBER 2026
+
+The next physical showroom print demonstrated that Section 84's full-width 9.5 mm barcode was too wide and too tall: the bars occupied nearly the entire label and the six-character caption printed across the following sticker. That physical evidence supersedes the earlier sizing decision.
+
+Compact showroom labels now retain the barcode generator's natural integer-dot width at the configured 203 DPI instead of stretching the SVG to 100%. The available symbol width reserves a generous physical quiet area, the bars are 6.5 mm high, and both the barcode and complete label content block are centred. Four-millimetre content insets protect the printer's left/right non-printable area. Text sizes and gaps are compact enough to contain name, description, barcode, printed ID, detail and optional price within one 50.8 × 25.4 mm sticker.
+
+The real dialog browser test now uses a maximum-content label, checks natural-width horizontal centring, and checks every rendered child boundary against its sticker. Pagination, one-label/blank-position behavior, barcode identity and stock remain unchanged. Thermal-model, actual-dialog, TypeScript, scoped lint and production-build verification accompany the release. A refreshed physical test print and scanner read remain the final hardware acceptance step. See `docs/LABEL_PRINT_SETUP.md`.

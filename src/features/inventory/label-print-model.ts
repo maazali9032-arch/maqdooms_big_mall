@@ -99,7 +99,9 @@ export function symbolSize(code: string, profile: LabelProfile) {
   const bars = fabricBarcodeBars(code),
     modules = bars.length + 20;
   const dotsPerMm = profile.dpi / 25.4;
-  const dots = Math.floor(((profile.width - 4) * dotsPerMm) / modules);
+  // Keep a generous physical quiet area on compact showroom stickers. At
+  // 203 DPI this also avoids stretching six-character symbols across the label.
+  const dots = Math.floor(((profile.width - 12) * dotsPerMm) / modules);
   return { bars, modules, dots, width: (modules * dots) / dotsPerMm };
 }
 
@@ -128,5 +130,5 @@ export function labelPrintCSS(raw: LabelProfile) {
   const pageStyle = sheet
     ? `padding:${p.margin}mm;grid-template-columns:repeat(${p.columns},${p.width}mm);grid-template-rows:repeat(${p.rows},${p.height}mm);column-gap:${p.gap}mm;row-gap:${p.rowGap}mm;`
     : `grid-template-columns:repeat(${p.columns},${p.width}mm);column-gap:${p.gap}mm;grid-auto-rows:${p.height}mm;`;
-  return `@page{size:${printWidth}mm ${printHeight}mm;margin:0}html,body{margin:0;padding:0;background:white;color:black}*{box-sizing:border-box}.label-page{display:grid;${pageStyle}width:${printWidth}mm;height:${printHeight}mm;break-after:page;page-break-after:always;overflow:hidden}.label-page:last-child{break-after:auto;page-break-after:auto}.sticker{width:${p.width}mm;height:${p.height}mm;padding:1.4mm 2mm 1.2mm;font:8.5pt Arial,sans-serif;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:.25mm}.sticker p{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}.sticker .name{font-weight:bold;font-size:9pt}.sticker .code{text-align:center;font:700 7.5pt monospace;letter-spacing:.2mm}.sticker .price{font-weight:bold;font-size:11pt}.sticker svg{width:100%;height:9.5mm;flex-shrink:0;align-self:center;shape-rendering:crispEdges}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
+  return `@page{size:${printWidth}mm ${printHeight}mm;margin:0}html,body{margin:0;padding:0;background:white;color:black}*{box-sizing:border-box}.label-page{display:grid;${pageStyle}width:${printWidth}mm;height:${printHeight}mm;break-after:page;page-break-after:always;overflow:hidden}.label-page:last-child{break-after:auto;page-break-after:auto}.sticker{position:relative;width:${p.width}mm;height:${p.height}mm;padding:1.2mm 4mm;font:7pt Arial,sans-serif;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;justify-content:center;gap:.1mm}.sticker p{flex:0 0 auto;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.05}.sticker .name{font-weight:bold;font-size:8pt}.sticker .code{text-align:center;font:700 6.8pt/1.05 monospace;letter-spacing:.15mm}.sticker .price{font-weight:bold;font-size:9pt}.sticker svg{max-width:100%;height:6.5mm;flex:0 0 6.5mm;align-self:center;shape-rendering:crispEdges}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
 }

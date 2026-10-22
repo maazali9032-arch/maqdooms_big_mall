@@ -20,7 +20,7 @@ await fs.writeFile(
 import {createRoot} from 'react-dom/client';
 import {LabelPrintDialog} from '@/features/inventory/LabelPrintDialog';
 import '@/styles.css';
-const labels=Array.from({length:13},(_,i)=>({code:'T'+String(i+1).padStart(5,'0'),name:'Cotton',description:'Batch 12',detail:'Grey · 10.000 m',price:''}));
+const labels=Array.from({length:13},(_,i)=>({code:'T'+String(i+1).padStart(5,'0'),name:'Cotton',description:'Batch 12 / Supplier',detail:'Grey · 10.000 m',price:i===0?'₹3,999.00':''}));
 createRoot(document.getElementById('root')!).render(<LabelPrintDialog labels={labels} title="Test labels" close={()=>{}}/>);
 `,
 );
@@ -105,10 +105,36 @@ try {
     await previewBarcode.evaluate((svg) => {
       const label = svg.closest(".sticker");
       if (!label) return false;
-      return svg.getBoundingClientRect().width >= label.getBoundingClientRect().width * 0.9;
+      const labelBox = label.getBoundingClientRect();
+      const svgBox = svg.getBoundingClientRect();
+      return (
+        svgBox.width >= labelBox.width * 0.5 &&
+        svgBox.width <= labelBox.width * 0.65 &&
+        Math.abs((svgBox.left + svgBox.right) / 2 - (labelBox.left + labelBox.right) / 2) <= 1
+      );
     }),
     true,
-    "Preview barcode uses the sticker's safe printable width",
+    "Preview barcode keeps its natural scanner-safe width and is horizontally centred",
+  );
+  assert.equal(
+    await page
+      .frameLocator('iframe[title="Barcode label preview"]')
+      .locator(".sticker")
+      .first()
+      .evaluate((label) => {
+        const box = label.getBoundingClientRect();
+        return [...label.children].every((child) => {
+          const childBox = child.getBoundingClientRect();
+          return (
+            childBox.left >= box.left - 0.5 &&
+            childBox.right <= box.right + 0.5 &&
+            childBox.top >= box.top - 0.5 &&
+            childBox.bottom <= box.bottom + 0.5
+          );
+        });
+      }),
+    true,
+    "Every text line, barcode and printed ID stays inside one physical sticker",
   );
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
