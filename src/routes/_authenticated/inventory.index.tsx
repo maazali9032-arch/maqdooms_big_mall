@@ -10,6 +10,7 @@ import { LocationDefinitions } from "@/features/inventory/LocationDefinitions";
 import { StockActivity } from "@/features/inventory/StockActivity";
 import { FabricArchive } from "@/features/inventory/FabricArchive";
 import { ShowroomFloorStock } from "@/features/inventory/ShowroomFloorStock";
+import { VendorReadymadeStock } from "@/features/inventory/VendorReadymadeStock";
 import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -56,7 +57,13 @@ function InventoryPage() {
 function StockInventory({ active, onChange }: { active: string; onChange: (id: string) => void }) {
   const [search, setSearch] = useState(""),
     [incomplete, setIncomplete] = useState(false);
-  const chosen = ["fabric-stock", "showroom-stock", "movements", "archived"].includes(active)
+  const chosen = [
+    "fabric-stock",
+    "readymade-stock",
+    "showroom-stock",
+    "movements",
+    "archived",
+  ].includes(active)
     ? active
     : "fabric-stock";
   return (
@@ -68,11 +75,12 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
       {chosen === "fabric-stock" && <FabricStockSummary />}
       <Tabs value={chosen} onValueChange={onChange}>
         <TabsList
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-4"
+          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-5"
           aria-label="Fabric inventory views"
         >
           {[
             ["fabric-stock", "Fabric stock & scan"],
+            ["readymade-stock", "Readymade stock"],
             ["showroom-stock", "Showroom floors"],
             ["movements", "Stock movements"],
             ["archived", "Depleted / archived"],
@@ -89,6 +97,9 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
             incompleteOnly={incomplete}
             onIncompleteChange={setIncomplete}
           />
+        </TabsContent>
+        <TabsContent value="readymade-stock">
+          <VendorReadymadeStock />
         </TabsContent>
         <TabsContent value="movements">
           <StockActivity />
