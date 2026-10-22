@@ -1,4 +1,5 @@
 import { ScannedThaanRows } from "./ScannedThaanRows";
+import { VendorReadymadeRegistration } from "./VendorReadymadeRegistration";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -156,7 +157,7 @@ export function StockRegistration() {
   const qc = useQueryClient();
   const suppliers = useSuppliers();
   const gst = useGstConfiguration();
-  const [stage, setStage] = useState<"home" | "create" | "labels">("home");
+  const [stage, setStage] = useState<"home" | "create" | "labels" | "vendor">("home");
   const [provider, setProvider] = useState("");
   const [date, setDate] = useState(() =>
     new Intl.DateTimeFormat("en-CA", {
@@ -354,6 +355,17 @@ export function StockRegistration() {
                 labels.
               </p>
             </Panel>
+            <Panel
+              title="Receive Vendor Readymade"
+              description="Enter purchased garments by product, size, piece count, CP and SP. Each piece receives an F barcode."
+            >
+              <Button
+                disabled={frozen || !can("stock.price_finished")}
+                onClick={() => setStage("vendor")}
+              >
+                Vendor readymade entry
+              </Button>
+            </Panel>
           </div>
           <Panel title="Previous batches">
             <QueryState
@@ -389,6 +401,7 @@ export function StockRegistration() {
           </Panel>
         </>
       )}
+      {stage === "vendor" && <VendorReadymadeRegistration onBack={() => setStage("home")} />}
       {stage === "create" && (
         <>
           <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">

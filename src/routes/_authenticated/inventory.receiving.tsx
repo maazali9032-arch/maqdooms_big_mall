@@ -5,11 +5,11 @@ import { PageHeader } from "@/shared/components/page";
 export const Route = createFileRoute("/_authenticated/inventory/receiving")({
   head: () => ({
     meta: [
-      { title: "Fabric Stock Entry — Maqdoom's Big Mall ERP" },
+      { title: "Stock Entry — Maqdoom's Big Mall ERP" },
       {
         name: "description",
         content:
-          "Provider delivery batches, Fabric Types and individually barcoded Thans with optional CP.",
+          "Fabric Thaans and vendor-purchased ready-made garments with individually barcoded physical stock.",
       },
     ],
   }),
@@ -19,8 +19,8 @@ function ReceivingPage() {
   return (
     <>
       <PageHeader
-        title="Fabric Stock Entry"
-        description="Scan existing fabric labels or create a batch, print labels by fabric type, then measure each Thaan."
+        title="Stock Entry"
+        description="Scan existing fabric labels, create a fabric batch, or receive vendor readymade garments with individual F barcodes."
       />
       <StockRegistration />
     </>
