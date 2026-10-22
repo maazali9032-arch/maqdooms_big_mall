@@ -1,7 +1,7 @@
 BEGIN;
 INSERT INTO public.permissions(key,label,domain) VALUES('stock_count.perform','Perform assigned stock counts','inventory') ON CONFLICT(key) DO NOTHING;
 INSERT INTO public.role_permissions(role_key,permission_key)
-SELECT role_key,'stock_count.perform' FROM public.roles WHERE key<>'owner' ON CONFLICT DO NOTHING;
+SELECT key,'stock_count.perform' FROM public.roles WHERE key<>'owner' ON CONFLICT DO NOTHING;
 
 CREATE TABLE public.stock_count_audits(
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), request_id uuid NOT NULL UNIQUE, name text NOT NULL, item_kinds text[] NOT NULL CHECK(item_kinds <@ ARRAY['fabric','finished_product']), location_ids uuid[] NOT NULL, assigned_to uuid NOT NULL REFERENCES public.profiles(id), status text NOT NULL DEFAULT 'active' CHECK(status IN('active','completed','cancelled')), created_by uuid NOT NULL REFERENCES public.profiles(id), created_at timestamptz NOT NULL DEFAULT clock_timestamp(), completed_at timestamptz

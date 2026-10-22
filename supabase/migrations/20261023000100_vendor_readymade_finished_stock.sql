@@ -179,7 +179,7 @@ END; $$;
 DO $$ DECLARE original text; updated text; BEGIN
   original:=pg_get_functiondef('public.finished_product_sale_scan(text)'::regprocedure);
   updated:=replace(original,'p.current_location_id=l.id AND p.production_job_id=piece.production_job_id','p.current_location_id=l.id AND p.production_job_id IS NOT DISTINCT FROM piece.production_job_id AND p.vendor_receipt_id IS NOT DISTINCT FROM piece.vendor_receipt_id');
-  updated:=replace(updated,'''identical_scope'',''production_job''',''identical_scope'',CASE WHEN piece.vendor_receipt_id IS NULL THEN ''production_job'' ELSE ''vendor_receipt'' END');
+  updated:=replace(updated,'''identical_scope'',''production_job''','''identical_scope'',CASE WHEN piece.vendor_receipt_id IS NULL THEN ''production_job'' ELSE ''vendor_receipt'' END');
   IF updated=original THEN RAISE EXCEPTION 'Finished sale scan integration point missing'; END IF; EXECUTE updated;
   original:=pg_get_functiondef('public.complete_counter_bill_multi(uuid,jsonb,jsonb,boolean,uuid,uuid,text,text)'::regprocedure);
   updated:=replace(original,'JOIN public.production_jobs j ON j.id=piece.production_job_id','LEFT JOIN public.production_jobs j ON j.id=piece.production_job_id');
