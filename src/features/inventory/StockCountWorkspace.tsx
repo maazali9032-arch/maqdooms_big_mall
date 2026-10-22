@@ -10,6 +10,7 @@ import { Panel, StatCard } from "@/shared/components/page";
 type Catalog = {
   staff: { id: string; name: string }[];
   locations: { id: string; name: string; kind: string }[];
+  categories: { id: string; label: string; kind: string }[];
 };
 type AuditItem = {
   barcode: string;
@@ -51,14 +52,14 @@ function SelectionField({
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium">{label}</label>
-      <details className="group relative">
+      <details className="group relative z-30 open:z-50">
         <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-md border bg-background px-3 text-sm">
           <span className={selectedLabels.length ? "truncate" : "text-muted-foreground"}>
             {selectedLabels.length ? selectedLabels.join(", ") : placeholder}
           </span>
           <span className="ml-3 text-muted-foreground">⌄</span>
         </summary>
-        <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover p-2 shadow-lg">
+        <div className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-2 shadow-lg">
           {options.map((option) => (
             <label
               key={option.id}
@@ -92,6 +93,7 @@ function OwnerStockCounts() {
   const [name, setName] = useState("");
   const [staff, setStaff] = useState("");
   const [locations, setLocations] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [kinds, setKinds] = useState<string[]>([
     "fabric",
     "production_finished",
@@ -121,12 +123,14 @@ function OwnerStockCounts() {
         p_kinds: kinds,
         p_locations: locations,
         p_staff: staff,
+        p_category_refs: categories,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       setName("");
       setLocations([]);
+      setCategories([]);
       toast.success("Stock audit assigned");
       void qc.invalidateQueries({ queryKey: ["stock-count-owner"] });
     },
@@ -147,6 +151,7 @@ function OwnerStockCounts() {
   return (
     <div className="space-y-4">
       <Panel
+        className="overflow-visible"
         title="Create stock audit"
         description="Freeze the expected barcode list by item source and location, then assign one staff member to scan it."
       >
@@ -188,6 +193,16 @@ function OwnerStockCounts() {
             placeholder="Select stock categories"
           />
           <SelectionField
+            label="Stock names to audit (optional)"
+            selected={categories}
+            options={(catalog.data?.categories ?? []).map((category) => ({
+              id: category.id,
+              label: `${category.label} · ${category.kind}`,
+            }))}
+            onChange={setCategories}
+            placeholder="All matching fabrics and garments"
+          />
+          <SelectionField
             label="Locations to include"
             selected={locations}
             options={locationOptions}
@@ -196,8 +211,9 @@ function OwnerStockCounts() {
           />
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          Finished-garment categories can be selected separately or together. Every matching barcode
-          is frozen into one audit and grouped by category and location.
+          Select existing stock names only when the audit is limited to garments such as pants,
+          shirts or suits. Leave it blank to include every item from the selected categories. Every
+          matching barcode is frozen and grouped by category and location.
         </p>
         <Button
           className="mt-4"
