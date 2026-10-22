@@ -76,7 +76,7 @@ export function FabricTransfer() {
   const [rows, setRows] = useState<Row[]>([]);
   const [source, setSource] = useState("");
   const [reason, setReason] = useState("");
-  const [finishedPiece, setFinishedPiece] = useState<FinishedPiece | null>(null);
+  const [finishedPieces, setFinishedPieces] = useState<FinishedPiece[]>([]);
   const [finishedDestination, setFinishedDestination] = useState("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Plan[]>([]);
@@ -173,8 +173,14 @@ export function FabricTransfer() {
         if (!piece) throw new Error("No fabric or ready-made product matches this barcode");
         if (!piece.available || !piece.location_active)
           throw new Error("This ready-made piece is not available at an active location");
-        setFinishedPiece(piece);
-        setFinishedDestination("");
+        if (finishedPieces.some((existing) => existing.id === piece.id)) {
+          throw new Error(`${piece.barcode} is already in the ready-made transfer list`);
+        }
+        if (finishedPieces.length && finishedPieces[0]!.location_id !== piece.location_id) {
+          throw new Error("All ready-made pieces in one transfer must come from the same location");
+        }
+        setFinishedPieces((current) => [...current, piece]);
+        if (!finishedPieces.length) setFinishedDestination("");
         setBarcode("");
         input.current?.focus();
       })().catch((error) =>
@@ -182,7 +188,7 @@ export function FabricTransfer() {
       );
       return;
     }
-    setFinishedPiece(null);
+    setFinishedPieces([]);
     setRows((old) => [
       ...old,
       ...stock.thans
@@ -199,25 +205,30 @@ export function FabricTransfer() {
     setBarcode("");
     input.current?.focus();
   }
-  async function postFinishedPiece() {
-    if (!finishedPiece || !finishedDestination || busy) return;
+  async function postFinishedPieces() {
+    const firstPiece = finishedPieces[0];
+    if (!firstPiece || !finishedDestination || busy) return;
     try {
       setBusy(true);
       const { error } = await supabase.rpc("transfer_finished_products", {
         p_request: crypto.randomUUID(),
-        p_source: finishedPiece.location_id,
+        p_source: firstPiece.location_id,
         p_destination: finishedDestination,
-        p_pieces: [finishedPiece.id],
+        p_pieces: finishedPieces.map((piece) => piece.id).sort(),
         p_reason: reason.trim(),
       });
       if (error) throw error;
-      toast.success("Ready-made piece transferred");
-      setFinishedPiece(null);
+      toast.success(`${finishedPieces.length} ready-made ${finishedPieces.length === 1 ? "piece" : "pieces"} transferred`);
+      setFinishedPieces([]);
       setFinishedDestination("");
       setReason("");
       await qc.invalidateQueries();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ready-made transfer failed");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : ((error as { message?: string }).message ?? "Ready-made transfer failed"),
+      );
     } finally {
       setBusy(false);
     }
@@ -345,22 +356,38 @@ export function FabricTransfer() {
             </select>
           )}
         </div>
-        {finishedPiece && (
+        {!!finishedPieces.length && (
           <div className="mt-4 rounded-xl border border-primary/30 bg-muted/30 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-semibold">Ready-made piece</p>
-                <p className="font-mono text-sm">{finishedPiece.barcode}</p>
+                <p className="font-semibold">Ready-made pieces</p>
                 <p className="text-sm text-muted-foreground">
-                  {finishedPiece.product}
-                  {finishedPiece.design ? ` · ${finishedPiece.design}` : ""}
-                  {finishedPiece.size ? ` · Size ${finishedPiece.size}` : ""}
-                  {` · From ${finishedPiece.location}`}
+                  {finishedPieces.length} selected · From {finishedPieces[0]!.location}
                 </p>
               </div>
-              <Button variant="ghost" disabled={busy} onClick={() => setFinishedPiece(null)}>
-                Remove
+              <Button variant="ghost" disabled={busy} onClick={() => setFinishedPieces([])}>
+                Remove all
               </Button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {finishedPieces.map((piece) => (
+                <div key={piece.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+                  <div>
+                    <span className="font-mono">{piece.barcode}</span>
+                    <span className="text-muted-foreground">
+                      {` · ${piece.product}${piece.design ? ` · ${piece.design}` : ""}${piece.size ? ` · Size ${piece.size}` : ""}`}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setFinishedPieces((current) => current.filter((item) => item.id !== piece.id))}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
             </div>
             <div className="mt-3 flex flex-wrap items-end gap-2">
               <label className="min-w-64 flex-1 text-sm">
@@ -377,7 +404,7 @@ export function FabricTransfer() {
                     ?.filter(
                       (location) =>
                         location.active &&
-                        location.id !== finishedPiece.location_id &&
+                        location.id !== finishedPieces[0]!.location_id &&
                         ((isOwner &&
                           (location.kind === "workshop" ||
                             location.kind === "showroom_sublocation")) ||
@@ -392,9 +419,9 @@ export function FabricTransfer() {
               </label>
               <Button
                 disabled={busy || !finishedDestination}
-                onClick={() => void postFinishedPiece()}
+                onClick={() => void postFinishedPieces()}
               >
-                Transfer ready-made piece
+                Transfer {finishedPieces.length} ready-made {finishedPieces.length === 1 ? "piece" : "pieces"}
               </Button>
             </div>
           </div>
