@@ -48,7 +48,12 @@ try {
   assert(receiptSource.includes("${node.outerHTML}"));
   assert(!receiptSource.includes("${node.innerHTML}"));
   const printCss = receiptPrintStyles();
-  assert(printCss.includes("@page{size:80mm auto") && printCss.includes("padding-left:4mm"));
+  assert(
+    printCss.includes("@page{size:80mm auto") &&
+      printCss.includes("padding-left:4mm") &&
+      printCss.includes(".invoice-tax-summary .flex>:first-child") &&
+      printCss.includes("left:1mm"),
+  );
   const billBarcode = receiptBarcodeGeometry("B00007");
   assert.equal(billBarcode.bars.length, 90);
   assert.equal(billBarcode.modules, 110);

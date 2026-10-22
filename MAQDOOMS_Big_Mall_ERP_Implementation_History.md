@@ -6971,3 +6971,9 @@ The physical fabric label was centred and readable but its CODE128 symbol needed
 # 89. PHYSICAL LABEL POSITION CALIBRATION — 22 OCTOBER 2026
 
 The supplied physical label shows the complete identity group slightly left and low in the 50.8 × 25.4 mm cell. The group—batch/supplier, fabric/type name, barcode and printed ID—now shifts 1.5 mm right and one additional millimetre upward. Unpriced fabric labels therefore use `translate(1.5mm, -5mm)`; priced finished labels retain their smaller vertical correction with `translate(1.5mm, -3mm)`. The symbol remains the same scanner-safe three-dot, 7 mm CODE128 geometry and retains the existing safe boundaries. Browser checks assert the calibrated horizontal position and element containment. No identity, barcode content, paper pitch, record, stock or permission behavior changed.
+
+# 90. FINAL 80 MM RECEIPT LEFT-EDGE SAFETY INSET — 22 OCTOBER 2026
+
+The latest physical 80 mm bill is otherwise correct, but its printer can still shave a tiny amount from the extreme left edge. Keep the existing 4 mm customer-invoice inset and apply a separate 1 mm rightward safety offset only to left-aligned text: the bill number, item labels, tax labels, payment labels and the left side of the grand-total row. The barcode, centred elements, right-aligned values, external right boundary and receipt width stay in their current positions. Bills, tax values, identities, scanner lookup, payment behavior and reprints are unaffected.
+
+Receipt presentation checks confirm the explicit 4 mm layout inset, targeted 1 mm left-text offset and unchanged 80 mm layout. A fresh physical bill is the only remaining validation for this printer-specific final calibration.

@@ -2124,3 +2124,7 @@ For compact six-character showroom labels, use three whole thermal dots per modu
 # 90. CALIBRATE COMPACT LABEL POSITION FROM PHYSICAL OUTPUT — 22 OCTOBER 2026
 
 Move the complete unpriced fabric-label group 1.5 mm right and 5 mm upward; move priced finished-label groups 1.5 mm right and 3 mm upward. Keep all four printed elements aligned as a group. Preserve the three-dot, 7 mm barcode geometry, sticker safe boundaries, sheet pitch and every business behavior. Verify containment and calibrated position in the browser test, then confirm with a new physical print. See History Section 89.
+
+# 91. FINAL 80 MM CUSTOMER-RECEIPT LEFT-EDGE CALIBRATION — 22 OCTOBER 2026
+
+Retain the 4 mm customer-invoice print-safety inset described in Sections 88 and 89. Add a **targeted 1 mm rightward offset only for left-aligned receipt text** to correct the demonstrated printer's tiny residual left clipping. Do not move the barcode, centred header/footer, right-aligned monetary values, fixed external right edge, barcode dimensions or invoice data. Verify the receipt CSS and presentation test, then confirm a refreshed physical print. See History Section 90.
