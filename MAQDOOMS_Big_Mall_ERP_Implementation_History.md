@@ -6985,3 +6985,7 @@ Physical output showed that a one-label print was centred but could leave more u
 The physical blank area between two stickers is determined by the loaded sticker sheet and driver pitch. It is not usable print area; the CSS must instead match its measured page and cell dimensions. Barcode identities, size, scanner behavior, stock, pricing and reprints remain unchanged.
 
 The 80 mm customer receipt now replaces the prior asymmetric inset with a fixed 68 mm customer-invoice block centred inside the printable 76 mm width. This yields equal 4 mm internal margins on both sides; it does not change invoice values, barcode geometry or workflow behavior. Label model/UI and receipt presentation checks cover the fixed cell geometry, upper content position and receipt width. A physical test page and bill remain the final printer-specific confirmation.
+
+# 92. RESTORE PREVIOUS 80 MM BILL CALIBRATION — 22 OCTOBER 2026
+
+After physical review, the customer-bill layout is restored to the immediately preceding print calibration: the full 76 mm printable receipt width retains its 4 mm left safety inset, and only left-aligned receipt text has the additional 1 mm safety offset. The barcode, centred heading/footer, right-side monetary values and right edge return to their proven previous positions. The fixed label-cell implementation from Section 91 remains active and unchanged.
