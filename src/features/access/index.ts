@@ -86,3 +86,32 @@ export function useSetActive() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["staff"] }),
   });
 }
+
+export function useStockAuditAccess() {
+  return useQuery({
+    queryKey: ["stock-audit-access"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_permission_overrides")
+        .select("user_id, granted")
+        .eq("permission_key", "stock_count.perform");
+      if (error) throw error;
+      return new Map((data ?? []).map((entry) => [entry.user_id, entry.granted]));
+    },
+  });
+}
+
+export function useSetStockAuditAccess() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { userId: string; granted: boolean }) => {
+      const { error } = await (supabase.rpc as any)("owner_set_user_permission", {
+        p_user: input.userId,
+        p_permission: "stock_count.perform",
+        p_granted: input.granted,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => void qc.invalidateQueries(),
+  });
+}

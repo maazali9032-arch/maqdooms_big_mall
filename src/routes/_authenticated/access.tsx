@@ -11,7 +11,14 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useRoles, useSetActive, useSetUserRole, useStaff } from "@/features/access";
+import {
+  useRoles,
+  useSetActive,
+  useSetStockAuditAccess,
+  useSetUserRole,
+  useStaff,
+  useStockAuditAccess,
+} from "@/features/access";
 import { ROLE_LABELS } from "@/app/providers/session";
 import { PageHeader, StatusBadge, EmptyState, StatCard } from "@/shared/components/page";
 import { formatDateTime, initials, relativeTime } from "@/shared/utils/format";
@@ -57,6 +64,8 @@ function AccessPage() {
   const roles = useRoles();
   const setRole = useSetUserRole();
   const setActive = useSetActive();
+  const stockAuditAccess = useStockAuditAccess();
+  const setStockAuditAccess = useSetStockAuditAccess();
   const [search, setSearch] = useState("");
   const [creatingStaff, setCreatingStaff] = useState(false);
   const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
@@ -302,6 +311,49 @@ function AccessPage() {
                             );
                           })}
                         </div>
+                        <label
+                          className={cn(
+                            "mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors",
+                            user.roles.includes("owner") || stockAuditAccess.data?.get(user.id)
+                              ? "border-primary/20 bg-accent text-accent-foreground"
+                              : "border-border bg-card text-foreground hover:border-primary/30",
+                            (!user.active || user.roles.includes("owner")) &&
+                              "cursor-not-allowed opacity-65",
+                          )}
+                          title={
+                            user.roles.includes("owner")
+                              ? "Owners always have Stock Audit access"
+                              : "Allows this staff member to see Stock Audit and receive audit assignments"
+                          }
+                        >
+                          <Checkbox
+                            checked={
+                              user.roles.includes("owner") ||
+                              stockAuditAccess.data?.get(user.id) === true
+                            }
+                            disabled={
+                              !user.active ||
+                              user.roles.includes("owner") ||
+                              setStockAuditAccess.isPending
+                            }
+                            onCheckedChange={async (value) => {
+                              try {
+                                await setStockAuditAccess.mutateAsync({
+                                  userId: user.id,
+                                  granted: Boolean(value),
+                                });
+                                toast.success(
+                                  value
+                                    ? "Stock Audit access granted"
+                                    : "Stock Audit access revoked",
+                                );
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : "Update failed");
+                              }
+                            }}
+                          />
+                          Stock Audit
+                        </label>
                         <PosUserAssignment user={user} />
                       </td>
                       <td className="px-4 py-3">

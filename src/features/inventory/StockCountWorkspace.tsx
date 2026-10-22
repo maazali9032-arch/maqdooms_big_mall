@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,26 +39,49 @@ function SelectionField({
   options,
   onChange,
   placeholder,
+  open,
+  onOpenChange,
 }: {
   label: string;
   selected: string[];
   options: { id: string; label: string }[];
   onChange: (items: string[]) => void;
   placeholder: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
+  const root = useRef<HTMLDivElement>(null);
   const selectedLabels = options
     .filter((option) => selected.includes(option.id))
     .map((option) => option.label);
+  useEffect(() => {
+    if (!open) return;
+    const closeIfOutside = (event: PointerEvent) => {
+      if (root.current && !root.current.contains(event.target as Node)) onOpenChange(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => event.key === "Escape" && onOpenChange(false);
+    document.addEventListener("pointerdown", closeIfOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeIfOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [onOpenChange, open]);
   return (
-    <div className="space-y-1">
+    <div ref={root} className="relative z-30 space-y-1">
       <label className="text-sm font-medium">{label}</label>
-      <details className="group relative z-30 open:z-50">
-        <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-md border bg-background px-3 text-sm">
-          <span className={selectedLabels.length ? "truncate" : "text-muted-foreground"}>
-            {selectedLabels.length ? selectedLabels.join(", ") : placeholder}
-          </span>
-          <span className="ml-3 text-muted-foreground">⌄</span>
-        </summary>
+      <button
+        type="button"
+        className="flex h-11 w-full items-center justify-between rounded-md border bg-background px-3 text-left text-sm"
+        aria-expanded={open}
+        onClick={() => onOpenChange(!open)}
+      >
+        <span className={selectedLabels.length ? "truncate" : "text-muted-foreground"}>
+          {selectedLabels.length ? selectedLabels.join(", ") : placeholder}
+        </span>
+        <span className="ml-3 text-muted-foreground">⌄</span>
+      </button>
+      {open ? (
         <div className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-2 shadow-lg">
           {options.map((option) => (
             <label
@@ -80,10 +103,11 @@ function SelectionField({
             </label>
           ))}
         </div>
-      </details>
+      ) : null}
     </div>
   );
 }
+
 export function StockCountWorkspace() {
   const { isOwner } = useSession();
   return isOwner ? <OwnerStockCounts /> : <AssignedStockCount />;
@@ -99,6 +123,9 @@ function OwnerStockCounts() {
     "production_finished",
     "vendor_finished",
   ]);
+  const [openSelection, setOpenSelection] = useState<"kinds" | "categories" | "locations" | null>(
+    null,
+  );
   const catalog = useQuery({
     queryKey: ["stock-count-catalog"],
     queryFn: async () => {
@@ -191,6 +218,8 @@ function OwnerStockCounts() {
             options={itemTypeOptions}
             onChange={setKinds}
             placeholder="Select stock categories"
+            open={openSelection === "kinds"}
+            onOpenChange={(open) => setOpenSelection(open ? "kinds" : null)}
           />
           <SelectionField
             label="Stock names to audit (optional)"
@@ -201,6 +230,8 @@ function OwnerStockCounts() {
             }))}
             onChange={setCategories}
             placeholder="All matching fabrics and garments"
+            open={openSelection === "categories"}
+            onOpenChange={(open) => setOpenSelection(open ? "categories" : null)}
           />
           <SelectionField
             label="Locations to include"
@@ -208,6 +239,8 @@ function OwnerStockCounts() {
             options={locationOptions}
             onChange={setLocations}
             placeholder="Select one or more locations"
+            open={openSelection === "locations"}
+            onOpenChange={(open) => setOpenSelection(open ? "locations" : null)}
           />
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
