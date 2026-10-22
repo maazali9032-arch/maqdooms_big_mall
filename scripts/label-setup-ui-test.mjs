@@ -153,6 +153,26 @@ try {
     await page
       .frameLocator('iframe[title="Barcode label preview"]')
       .locator(".sticker")
+      .evaluateAll((labels) =>
+        labels.every((label) => {
+          const box = label.getBoundingClientRect();
+          const content = label.querySelector(".label-content")?.getBoundingClientRect();
+          return (
+            !!content &&
+            content.left >= box.left - 0.5 &&
+            content.right <= box.right + 0.5 &&
+            content.top >= box.top - 0.5 &&
+            content.bottom <= box.bottom + 0.5
+          );
+        }),
+      ),
+    true,
+    "The calibrated column and row offsets keep every multi-label content group in its own sticker",
+  );
+  assert.equal(
+    await page
+      .frameLocator('iframe[title="Barcode label preview"]')
+      .locator(".sticker")
       .first()
       .evaluate((label) => {
         const labelBox = label.getBoundingClientRect();

@@ -106,8 +106,13 @@ check(
     css.includes("grid-template-rows:repeat(6,25.4mm)") &&
     css.includes("grid-auto-flow:row") &&
     css.includes("contain:layout paint") &&
-    css.includes(".label-content{position:absolute;top:1.4mm;left:4mm;right:4mm") &&
-    css.includes("transform:translate(1mm,-1mm)") &&
+    css.includes(
+      ".label-content{--column-offset:1mm;--row-offset:-1mm;position:absolute;top:1.4mm;left:4mm;right:4mm",
+    ) &&
+    css.includes(".sticker:nth-child(2n) .label-content{--column-offset:0mm}") &&
+    css.includes(
+      ".sticker:nth-child(11) .label-content,.sticker:nth-child(12) .label-content{--row-offset:4mm}",
+    ) &&
     css.includes("text-align:center") &&
     css.includes(".sticker svg{max-width:100%;height:7mm") &&
     css.includes(".sticker .code{text-align:center"),
