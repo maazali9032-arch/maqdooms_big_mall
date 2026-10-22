@@ -1,11 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import {
+  AlertTriangle,
+  Boxes,
+  CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
+  Info,
+  Send,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Panel, StatCard } from "@/shared/components/page";
+import { Panel, StatCard, StatusBadge } from "@/shared/components/page";
+import { cn } from "@/lib/utils";
+import { formatDateTime } from "@/shared/utils/format";
 
 type Catalog = {
   staff: { id: string; name: string }[];
@@ -26,6 +37,7 @@ type Audit = {
   total: number;
   scanned: number;
   items: AuditItem[];
+  created_at?: string;
 };
 const itemTypeOptions = [
   { id: "fabric", label: "Fabric / Thaans" },
@@ -76,10 +88,28 @@ function SelectionField({
         aria-expanded={open}
         onClick={() => onOpenChange(!open)}
       >
-        <span className={selectedLabels.length ? "truncate" : "text-muted-foreground"}>
-          {selectedLabels.length ? selectedLabels.join(", ") : placeholder}
+        <span
+          className={
+            selectedLabels.length
+              ? "flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden"
+              : "text-muted-foreground"
+          }
+        >
+          {selectedLabels.length
+            ? selectedLabels.slice(0, 3).map((item) => (
+                <span
+                  key={item}
+                  className="max-w-36 truncate rounded-md bg-accent px-2 py-1 text-xs text-accent-foreground"
+                >
+                  {item}
+                </span>
+              ))
+            : placeholder}
+          {selectedLabels.length > 3 ? (
+            <span className="text-xs text-muted-foreground">+{selectedLabels.length - 3}</span>
+          ) : null}
         </span>
-        <span className="ml-3 text-muted-foreground">⌄</span>
+        <ChevronDown className="ml-3 size-4 shrink-0 text-muted-foreground" />
       </button>
       {open ? (
         <div className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-md border bg-popover p-2 shadow-lg">
@@ -179,8 +209,8 @@ function OwnerStockCounts() {
     <div className="space-y-4">
       <Panel
         className="overflow-visible"
-        title="Create stock audit"
-        description="Freeze the expected barcode list by item source and location, then assign one staff member to scan it."
+        title="1. Create stock audit"
+        description="Define what to audit, where it is held and who will scan it."
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
@@ -243,20 +273,23 @@ function OwnerStockCounts() {
             onOpenChange={(open) => setOpenSelection(open ? "locations" : null)}
           />
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Select existing stock names only when the audit is limited to garments such as pants,
-          shirts or suits. Leave it blank to include every item from the selected categories. Every
-          matching barcode is frozen and grouped by category and location.
-        </p>
-        <Button
-          className="mt-4"
-          disabled={
-            create.isPending || !name.trim() || !staff || !locations.length || !kinds.length
-          }
-          onClick={() => create.mutate()}
-        >
-          Create and assign audit
-        </Button>
+        <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex max-w-3xl items-start gap-2 rounded-lg bg-accent/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+            <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+            Every matching barcode is frozen and grouped by category and location. Choose stock
+            names only to limit an audit to garments such as pants, shirts or suits.
+          </p>
+          <Button
+            className="shrink-0"
+            disabled={
+              create.isPending || !name.trim() || !staff || !locations.length || !kinds.length
+            }
+            onClick={() => create.mutate()}
+          >
+            <Send />
+            Create and assign audit
+          </Button>
+        </div>
       </Panel>
       {audits.data?.map((audit) => (
         <AuditCard key={audit.id} audit={audit} onFinish={() => finish.mutate(audit.id)} />
@@ -266,54 +299,159 @@ function OwnerStockCounts() {
 }
 function AuditCard({ audit, onFinish }: { audit: Audit; onFinish: () => void }) {
   const remaining = audit.total - audit.scanned;
+  const progress = audit.total ? Math.round((audit.scanned / audit.total) * 100) : 0;
   const groups = audit.items.reduce<Record<string, AuditItem[]>>((all, item) => {
     const key = `${item.details["category"] ?? item.kind} · ${item.details["location"] ?? "Unknown location"}`;
     (all[key] ??= []).push(item);
     return all;
   }, {});
+
   return (
     <Panel
-      title={audit.name}
-      description={`${audit.assigned_to} · ${audit.status}`}
+      title="2. Audit progress"
+      description={`${audit.name} · ${audit.assigned_to} · ${audit.created_at ? `created ${formatDateTime(audit.created_at)}` : audit.status}`}
       actions={
-        audit.status === "active" ? (
+        <StatusBadge
+          status={audit.status === "active" ? "in_progress" : "completed"}
+          label={audit.status === "active" ? "In progress" : "Completed"}
+        />
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Total items"
+          value={audit.total}
+          hint="Expected barcodes to scan"
+          icon={Boxes}
+        />
+        <StatCard
+          label="Scanned"
+          value={audit.scanned}
+          hint="Barcodes verified"
+          icon={ClipboardCheck}
+          tone="success"
+        />
+        <StatCard
+          label="Remaining / missing"
+          value={remaining}
+          hint="Items not found"
+          icon={AlertTriangle}
+          tone={remaining ? "danger" : "success"}
+        />
+        <div className="panel flex min-h-[104px] min-w-0 items-center gap-4 px-4 py-4 sm:px-5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+            <ClipboardCheck className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground">Progress</p>
+            <p className="numeric mt-1 text-2xl font-semibold leading-none">{progress}%</p>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <details className="group mt-4" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg border bg-surface px-3 py-3 text-sm font-semibold">
+          <span className="flex items-center gap-2">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            3. Expected items and missing details
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            Grouped by item type and location
+          </span>
+        </summary>
+        <div className="mt-3 space-y-3">
+          {Object.entries(groups).map(([group, items]) => {
+            const groupScanned = items.filter((item) => item.scanned).length;
+            const groupProgress = Math.round((groupScanned / items.length) * 100);
+            return (
+              <section key={group} className="overflow-hidden rounded-lg border">
+                <header className="flex flex-wrap items-center justify-between gap-3 bg-surface px-3 py-2.5 text-sm">
+                  <span className="font-semibold">{group}</span>
+                  <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <b className="font-semibold text-foreground">
+                      {groupScanned} / {items.length} scanned
+                    </b>
+                    <span className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-primary"
+                        style={{ width: `${groupProgress}%` }}
+                      />
+                    </span>
+                    {groupProgress}%
+                  </span>
+                </header>
+                <div className="scrollbar-subtle overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-left text-xs">
+                    <thead className="border-y bg-card text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                        <th className="px-3 py-2 font-medium">Barcode</th>
+                        <th className="px-3 py-2 font-medium">Item</th>
+                        <th className="px-3 py-2 font-medium">Details</th>
+                        <th className="px-3 py-2 font-medium">Location</th>
+                        <th className="px-3 py-2 font-medium">Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item) => (
+                        <tr key={item.barcode} className="border-b last:border-0">
+                          <td className="px-3 py-2">
+                            {item.scanned ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-1 font-medium text-success">
+                                <CheckCircle2 className="size-3" />
+                                Scanned
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-1 font-medium text-destructive">
+                                <AlertTriangle className="size-3" />
+                                Missing
+                              </span>
+                            )}
+                          </td>
+                          <td
+                            className={cn(
+                              "px-3 py-2 font-medium",
+                              item.scanned ? "text-foreground" : "text-destructive",
+                            )}
+                          >
+                            {item.barcode}
+                          </td>
+                          <td className="px-3 py-2 font-medium">{item.details["name"] ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {[item.details["design"], item.details["size"], item.details["batch"]]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
+                          </td>
+                          <td className="px-3 py-2">{item.details["location"] ?? "—"}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {item.scanned ? "Verified" : "Not found"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </details>
+      {audit.status === "active" ? (
+        <div className="mt-4 flex justify-end">
           <Button variant="outline" onClick={onFinish}>
             Finish audit
           </Button>
-        ) : undefined
-      }
-    >
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Scanned" value={`${audit.scanned} / ${audit.total}`} />
-        <StatCard label="Remaining / missing" value={remaining} />
-        <StatCard
-          label="Progress"
-          value={`${audit.total ? Math.round((audit.scanned / audit.total) * 100) : 0}%`}
-        />
-      </div>
-      <details className="mt-3">
-        <summary>See grouped expected items and missing details</summary>
-        <div className="mt-3 space-y-3 text-sm">
-          {Object.entries(groups).map(([group, items]) => (
-            <div key={group} className="rounded-md border p-3">
-              <p className="font-medium">
-                {group} · {items.filter((item) => item.scanned).length} / {items.length} scanned
-              </p>
-              {items.map((item) => (
-                <p
-                  key={item.barcode}
-                  className={item.scanned ? "text-emerald-700" : "text-destructive"}
-                >
-                  {item.scanned ? "Scanned" : "Missing"} · {item.barcode} · {item.details["name"]}
-                </p>
-              ))}
-            </div>
-          ))}
         </div>
-      </details>
+      ) : null}
     </Panel>
   );
 }
+
 function AssignedStockCount() {
   const qc = useQueryClient();
   const [barcode, setBarcode] = useState("");
