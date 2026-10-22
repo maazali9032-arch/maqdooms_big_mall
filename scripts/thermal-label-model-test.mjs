@@ -107,6 +107,7 @@ check(
     css.includes("grid-auto-flow:row") &&
     css.includes("contain:layout paint") &&
     css.includes(".label-content{position:absolute;top:1.4mm;left:4mm;right:4mm") &&
+    css.includes("transform:translate(1mm,-1mm)") &&
     css.includes("text-align:center") &&
     css.includes(".sticker svg{max-width:100%;height:7mm") &&
     css.includes(".sticker .code{text-align:center"),
