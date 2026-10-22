@@ -34,6 +34,9 @@ export type GstInvoice = {
   igst_paise: string;
   gst_paise: string;
   final_paise: string;
+  gross_paise?: string;
+  discount_paise?: string;
+  discount_bps?: number;
   lines: {
     id: string;
     source_item_id: string;
@@ -54,6 +57,10 @@ export type CounterReceipt = {
   scan_code?: string | null;
   created_at: string;
   total_paise: string;
+  gross_paise?: string;
+  discount_paise?: string;
+  discount_bps?: number;
+  discount_edit_until?: string | null;
   paid_amount_paise?: string;
   balance_paise?: string;
   pos_code?: string | null;

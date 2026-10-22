@@ -46,6 +46,7 @@ type BillRequest = {
   p_name: string;
   p_contact: string;
   p_advance_paise?: number;
+  p_discount_bps: number;
   p_tax_context: {
     configuration_id: string | null;
     customer_gstin: string;
@@ -70,6 +71,7 @@ export function CounterWorkspace() {
       canSell={isOwner || can("pos.sell")}
       canTailor={isOwner || (can("pos.issue_to_tailoring") && can("pos.enter_tailoring_total"))}
       canIssue={isOwner || can("pos.issue_to_tailoring")}
+      isOwner={isOwner}
     />
   );
 }
@@ -77,10 +79,12 @@ function CounterContent({
   canSell,
   canTailor,
   canIssue,
+  isOwner,
 }: {
   canSell: boolean;
   canTailor: boolean;
   canIssue: boolean;
+  isOwner: boolean;
 }) {
   const qc = useQueryClient();
   const gst = useGstConfiguration();
@@ -97,6 +101,8 @@ function CounterContent({
     [name, setName] = useState(""),
     [contact, setContact] = useState(""),
     [advance, setAdvance] = useState("0");
+  const [discountPercent, setDiscountPercent] = useState("0");
+  const [ownerDiscount, setOwnerDiscount] = useState("");
   const [businessInvoice, setBusinessInvoice] = useState(false);
   const [customerGstin, setCustomerGstin] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -228,7 +234,10 @@ function CounterContent({
           name: string,
           args: Record<string, unknown>,
         ) => Promise<{ data: string | null; error: Error | null }>
-      )("complete_counter_bill_gst", { ...args, p_advance_paise: args.p_advance_paise ?? null });
+      )("complete_counter_bill_gst_discount", {
+        ...args,
+        p_advance_paise: args.p_advance_paise ?? null,
+      });
       if (error) throw error;
       if (!data)
         throw new Error("The bill was saved but its ID was not returned. Retry the same bill.");
@@ -247,6 +256,7 @@ function CounterContent({
       setName("");
       setContact("");
       setAdvance("0");
+      setDiscountPercent("0");
       setBusinessInvoice(false);
       setCustomerGstin("");
       void qc.invalidateQueries();
@@ -276,7 +286,32 @@ function CounterContent({
     },
     onError: (e) => toast.error(e.message),
   });
-  const frozen = bill.isPending || !!pending || extraLocked || settle.isPending;
+  const reviseDiscount = useMutation({
+    mutationFn: async () => {
+      const bps = Math.round(Number(ownerDiscount) * 100);
+      if (!Number.isFinite(bps) || bps < 0 || bps > 10000)
+        throw new Error("Enter a discount from 0 to 100%");
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: string | null; error: Error | null }>
+      )("owner_revise_counter_bill_discount", { p_bill: receipt!.id, p_discount_bps: bps });
+      if (error) throw error;
+      const result = await supabase.rpc("counter_bill", { p_code: data ?? receipt!.id });
+      if (result.error) throw result.error;
+      return result.data as unknown as CounterReceipt;
+    },
+    onSuccess: (doc) => {
+      setReceipt(doc);
+      setOwnerDiscount("");
+      void qc.invalidateQueries();
+      toast.success("Discount saved on the same bill");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const frozen =
+    bill.isPending || !!pending || extraLocked || settle.isPending || reviseDiscount.isPending;
   async function refreshWork() {
     if (!work) return;
     const version = contextVersion.current;
@@ -328,7 +363,10 @@ function CounterContent({
       if (businessInvoice && !/^\d{2}[A-Z0-9]{13}$/.test(customerGstin.trim().toUpperCase()))
         throw new Error("Enter the customer's valid GSTIN for a GST business invoice");
       const payload = counterPayload(rows, groups);
-      const tax = gstPreview(rows, groups, gst.data, derivedSupplyType);
+      const discountBps = Math.round(Number(discountPercent || "0") * 100);
+      if (!Number.isFinite(discountBps) || discountBps < 0 || discountBps > 10000)
+        throw new Error("Enter a discount from 0 to 100%");
+      const tax = gstPreview(rows, groups, gst.data, derivedSupplyType, discountBps);
       if (gst.data?.configuration?.enabled && !tax)
         throw new Error("Check the configured GST rules and bill prices");
       const billTotal = tax?.final ?? previewTotal(rows, groups);
@@ -339,6 +377,7 @@ function CounterContent({
         p_tailoring: payload.tailoring,
         p_paid: payment.paid,
         p_salesperson: salesperson,
+        p_discount_bps: discountBps,
         p_name: name,
         p_contact: contact,
         p_tax_context: {
@@ -359,7 +398,15 @@ function CounterContent({
     businessInvoice && /^\d{2}$/.test(customerStateCode) && customerStateCode !== businessStateCode
       ? "inter_state"
       : "intra_state";
-  const taxPreview = gstPreview(rows, groups, gst.data, derivedSupplyType);
+  const discountBps = Math.round(Number(discountPercent || "0") * 100);
+  const validDiscount = Number.isFinite(discountBps) && discountBps >= 0 && discountBps <= 10000;
+  const taxPreview = gstPreview(
+    rows,
+    groups,
+    gst.data,
+    derivedSupplyType,
+    validDiscount ? discountBps : -1,
+  );
   const total = pendingTailoring
     ? previewTotal(rows, groups, form.stitching)
     : (taxPreview?.final ?? previewTotal(rows, groups));
@@ -716,6 +763,19 @@ function CounterContent({
                       </div>
                     </div>
                   )}
+                  <label className="block text-sm">
+                    Discount %
+                    <Input
+                      aria-label="Bill discount percentage"
+                      inputMode="decimal"
+                      value={discountPercent}
+                      onChange={(event) => setDiscountPercent(event.target.value)}
+                      placeholder="0"
+                    />
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Applied to this new bill before GST is calculated.
+                    </span>
+                  </label>
                   <SalespersonPicker
                     id="combined-salesperson"
                     value={salesperson}
@@ -815,6 +875,36 @@ function CounterContent({
           Record full payment {reportMoney(receipt.total_paise)}
         </Button>
       )}
+      {receipt &&
+        !work &&
+        isOwner &&
+        !receipt.exchange &&
+        receipt.discount_edit_until &&
+        new Date(receipt.discount_edit_until).getTime() > Date.now() && (
+          <Panel
+            title="Owner discount correction"
+            description="This updates the same bill and barcode. Available for one hour after billing."
+          >
+            <div className="flex max-w-md flex-wrap items-end gap-2">
+              <label className="flex-1 text-sm">
+                Discount %
+                <Input
+                  aria-label="Owner bill discount percentage"
+                  inputMode="decimal"
+                  placeholder={String((receipt.discount_bps ?? 0) / 100)}
+                  value={ownerDiscount}
+                  onChange={(event) => setOwnerDiscount(event.target.value)}
+                />
+              </label>
+              <Button
+                disabled={reviseDiscount.isPending || !ownerDiscount.trim()}
+                onClick={() => reviseDiscount.mutate()}
+              >
+                {reviseDiscount.isPending ? "Saving…" : "Save discount"}
+              </Button>
+            </div>
+          </Panel>
+        )}
       {receipt && !work && receipt.paid && !receipt.exchange && (
         <FinishedProductExchange
           receipt={receipt}

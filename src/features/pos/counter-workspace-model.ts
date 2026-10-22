@@ -151,13 +151,15 @@ export function gstPreview(
   groups: TailoringGroup[],
   configuration: GstTransactionConfiguration | undefined,
   supplyType: GstSupplyType,
+  discountBps = 0,
 ) {
   const config = configuration?.configuration;
+  if (!Number.isInteger(discountBps) || discountBps < 0 || discountBps > 10000) return null;
+  const discounted = (amount: bigint) => (amount * BigInt(10000 - discountBps) + 5000n) / 10000n;
   if (!config?.enabled) {
     const total = previewTotal(rows, groups);
-    return total === null
-      ? null
-      : { taxable: total, gst: 0n, cgst: 0n, sgst: 0n, igst: 0n, final: total };
+    const final = total === null ? null : discounted(total);
+    return final === null ? null : { taxable: final, gst: 0n, cgst: 0n, sgst: 0n, igst: 0n, final };
   }
   try {
     let taxable = 0n,
@@ -173,7 +175,12 @@ export function gstPreview(
     ) => {
       const rule = selectedGstRule(configuration, category, itemRef);
       if (!rule) throw new Error(`Configure the default ${category} GST rule`);
-      const tax = calculateTaxPaise(amount, rule.rate_bps, config.price_mode, supplyType);
+      const tax = calculateTaxPaise(
+        discounted(amount),
+        rule.rate_bps,
+        config.price_mode,
+        supplyType,
+      );
       taxable += tax.taxablePaise;
       gst += tax.gstPaise;
       cgst += tax.cgstPaise;

@@ -16,6 +16,12 @@ export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
   return (
     <div className="invoice-tax-summary space-y-1 border-t border-dashed pt-2 text-xs">
       {tax.invoice_display === "final_first" && payable}
+      {tax.discount_paise && BigInt(tax.discount_paise) > 0n && (
+        <div className="flex justify-between text-emerald-700">
+          <span>Discount ({((tax.discount_bps ?? 0) / 100).toFixed(2)}%)</span>
+          <span>-{reportMoney(tax.discount_paise)}</span>
+        </div>
+      )}
       <div className="flex justify-between">
         <span>Taxable amount</span>
         <span>{reportMoney(tax.taxable_paise)}</span>
