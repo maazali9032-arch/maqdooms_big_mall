@@ -2128,3 +2128,9 @@ Move the complete unpriced fabric-label group 1.5 mm right and 5 mm upward; move
 # 91. FINAL 80 MM CUSTOMER-RECEIPT LEFT-EDGE CALIBRATION — 22 OCTOBER 2026
 
 Retain the 4 mm customer-invoice print-safety inset described in Sections 88 and 89. Add a **targeted 1 mm rightward offset only for left-aligned receipt text** to correct the demonstrated printer's tiny residual left clipping. Do not move the barcode, centred header/footer, right-aligned monetary values, fixed external right edge, barcode dimensions or invoice data. Verify the receipt CSS and presentation test, then confirm a refreshed physical print. See History Section 90.
+
+# 92. FIXED SHOWROOM LABEL CELLS AND CENTRED RECEIPT BLOCK — 22 OCTOBER 2026
+
+Supersede the transform-based compact-label positioning in Section 90. For the showroom 4 × 6 sheet, use an exact 101.6 × 152.4 mm page containing twelve fixed 50.8 × 25.4 mm cells, two across and six down. Each barcode must render wholly within one contained cell, and the next selected barcode must always begin in the next cell. Place the centred compact identity group 1.4 mm from the cell top, retaining lower label space for finished-garment design, size and price content. The physical gap between loaded stickers must match the sheet/driver pitch; do not try to print into that gap.
+
+For the 80 mm customer bill, supersede Section 91's asymmetric left-text shift. Centre a fixed 68 mm invoice block inside the 76 mm printable width for equal 4 mm left and right internal margins. Preserve the page size, customer-bill barcode geometry, calculations, identities, lookup and all transaction behavior. Verify fixed cells, multi-page placement, containment, top placement and centred receipt width before physical printer confirmation. See History Section 91.

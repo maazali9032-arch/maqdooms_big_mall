@@ -103,13 +103,14 @@ const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
   css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
     css.includes("grid-template-columns:repeat(2,50.8mm)") &&
-    css.includes("padding:1.2mm 4mm") &&
-    css.includes(".label-content{min-width:0;display:flex") &&
-    css.includes("transform:translate(1.5mm,-5mm)") &&
+    css.includes("grid-template-rows:repeat(6,25.4mm)") &&
+    css.includes("grid-auto-flow:row") &&
+    css.includes("contain:layout paint") &&
+    css.includes(".label-content{position:absolute;top:1.4mm;left:4mm;right:4mm") &&
     css.includes("text-align:center") &&
     css.includes(".sticker svg{max-width:100%;height:7mm") &&
     css.includes(".sticker .code{text-align:center"),
-  "Print CSS keeps compact label content within safe physical sticker insets",
+  "Print CSS gives every barcode a fixed sticker cell and reserves lower label space",
 );
 await fs.writeFile(
   "docs/THERMAL_LABEL_MODEL_VERIFICATION.json",

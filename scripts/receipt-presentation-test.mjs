@@ -50,9 +50,7 @@ try {
   const printCss = receiptPrintStyles();
   assert(
     printCss.includes("@page{size:80mm auto") &&
-      printCss.includes("padding-left:4mm") &&
-      printCss.includes(".invoice-tax-summary .flex>:first-child") &&
-      printCss.includes("left:1mm"),
+      printCss.includes(".customer-invoice{width:68mm;margin:0 auto;padding:0}"),
   );
   const billBarcode = receiptBarcodeGeometry("B00007");
   assert.equal(billBarcode.bars.length, 90);
@@ -321,10 +319,13 @@ try {
             `${name} bill barcode width ${barcodeWidth}px must match ${expectedPixels}px`,
           );
         }
-        const inset = await page
+        const receiptWidth = await page
           .locator(".customer-invoice")
-          .evaluate((element) => Number.parseFloat(getComputedStyle(element).paddingLeft));
-        assert(Math.abs(inset - (4 * 96) / 25.4) < 1, `${name} must protect the left print edge`);
+          .evaluate((element) => Number.parseFloat(getComputedStyle(element).width));
+        assert(
+          Math.abs(receiptWidth - (68 * 96) / 25.4) < 1,
+          `${name} must use the centred 68 mm receipt block`,
+        );
       }
       await page.locator("body").screenshot({ path: join(folder, `${name}.png`) });
       await page.close();

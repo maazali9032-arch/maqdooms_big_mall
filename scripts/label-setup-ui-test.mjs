@@ -110,14 +110,11 @@ try {
       return (
         svgBox.width >= labelBox.width * 0.75 &&
         svgBox.width <= labelBox.width * 0.85 &&
-        Math.abs(
-          (svgBox.left + svgBox.right) / 2 -
-            ((labelBox.left + labelBox.right) / 2 + (1.5 * 96) / 25.4),
-        ) <= 1
+        Math.abs((svgBox.left + svgBox.right) / 2 - (labelBox.left + labelBox.right) / 2) <= 1
       );
     }),
     true,
-    "Preview barcode keeps its natural scanner-safe width and the calibrated right offset",
+    "Preview barcode keeps its natural scanner-safe width and is centred in its fixed sticker cell",
   );
   assert.deepEqual(
     await page
@@ -161,6 +158,19 @@ try {
       }),
     true,
     "The calibrated content block no longer sits against the bottom of the sticker",
+  );
+  assert.equal(
+    await page
+      .frameLocator('iframe[title="Barcode label preview"]')
+      .locator(".sticker")
+      .first()
+      .evaluate((label) => {
+        const labelBox = label.getBoundingClientRect();
+        const contentBox = label.querySelector(".label-content")?.getBoundingClientRect();
+        return !!contentBox && contentBox.top <= labelBox.top + (2 * 96) / 25.4;
+      }),
+    true,
+    "The barcode group starts near the top, leaving lower sticker space for garment details and price",
   );
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });

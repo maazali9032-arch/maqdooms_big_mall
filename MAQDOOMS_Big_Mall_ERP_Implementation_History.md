@@ -6977,3 +6977,11 @@ The supplied physical label shows the complete identity group slightly left and 
 The latest physical 80 mm bill is otherwise correct, but its printer can still shave a tiny amount from the extreme left edge. Keep the existing 4 mm customer-invoice inset and apply a separate 1 mm rightward safety offset only to left-aligned text: the bill number, item labels, tax labels, payment labels and the left side of the grand-total row. The barcode, centred elements, right-aligned values, external right boundary and receipt width stay in their current positions. Bills, tax values, identities, scanner lookup, payment behavior and reprints are unaffected.
 
 Receipt presentation checks confirm the explicit 4 mm layout inset, targeted 1 mm left-text offset and unchanged 80 mm layout. A fresh physical bill is the only remaining validation for this printer-specific final calibration.
+
+# 91. FIXED LABEL CELLS AND CENTRED 80 MM RECEIPTS — 22 OCTOBER 2026
+
+Physical output showed that a one-label print was centred but could leave more useful lower space, and that multi-label sheets must be protected against any content crossing into a later sticker. The 4 × 6 showroom profile is now enforced as twelve fixed 50.8 × 25.4 mm cells on an exact 101.6 × 152.4 mm page. Each cell contains its layout and clips its own paint; every selected barcode is assigned to one cell, so later barcode text cannot flow into or overlap another label. The centred label group begins 1.4 mm from the top, preserving lower space for future finished-garment design, size and selling-price lines.
+
+The physical blank area between two stickers is determined by the loaded sticker sheet and driver pitch. It is not usable print area; the CSS must instead match its measured page and cell dimensions. Barcode identities, size, scanner behavior, stock, pricing and reprints remain unchanged.
+
+The 80 mm customer receipt now replaces the prior asymmetric inset with a fixed 68 mm customer-invoice block centred inside the printable 76 mm width. This yields equal 4 mm internal margins on both sides; it does not change invoice values, barcode geometry or workflow behavior. Label model/UI and receipt presentation checks cover the fixed cell geometry, upper content position and receipt width. A physical test page and bill remain the final printer-specific confirmation.
