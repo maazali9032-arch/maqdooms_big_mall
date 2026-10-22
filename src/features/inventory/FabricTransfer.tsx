@@ -27,6 +27,17 @@ type Row = {
   destination: string;
   status: string;
 };
+type FinishedPiece = {
+  id: string;
+  barcode: string;
+  product: string;
+  design?: string | null;
+  size?: string | null;
+  location_id: string;
+  location: string;
+  location_active: boolean;
+  available: boolean;
+};
 type Plan = {
   id: string;
   source: string;
@@ -54,7 +65,10 @@ function Symbol({ code }: { code: string }) {
 }
 export function FabricTransfer() {
   const { isOwner, roles, can } = useSession();
-  const allowed = (isOwner || roles.includes("stock_entry")) && can("stock.transfer");
+  const canFabricTransfer = (isOwner || roles.includes("stock_entry")) && can("stock.transfer");
+  const canFinishedTransfer =
+    isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
+  const allowed = canFabricTransfer || canFinishedTransfer;
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const labels = useRef<HTMLDivElement>(null);
@@ -62,11 +76,13 @@ export function FabricTransfer() {
   const [rows, setRows] = useState<Row[]>([]);
   const [source, setSource] = useState("");
   const [reason, setReason] = useState("");
+  const [finishedPiece, setFinishedPiece] = useState<FinishedPiece | null>(null);
+  const [finishedDestination, setFinishedDestination] = useState("");
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Plan[]>([]);
   const stocks = useQuery({
     queryKey: ["fabric-stock"],
-    enabled: allowed,
+    enabled: canFabricTransfer,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("fabric_stock_catalog", {});
       if (error) throw error;
@@ -142,9 +158,31 @@ export function FabricTransfer() {
     if (frozen || loading || loadError) return;
     const stock = stocks.data?.find((s) => s.barcode === barcode.trim());
     if (!stock) {
-      toast.error("Fabric barcode not found");
+      if (!canFinishedTransfer) {
+        toast.error(
+          "No fabric barcode found. Finished-product transfer access is required for this barcode.",
+        );
+        return;
+      }
+      void (async () => {
+        const { data, error } = await supabase.rpc("finished_product_transfer_scan", {
+          p_barcode: barcode.trim(),
+        });
+        if (error) throw error;
+        const piece = (data as unknown as FinishedPiece[])[0];
+        if (!piece) throw new Error("No fabric or ready-made product matches this barcode");
+        if (!piece.available || !piece.location_active)
+          throw new Error("This ready-made piece is not available at an active location");
+        setFinishedPiece(piece);
+        setFinishedDestination("");
+        setBarcode("");
+        input.current?.focus();
+      })().catch((error) =>
+        toast.error(error instanceof Error ? error.message : "Barcode could not be read"),
+      );
       return;
     }
+    setFinishedPiece(null);
     setRows((old) => [
       ...old,
       ...stock.thans
@@ -160,6 +198,29 @@ export function FabricTransfer() {
     ]);
     setBarcode("");
     input.current?.focus();
+  }
+  async function postFinishedPiece() {
+    if (!finishedPiece || !finishedDestination || busy) return;
+    try {
+      setBusy(true);
+      const { error } = await supabase.rpc("transfer_finished_products", {
+        p_request: crypto.randomUUID(),
+        p_source: finishedPiece.location_id,
+        p_destination: finishedDestination,
+        p_pieces: [finishedPiece.id],
+        p_reason: reason.trim(),
+      });
+      if (error) throw error;
+      toast.success("Ready-made piece transferred");
+      setFinishedPiece(null);
+      setFinishedDestination("");
+      setReason("");
+      await qc.invalidateQueries();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ready-made transfer failed");
+    } finally {
+      setBusy(false);
+    }
   }
   async function post() {
     if (busy || loadError) return;
@@ -234,7 +295,7 @@ export function FabricTransfer() {
     <div className="space-y-4">
       <Panel
         title="Stock Transfer"
-        description="Scan multiple Thaans. Select rows, enter metres and choose where to send them. The same barcode stays on each piece."
+        description="Scan fabric Thaans or one ready-made piece. Fabric transfers use metres; ready-made products transfer as a complete piece with the same barcode."
       >
         {loadError && <p role="alert">Transfer data could not load. Refresh before posting.</p>}
         <form
@@ -284,6 +345,60 @@ export function FabricTransfer() {
             </select>
           )}
         </div>
+        {finishedPiece && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-muted/30 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">Ready-made piece</p>
+                <p className="font-mono text-sm">{finishedPiece.barcode}</p>
+                <p className="text-sm text-muted-foreground">
+                  {finishedPiece.product}
+                  {finishedPiece.design ? ` · ${finishedPiece.design}` : ""}
+                  {finishedPiece.size ? ` · Size ${finishedPiece.size}` : ""}
+                  {` · From ${finishedPiece.location}`}
+                </p>
+              </div>
+              <Button variant="ghost" disabled={busy} onClick={() => setFinishedPiece(null)}>
+                Remove
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="min-w-64 flex-1 text-sm">
+                Send to
+                <select
+                  aria-label="Ready-made transfer destination"
+                  className="mt-1 h-11 w-full rounded border bg-background p-2"
+                  value={finishedDestination}
+                  disabled={busy}
+                  onChange={(event) => setFinishedDestination(event.target.value)}
+                >
+                  <option value="">Choose destination</option>
+                  {locations.data
+                    ?.filter(
+                      (location) =>
+                        location.active &&
+                        location.id !== finishedPiece.location_id &&
+                        ((isOwner &&
+                          (location.kind === "workshop" ||
+                            location.kind === "showroom_sublocation")) ||
+                          (!isOwner && location.kind === "showroom_sublocation")),
+                    )
+                    .map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {locationLabel(location)}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <Button
+                disabled={busy || !finishedDestination}
+                onClick={() => void postFinishedPiece()}
+              >
+                Transfer ready-made piece
+              </Button>
+            </div>
+          </div>
+        )}
         {!!rows.length && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap items-center gap-3">
