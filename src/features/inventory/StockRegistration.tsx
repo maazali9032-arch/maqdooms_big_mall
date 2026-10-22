@@ -3,7 +3,7 @@ import { VendorReadymadeRegistration } from "./VendorReadymadeRegistration";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, Barcode, FileText, Info, Layers, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Barcode, FileText, Info, Layers, Plus, Shirt, Trash2 } from "lucide-react";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuppliers } from "@/features/inventory";
@@ -397,25 +397,65 @@ export function StockRegistration() {
       {stage === "create" && (
         <>
           <Panel
-            title="Batch type"
-            description="Choose what this stock batch contains. Every received item remains grouped under this batch."
+            title="1. Choose Stock Item Type"
+            description="Select whether you are adding fabric Thaans or ready-made garments purchased from a vendor."
           >
-            <div className="flex flex-wrap gap-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <Button
                 type="button"
-                variant={batchType === "fabric" ? "default" : "outline"}
+                variant="outline"
+                aria-pressed={batchType === "fabric"}
                 disabled={frozen}
                 onClick={() => setBatchType("fabric")}
+                className={`h-auto min-h-20 justify-start whitespace-normal px-4 py-3 text-left ${
+                  batchType === "fabric"
+                    ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40"
+                    : "border-border bg-background text-foreground hover:bg-muted/40"
+                }`}
               >
-                Fabric Thaans
+                <span className="flex items-center gap-3">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Layers className="size-6" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block text-base font-semibold">Fabric / Thaan</span>
+                    <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                      Raw fabrics purchased by metre and tracked as individual Thaans.
+                    </span>
+                  </span>
+                  <span
+                    className={`ml-auto size-5 shrink-0 rounded-full border-2 ${batchType === "fabric" ? "border-primary bg-primary shadow-[inset_0_0_0_4px_hsl(var(--background))]" : "border-muted-foreground/40"}`}
+                    aria-hidden="true"
+                  />
+                </span>
               </Button>
               <Button
                 type="button"
-                variant={batchType === "vendor_finished" ? "default" : "outline"}
+                variant="outline"
+                aria-pressed={batchType === "vendor_finished"}
                 disabled={frozen || !can("stock.price_finished")}
                 onClick={() => setBatchType("vendor_finished")}
+                className={`h-auto min-h-20 justify-start whitespace-normal px-4 py-3 text-left ${
+                  batchType === "vendor_finished"
+                    ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40"
+                    : "border-border bg-background text-foreground hover:bg-muted/40"
+                }`}
               >
-                Vendor Readymade Garments
+                <span className="flex items-center gap-3">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Shirt className="size-6" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block text-base font-semibold">Ready-made Garments</span>
+                    <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                      Garments purchased from a vendor, barcoded individually and resold.
+                    </span>
+                  </span>
+                  <span
+                    className={`ml-auto size-5 shrink-0 rounded-full border-2 ${batchType === "vendor_finished" ? "border-primary bg-primary shadow-[inset_0_0_0_4px_hsl(var(--background))]" : "border-muted-foreground/40"}`}
+                    aria-hidden="true"
+                  />
+                </span>
               </Button>
             </div>
           </Panel>
@@ -437,7 +477,7 @@ export function StockRegistration() {
                 </div>
               </div>
               <Panel
-                title="Batch Information"
+                title="2. Batch Information"
                 actions={<FileText className="size-5 text-primary" aria-hidden="true" />}
               >
                 <fieldset disabled={frozen} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -475,7 +515,7 @@ export function StockRegistration() {
               </Panel>
               {gstEnabled && (
                 <Panel
-                  title="Supplier invoice available?"
+                  title="3. Supplier invoice available?"
                   description="CP remains the base cost excluding GST. Record supplier-invoice values only when you have the invoice."
                 >
                   <fieldset disabled={frozen} className="space-y-3">

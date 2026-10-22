@@ -145,8 +145,8 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   return (
     <div className="space-y-4">
       <Panel
-        title="Vendor Readymade Batch"
-        description="This batch groups all purchased garments from one supplier. It receives a batch ID automatically when saved."
+        title="2. Batch Information"
+        description="This vendor batch groups all purchased garments from one supplier. It receives a batch ID automatically when saved."
         actions={
           <Button variant="outline" onClick={onCancel} disabled={receive.isPending}>
             Cancel batch
@@ -188,7 +188,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
         </fieldset>
       </Panel>
       <Panel
-        title="Readymade types & quantities"
+        title="3. Readymade Types & Quantities"
         description="Enter the piece count. One editable physical-garment row is created for every piece, and each receives its own F barcode."
       >
         <div className="space-y-4">
