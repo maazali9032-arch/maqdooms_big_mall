@@ -239,116 +239,114 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                     Enter 1–500 pieces to create their rows.
                   </div>
                 </fieldset>
-                {count > 0 && (
-                  <>
-                    <fieldset
-                      disabled={receive.isPending}
-                      className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2 xl:grid-cols-4"
-                    >
-                      <div>
-                        <Label>Style / model for all (optional)</Label>
-                        <Input
-                          value={row.sharedStyle}
-                          onChange={(event) =>
-                            updateRow(row.id, { sharedStyle: event.target.value })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>Size for all</Label>
-                        <Input
-                          value={row.sharedSize}
-                          onChange={(event) =>
-                            updateRow(row.id, { sharedSize: event.target.value })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label>CP for all, excluding GST (₹)</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={row.sharedCp}
-                          onChange={(event) => updateRow(row.id, { sharedCp: event.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>SP for all (₹)</Label>
-                        <Input
-                          inputMode="decimal"
-                          value={row.sharedSp}
-                          onChange={(event) => updateRow(row.id, { sharedSp: event.target.value })}
-                        />
-                      </div>
-                    </fieldset>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="mt-3"
-                      disabled={receive.isPending}
-                      onClick={() =>
-                        updateRow(row.id, {
-                          pieces: Array.from({ length: count }, (_, pieceIndex) => ({
-                            style: row.sharedStyle,
-                            size: row.sharedSize,
-                            cp: row.sharedCp,
-                            sp: row.sharedSp,
-                            ...row.pieces[pieceIndex],
-                          })),
-                        })
-                      }
-                    >
-                      Apply to all {count} garments
-                    </Button>
-                    <div className="mt-4 space-y-2">
-                      {Array.from({ length: count }, (_, pieceIndex) => {
-                        const piece = pieceFor(row, pieceIndex);
-                        return (
-                          <div
-                            key={pieceIndex}
-                            className="grid gap-2 rounded-lg border bg-background p-3 sm:grid-cols-[180px_repeat(4,minmax(0,1fr))]"
-                          >
-                            <div className="self-center text-sm font-semibold">
-                              Garment {String(pieceIndex + 1).padStart(2, "0")}
-                              <p className="font-normal text-xs text-muted-foreground">
-                                F barcode on save
-                              </p>
-                            </div>
-                            <Input
-                              value={piece.style}
-                              placeholder="Style / model"
-                              onChange={(event) =>
-                                updatePiece(row, pieceIndex, { style: event.target.value })
-                              }
-                            />
-                            <Input
-                              value={piece.size}
-                              placeholder="Size"
-                              onChange={(event) =>
-                                updatePiece(row, pieceIndex, { size: event.target.value })
-                              }
-                            />
-                            <Input
-                              inputMode="decimal"
-                              value={piece.cp}
-                              placeholder="CP ₹"
-                              onChange={(event) =>
-                                updatePiece(row, pieceIndex, { cp: event.target.value })
-                              }
-                            />
-                            <Input
-                              inputMode="decimal"
-                              value={piece.sp}
-                              placeholder="SP ₹"
-                              onChange={(event) =>
-                                updatePiece(row, pieceIndex, { sp: event.target.value })
-                              }
-                            />
-                          </div>
-                        );
-                      })}
+                <>
+                  <fieldset
+                    disabled={receive.isPending}
+                    className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-2 xl:grid-cols-4"
+                  >
+                    <div>
+                      <Label>Style / model for all (optional)</Label>
+                      <Input
+                        value={row.sharedStyle}
+                        onChange={(event) => updateRow(row.id, { sharedStyle: event.target.value })}
+                      />
                     </div>
-                  </>
-                )}
+                    <div>
+                      <Label>Size for all</Label>
+                      <Input
+                        value={row.sharedSize}
+                        onChange={(event) => updateRow(row.id, { sharedSize: event.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>CP for all, excluding GST (₹)</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={row.sharedCp}
+                        onChange={(event) => updateRow(row.id, { sharedCp: event.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label>SP for all (₹)</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={row.sharedSp}
+                        onChange={(event) => updateRow(row.id, { sharedSp: event.target.value })}
+                      />
+                    </div>
+                  </fieldset>
+                  {count > 0 && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-3"
+                        disabled={receive.isPending}
+                        onClick={() =>
+                          updateRow(row.id, {
+                            pieces: Array.from({ length: count }, (_, pieceIndex) => ({
+                              style: row.sharedStyle,
+                              size: row.sharedSize,
+                              cp: row.sharedCp,
+                              sp: row.sharedSp,
+                              ...row.pieces[pieceIndex],
+                            })),
+                          })
+                        }
+                      >
+                        Apply to all {count} garments
+                      </Button>
+                      <div className="mt-4 space-y-2">
+                        {Array.from({ length: count }, (_, pieceIndex) => {
+                          const piece = pieceFor(row, pieceIndex);
+                          return (
+                            <div
+                              key={pieceIndex}
+                              className="grid gap-2 rounded-lg border bg-background p-3 sm:grid-cols-[180px_repeat(4,minmax(0,1fr))]"
+                            >
+                              <div className="self-center text-sm font-semibold">
+                                Garment {String(pieceIndex + 1).padStart(2, "0")}
+                                <p className="font-normal text-xs text-muted-foreground">
+                                  F barcode on save
+                                </p>
+                              </div>
+                              <Input
+                                value={piece.style}
+                                placeholder="Style / model"
+                                onChange={(event) =>
+                                  updatePiece(row, pieceIndex, { style: event.target.value })
+                                }
+                              />
+                              <Input
+                                value={piece.size}
+                                placeholder="Size"
+                                onChange={(event) =>
+                                  updatePiece(row, pieceIndex, { size: event.target.value })
+                                }
+                              />
+                              <Input
+                                inputMode="decimal"
+                                value={piece.cp}
+                                placeholder="CP ₹"
+                                onChange={(event) =>
+                                  updatePiece(row, pieceIndex, { cp: event.target.value })
+                                }
+                              />
+                              <Input
+                                inputMode="decimal"
+                                value={piece.sp}
+                                placeholder="SP ₹"
+                                onChange={(event) =>
+                                  updatePiece(row, pieceIndex, { sp: event.target.value })
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </>
               </section>
             );
           })}
