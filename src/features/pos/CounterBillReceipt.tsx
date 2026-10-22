@@ -83,6 +83,12 @@ export type CounterReceipt = {
       { barcode: string; name: string; quantity_mm: string; source?: string | null }[] | null;
   }[];
   tax?: GstInvoice | null;
+  exchange?: {
+    original_bill_code: string;
+    returned_barcode: string;
+    replacement_barcode: string;
+    selling_price_paise: string;
+  } | null;
 };
 function printThermal(node: HTMLElement, title: string) {
   const popup = window.open("", "_blank", "width=520,height=760");

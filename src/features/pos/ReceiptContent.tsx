@@ -115,6 +115,15 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <CustomerBillBarcode code={receipt.scan_code ?? receipt.code} />
         <p>{receipt.scan_code ?? receipt.code}</p>
       </div>
+      {receipt.exchange && (
+        <div className="invoice-cost-summary space-y-1 border-y py-2 text-xs">
+          <p className="font-semibold">Finished-product exchange</p>
+          <p>Original bill: {receipt.exchange.original_bill_code}</p>
+          <p>Returned piece: {receipt.exchange.returned_barcode}</p>
+          <p>Replacement piece: {receipt.exchange.replacement_barcode}</p>
+          <p>Equal-price exchange · no additional payment</p>
+        </div>
+      )}
       <details className="screen-only invoice-accounting-reference">
         <summary>Accounting invoice reference</summary>
         {receipt.tax?.invoice_number ?? receipt.code}

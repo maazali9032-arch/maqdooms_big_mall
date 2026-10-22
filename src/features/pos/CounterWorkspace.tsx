@@ -22,6 +22,7 @@ import { definiteDatabaseRejection } from "@/features/inventory/consumable-input
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
+import { FinishedProductExchange } from "./FinishedProductExchange";
 import { counterPayment } from "./counter-payment";
 import { resolveCounterBarcode, type CounterWork } from "./counter-barcode";
 import {
@@ -813,6 +814,16 @@ function CounterContent({
         <Button disabled={frozen || scan.isPending || !canSell} onClick={() => settle.mutate()}>
           Record full payment {reportMoney(receipt.total_paise)}
         </Button>
+      )}
+      {receipt && !work && receipt.paid && !receipt.exchange && (
+        <FinishedProductExchange
+          receipt={receipt}
+          disabled={frozen || scan.isPending || !canSell}
+          onComplete={(newReceipt) => {
+            setReceipt(newReceipt);
+            void qc.invalidateQueries();
+          }}
+        />
       )}
       {receipt &&
         (work ? (
