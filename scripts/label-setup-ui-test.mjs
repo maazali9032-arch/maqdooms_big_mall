@@ -20,7 +20,7 @@ await fs.writeFile(
 import {createRoot} from 'react-dom/client';
 import {LabelPrintDialog} from '@/features/inventory/LabelPrintDialog';
 import '@/styles.css';
-const labels=Array.from({length:13},(_,i)=>({code:'T'+String(i+1).padStart(5,'0'),name:'Cotton',description:'Batch 12 / Supplier',detail:'Grey · 10.000 m',price:i===0?'₹3,999.00':''}));
+const labels=Array.from({length:13},(_,i)=>({code:'T'+String(i+1).padStart(5,'0'),name:'Cotton / Cotton',description:'B0012 / maaz',detail:'Grey · 10.000 m',price:i===1?'₹3,999.00':''}));
 createRoot(document.getElementById('root')!).render(<LabelPrintDialog labels={labels} title="Test labels" close={()=>{}}/>);
 `,
 );
@@ -116,6 +116,16 @@ try {
     true,
     "Preview barcode keeps its natural scanner-safe width and is horizontally centred",
   );
+  assert.deepEqual(
+    await page
+      .frameLocator('iframe[title="Barcode label preview"]')
+      .locator(".sticker")
+      .first()
+      .locator("p")
+      .allTextContents(),
+    ["B0012 / maaz", "Cotton / Cotton", "T00001"],
+    "Batch/supplier and fabric/name print directly above the barcode in the required order",
+  );
   assert.equal(
     await page
       .frameLocator('iframe[title="Barcode label preview"]')
@@ -123,7 +133,7 @@ try {
       .first()
       .evaluate((label) => {
         const box = label.getBoundingClientRect();
-        return [...label.children].every((child) => {
+        return [...label.querySelectorAll(".label-content > *")].every((child) => {
           const childBox = child.getBoundingClientRect();
           return (
             childBox.left >= box.left - 0.5 &&
@@ -135,6 +145,19 @@ try {
       }),
     true,
     "Every text line, barcode and printed ID stays inside one physical sticker",
+  );
+  assert.equal(
+    await page
+      .frameLocator('iframe[title="Barcode label preview"]')
+      .locator(".sticker")
+      .first()
+      .evaluate((label) => {
+        const labelBox = label.getBoundingClientRect();
+        const contentBox = label.querySelector(".label-content")?.getBoundingClientRect();
+        return !!contentBox && contentBox.bottom < labelBox.bottom - labelBox.height * 0.15;
+      }),
+    true,
+    "The calibrated content block no longer sits against the bottom of the sticker",
   );
   for (const width of [360, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });

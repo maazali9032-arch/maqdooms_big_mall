@@ -39,24 +39,25 @@ function ThermalLabels({ labels, profile }: { labels: Sticker[]; profile: LabelP
             const symbol = symbolSize(l.code, profile);
             return (
               <article className="sticker" key={i}>
-                <p className="name">{l.name}</p>
-                {l.description && <p>{l.description}</p>}
-                <svg
-                  preserveAspectRatio="none"
-                  aria-label={`Barcode ${l.code}`}
-                  viewBox={`0 0 ${symbol.modules} 54`}
-                  style={{ width: `${symbol.width}mm` }}
-                >
-                  <rect width="100%" height="100%" fill="white" />
-                  {[...symbol.bars].map((b, j) =>
-                    b === "1" ? (
-                      <rect key={j} x={j + 10} width="1" height="54" fill="black" />
-                    ) : null,
-                  )}
-                </svg>
-                <p className="code">{l.code}</p>
-                {l.detail && <p>{l.detail}</p>}
-                {l.price && <p className="price">{l.price}</p>}
+                <div className={`label-content${l.price ? " with-price" : ""}`}>
+                  {l.description && <p>{l.description}</p>}
+                  <p className="name">{l.name}</p>
+                  <svg
+                    preserveAspectRatio="none"
+                    aria-label={`Barcode ${l.code}`}
+                    viewBox={`0 0 ${symbol.modules} 54`}
+                    style={{ width: `${symbol.width}mm` }}
+                  >
+                    <rect width="100%" height="100%" fill="white" />
+                    {[...symbol.bars].map((b, j) =>
+                      b === "1" ? (
+                        <rect key={j} x={j + 10} width="1" height="54" fill="black" />
+                      ) : null,
+                    )}
+                  </svg>
+                  <p className="code">{l.code}</p>
+                  {l.price && <p className="price">{l.price}</p>}
+                </div>
               </article>
             );
           })}

@@ -104,7 +104,9 @@ check(
   css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
     css.includes("grid-template-columns:repeat(2,50.8mm)") &&
     css.includes("padding:1.2mm 4mm") &&
-    css.includes("justify-content:center") &&
+    css.includes(".label-content{min-width:0;display:flex") &&
+    css.includes("transform:translateY(-4mm)") &&
+    css.includes("text-align:center") &&
     css.includes(".sticker svg{max-width:100%;height:6.5mm") &&
     css.includes(".sticker .code{text-align:center"),
   "Print CSS keeps compact label content within safe physical sticker insets",
