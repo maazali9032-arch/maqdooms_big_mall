@@ -24,21 +24,21 @@ export type LabelProfile = {
 };
 
 /**
- * Measured showroom roll: 3 mm outer/row pitch, two 40 × 30 mm labels across,
- * and a 3 mm gap between adjacent labels. Each browser page prints one row,
- * so the continuous roll advances exactly one 30 mm label plus its 3 mm pitch.
+ * The original showroom driver configuration: USER 4 × 6 inches with two
+ * 2 × 1 inch labels across and six rows on each printer page. Labels fill
+ * left-to-right then continue onto the next row and page automatically.
  */
 export const STARTING_LABEL_PROFILE: LabelProfile = {
-  mode: "roll",
-  width: 40,
-  height: 30,
+  mode: "sheet",
+  width: 50.8,
+  height: 25.4,
   columns: 2,
-  rows: 1,
-  gap: 3,
-  rowGap: 3,
-  pageWidth: 89,
-  pageHeight: 33,
-  margin: 3,
+  rows: 6,
+  gap: 0,
+  rowGap: 0,
+  pageWidth: 101.6,
+  pageHeight: 152.4,
+  margin: 0,
   dpi: 203,
 };
 
@@ -84,7 +84,7 @@ export function validProfile(raw: LabelProfile | Partial<LabelProfile>) {
   if (p.gap < 0 || p.gap > 30 || p.rowGap < 0 || p.rowGap > 30 || p.margin < 0 || p.margin > 30)
     return false;
   if (p.dpi < 100 || p.dpi > 1200) return false;
-  if (p.mode === "roll") return rowWidth(p) + p.margin * 2 <= 220;
+  if (p.mode === "roll") return rowWidth(p) <= 220;
   return (
     p.pageWidth >= 100 &&
     p.pageWidth <= 420 &&
@@ -128,10 +128,10 @@ export function labelPrintCSS(raw: LabelProfile) {
   const p = normalizeProfile(raw);
   if (!validProfile(p)) throw new Error("Enter valid label, page and gap dimensions.");
   const sheet = p.mode === "sheet";
-  const printWidth = sheet ? p.pageWidth : rowWidth(p) + p.margin * 2;
-  const printHeight = sheet ? p.pageHeight : p.height + p.rowGap;
+  const printWidth = sheet ? p.pageWidth : rowWidth(p);
+  const printHeight = sheet ? p.pageHeight : p.height;
   const pageStyle = sheet
     ? `padding:${p.margin}mm;grid-template-columns:repeat(${p.columns},${p.width}mm);grid-template-rows:repeat(${p.rows},${p.height}mm);column-gap:${p.gap}mm;row-gap:${p.rowGap}mm;`
-    : `padding:${p.rowGap}mm ${p.margin}mm 0;grid-template-columns:repeat(${p.columns},${p.width}mm);column-gap:${p.gap}mm;grid-auto-rows:${p.height}mm;`;
+    : `grid-template-columns:repeat(${p.columns},${p.width}mm);column-gap:${p.gap}mm;grid-auto-rows:${p.height}mm;`;
   return `@page{size:${printWidth}mm ${printHeight}mm;margin:0}html,body{margin:0;padding:0;width:${printWidth}mm;height:${printHeight}mm;background:white;color:black}*{box-sizing:border-box}.label-page{display:grid;${pageStyle}grid-auto-flow:row;align-content:start;width:${printWidth}mm;height:${printHeight}mm;break-after:page;page-break-after:always;overflow:hidden}.label-page:last-child{break-after:auto;page-break-after:auto}.sticker{position:relative;width:${p.width}mm;height:${p.height}mm;min-width:0;min-height:0;padding:0;font:7pt Arial,sans-serif;overflow:hidden;contain:layout paint;break-inside:avoid}.label-content{position:absolute;top:1.4mm;left:4mm;right:4mm;min-width:0;display:flex;flex-direction:column;align-items:center;gap:.1mm}.sticker p{flex:0 0 auto;max-width:100%;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.05}.sticker .name{font-weight:bold;font-size:8pt}.sticker .code{text-align:center;font:700 6.8pt/1.05 monospace;letter-spacing:.15mm}.sticker .price{font-weight:bold;font-size:9pt}.sticker svg{max-width:100%;height:7mm;flex:0 0 7mm;align-self:center;shape-rendering:crispEdges}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
 }

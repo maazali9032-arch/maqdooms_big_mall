@@ -6989,9 +6989,3 @@ The 80 mm customer receipt now replaces the prior asymmetric inset with a fixed 
 # 92. RESTORE PREVIOUS 80 MM BILL CALIBRATION — 22 OCTOBER 2026
 
 After physical review, the customer-bill layout is restored to the immediately preceding print calibration: the full 76 mm printable receipt width retains its 4 mm left safety inset, and only left-aligned receipt text has the additional 1 mm safety offset. The barcode, centred heading/footer, right-side monetary values and right edge return to their proven previous positions. The fixed label-cell implementation from Section 91 remains active and unchanged.
-
-# 93. MEASURED 40 × 30 MM SHOWROOM LABEL ROLL — 22 OCTOBER 2026
-
-The physical showroom media was measured directly: each sticker is 40 mm wide by 30 mm high; the horizontal sequence is 3 mm outer margin, 40 mm sticker, 3 mm gap, 40 mm sticker, 3 mm outer margin; each next row begins after a 3 mm vertical pitch. The older 50.8 × 25.4 mm 4 × 6 profile did not match this media and caused the barcode/identity group to appear too wide or use the wrong row position.
-
-The default profile is now a continuous two-column roll: 89 mm print width, 33 mm print height per row, 3 mm horizontal margins, 3 mm column gap, 3 mm row pitch, and 40 × 30 mm contained cells. Two selected labels print in one exact row; an odd final label uses the left cell and leaves the right cell blank. The profile storage version changes so experimental prior dimensions cannot override the measured setting. Barcode identity, stock, prices, scanning and reprints are unchanged.

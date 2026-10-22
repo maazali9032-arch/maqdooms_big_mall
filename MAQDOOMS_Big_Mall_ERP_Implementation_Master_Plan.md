@@ -2138,7 +2138,3 @@ For the 80 mm customer bill, supersede Section 91's asymmetric left-text shift. 
 # 93. RESTORE PROVEN 80 MM RECEIPT PRINT CALIBRATION — 22 OCTOBER 2026
 
 Supersede only the receipt-centering part of Section 92. Restore the preceding 80 mm receipt setup: a full-width customer invoice with a 4 mm left safety inset and a targeted 1 mm offset for left-aligned text. Keep the barcode, centred content, right-aligned amounts and right edge in their existing proven positions. Preserve all fixed showroom label-cell changes from Section 92. See History Section 92.
-
-# 94. APPLY THE MEASURED SHOWROOM 40 × 30 MM ROLL PROFILE — 22 OCTOBER 2026
-
-Supersede the previous 50.8 × 25.4 mm label-sheet default with the measured showroom roll: two 40 × 30 mm sticker cells across an 89 mm width, with 3 mm left/right outer margins and a 3 mm column gap. Print every two-label row as a fixed 89 × 33 mm browser page, using a 3 mm vertical pitch before the 30 mm cells. Every selected barcode must belong to exactly one contained cell; an odd final label leaves its neighbouring cell blank. Reset saved label settings through a profile version change so the measured profile becomes the default. Preserve generated barcode strings, stock, prices, scanner lookup and reprint behavior. See History Section 93.

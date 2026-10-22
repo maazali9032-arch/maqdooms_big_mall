@@ -18,10 +18,7 @@ const check = (value, label) => {
   assert(value, label);
   checks++;
 };
-check(
-  normalizeProfile(null).mode === "roll",
-  "First-use setup preserves the measured showroom roll mode",
-);
+check(normalizeProfile(null).mode === "sheet", "First-use setup preserves the showroom sheet mode");
 check(normalizeProfile({ mode: "roll" }).mode === "roll", "Saved roll calibration is preserved");
 const labels = Array.from({ length: 5 }, (_, index) => ({
   code: `80000000000${index + 1}`,
@@ -32,17 +29,12 @@ const labels = Array.from({ length: 5 }, (_, index) => ({
 }));
 check(
   validProfile(STARTING_LABEL_PROFILE),
-  "Starting TE244 profile fits the measured 40 by 30 mm roll",
+  "Starting TE244 profile fits the original four-by-six media",
 );
 check(
-  STARTING_LABEL_PROFILE.width === 40 &&
-    STARTING_LABEL_PROFILE.height === 30 &&
-    STARTING_LABEL_PROFILE.gap === 3 &&
-    STARTING_LABEL_PROFILE.rowGap === 3 &&
-    STARTING_LABEL_PROFILE.margin === 3 &&
-    STARTING_LABEL_PROFILE.pageWidth === 89 &&
-    STARTING_LABEL_PROFILE.pageHeight === 33,
-  "TSC default matches the measured 3,40,3,40,3 width and 3,30 repeated roll pitch",
+  Math.abs(STARTING_LABEL_PROFILE.width * STARTING_LABEL_PROFILE.columns - 101.6) < 0.001 &&
+    Math.abs(STARTING_LABEL_PROFILE.height * STARTING_LABEL_PROFILE.rows - 152.4) < 0.001,
+  "TSC default fills the original four-by-six media with two columns and six rows",
 );
 check(
   labelRows(labels, 2)
@@ -53,8 +45,8 @@ check(
 check(
   labelPages(labels, STARTING_LABEL_PROFILE)
     .map((page) => page.length)
-    .join(",") === "2,2,1",
-  "TSC profile automatically creates exact physical rows for the continuous roll",
+    .join(",") === "5",
+  "TSC profile automatically fills available rows on the original printer page",
 );
 check(
   labelPages(
@@ -62,8 +54,8 @@ check(
     STARTING_LABEL_PROFILE,
   )
     .map((page) => page.length)
-    .join(",") === "2,2,2,2,2,2,1",
-  "TSC roll gives every pair of labels its own measured physical row",
+    .join(",") === "12,1",
+  "TSC profile continues onto a new page after twelve labels",
 );
 check(
   labelPages(labels, {
@@ -99,7 +91,7 @@ check(
 );
 const short = symbolSize(labels[0].code, STARTING_LABEL_PROFILE);
 check(
-  short.dots >= 2 && short.width <= STARTING_LABEL_PROFILE.width - 8,
+  short.dots >= 2 && short.width <= STARTING_LABEL_PROFILE.width - 12,
   "Short numeric piece barcode has readable modules without stretching across the sticker",
 );
 const legacy = symbolSize("PRD-0fd2d3fb-3b6e-425e-9c58-4da18ca665c5", STARTING_LABEL_PROFILE);
@@ -109,9 +101,9 @@ check(
 );
 const css = labelPrintCSS(STARTING_LABEL_PROFILE);
 check(
-  css.includes("@page{size:89mm 33mm;margin:0}") &&
-    css.includes("grid-template-columns:repeat(2,40mm)") &&
-    css.includes("padding:3mm 3mm 0") &&
+  css.includes("@page{size:101.6mm 152.4mm;margin:0}") &&
+    css.includes("grid-template-columns:repeat(2,50.8mm)") &&
+    css.includes("grid-template-rows:repeat(6,25.4mm)") &&
     css.includes("grid-auto-flow:row") &&
     css.includes("contain:layout paint") &&
     css.includes(".label-content{position:absolute;top:1.4mm;left:4mm;right:4mm") &&
