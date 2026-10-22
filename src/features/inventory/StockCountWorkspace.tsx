@@ -68,7 +68,7 @@ function SelectionField({
     };
   }, [onOpenChange, open]);
   return (
-    <div ref={root} className="relative z-30 space-y-1">
+    <div ref={root} className={`relative space-y-1 ${open ? "z-50" : "z-0"}`}>
       <label className="text-sm font-medium">{label}</label>
       <button
         type="button"
