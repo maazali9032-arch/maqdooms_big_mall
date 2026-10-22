@@ -117,13 +117,9 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
     },
     onError: (error) => {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === "object" && error !== null && "message" in error
-            ? String(error.message)
-            : "Ready-made stock could not be received";
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Ready-made stock could not be received",
+      );
     },
   });
   if (!allowed) return null;
