@@ -5,8 +5,8 @@ export const Route = createFileRoute("/_authenticated/stock-count")({
   component: () => (
     <>
       <PageHeader
-        title="Stock counts"
-        description="Assigned barcode counts with owner-only missing-stock review."
+        title="Stock Audit"
+        description="Create, assign and monitor physical stock audits with owner-only missing-stock review."
       />
       <StockCountWorkspace />
     </>

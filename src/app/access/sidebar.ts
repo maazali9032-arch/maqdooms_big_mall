@@ -208,7 +208,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       items: [
         { to: "/reports", label: "Reports & Analytics", icon: BarChart3, module: "reports" },
         { to: "/audit", label: "Audit Trail", icon: ClipboardList, module: "audit" },
-        { to: "/stock-count", label: "Stock Counts", icon: ClipboardList, module: "stock_count" },
+        { to: "/stock-count", label: "Stock Audit", icon: ClipboardList, module: "stock_count" },
         {
           to: "/reports",
           hash: "orders",

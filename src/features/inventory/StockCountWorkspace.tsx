@@ -7,7 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel, StatCard } from "@/shared/components/page";
 
-type Catalog = { staff: { id: string; name: string }[]; locations: { id: string; name: string }[] };
+type Catalog = {
+  staff: { id: string; name: string }[];
+  locations: { id: string; name: string; kind: string }[];
+};
+type AuditItem = {
+  barcode: string;
+  kind: string;
+  details: Record<string, string>;
+  scanned: boolean;
+};
 type Audit = {
   id: string;
   name: string;
@@ -15,9 +24,65 @@ type Audit = {
   assigned_to: string;
   total: number;
   scanned: number;
-  items: { barcode: string; kind: string; details: Record<string, string>; scanned: boolean }[];
+  items: AuditItem[];
 };
-
+const itemTypeOptions = [
+  { id: "fabric", label: "Fabric / Thaans" },
+  { id: "production_finished", label: "Shop-produced garments" },
+  { id: "vendor_finished", label: "Vendor-purchased garments" },
+  { id: "finished_product", label: "All finished garments" },
+];
+function SelectionField({
+  label,
+  selected,
+  options,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  selected: string[];
+  options: { id: string; label: string }[];
+  onChange: (items: string[]) => void;
+  placeholder: string;
+}) {
+  const selectedLabels = options
+    .filter((option) => selected.includes(option.id))
+    .map((option) => option.label);
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium">{label}</label>
+      <details className="group relative">
+        <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-md border bg-background px-3 text-sm">
+          <span className={selectedLabels.length ? "truncate" : "text-muted-foreground"}>
+            {selectedLabels.length ? selectedLabels.join(", ") : placeholder}
+          </span>
+          <span className="ml-3 text-muted-foreground">⌄</span>
+        </summary>
+        <div className="absolute z-20 mt-1 w-full rounded-md border bg-popover p-2 shadow-lg">
+          {options.map((option) => (
+            <label
+              key={option.id}
+              className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm hover:bg-muted"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(option.id)}
+                onChange={(event) =>
+                  onChange(
+                    event.target.checked
+                      ? [...selected, option.id]
+                      : selected.filter((id) => id !== option.id),
+                  )
+                }
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
 export function StockCountWorkspace() {
   const { isOwner } = useSession();
   return isOwner ? <OwnerStockCounts /> : <AssignedStockCount />;
@@ -27,14 +92,17 @@ function OwnerStockCounts() {
   const [name, setName] = useState("");
   const [staff, setStaff] = useState("");
   const [locations, setLocations] = useState<string[]>([]);
-  const [fabric, setFabric] = useState(true);
-  const [products, setProducts] = useState(true);
+  const [kinds, setKinds] = useState<string[]>([
+    "fabric",
+    "production_finished",
+    "vendor_finished",
+  ]);
   const catalog = useQuery({
     queryKey: ["stock-count-catalog"],
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)("stock_count_setup_catalog");
       if (error) throw error;
-      return data as unknown as Catalog;
+      return data as Catalog;
     },
   });
   const audits = useQuery({
@@ -42,12 +110,11 @@ function OwnerStockCounts() {
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)("stock_count_owner_view");
       if (error) throw error;
-      return data as unknown as Audit[];
+      return data as Audit[];
     },
   });
   const create = useMutation({
     mutationFn: async () => {
-      const kinds = [...(fabric ? ["fabric"] : []), ...(products ? ["finished_product"] : [])];
       const { error } = await (supabase.rpc as any)("create_stock_count_audit", {
         p_request: crypto.randomUUID(),
         p_name: name,
@@ -60,7 +127,7 @@ function OwnerStockCounts() {
     onSuccess: () => {
       setName("");
       setLocations([]);
-      toast.success("Stock count assigned");
+      toast.success("Stock audit assigned");
       void qc.invalidateQueries({ queryKey: ["stock-count-owner"] });
     },
     onError: (e) => toast.error(e.message),
@@ -73,121 +140,129 @@ function OwnerStockCounts() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["stock-count-owner"] }),
     onError: (e) => toast.error(e.message),
   });
+  const locationOptions = (catalog.data?.locations ?? []).map((location) => ({
+    id: location.id,
+    label: `${location.name} · ${location.kind.replaceAll("_", " ")}`,
+  }));
   return (
     <div className="space-y-4">
       <Panel
-        title="Create stock count"
-        description="Freeze the expected barcode list for selected locations, then assign one staff member to scan it."
+        title="Create stock audit"
+        description="Freeze the expected barcode list by item source and location, then assign one staff member to scan it."
       >
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input
-            placeholder="For example: October Showroom count"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-sm font-medium" htmlFor="audit-name">
+              Audit name
+            </label>
+            <Input
+              id="audit-name"
+              placeholder="For example: October Showroom audit"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium" htmlFor="audit-staff">
+              Assign staff
+            </label>
+            <select
+              id="audit-staff"
+              className="h-11 w-full rounded-md border bg-background px-3 text-sm"
+              value={staff}
+              onChange={(e) => setStaff(e.target.value)}
+            >
+              <option value="">Select assigned staff</option>
+              {catalog.data?.staff.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <SelectionField
+            label="Item categories"
+            selected={kinds}
+            options={itemTypeOptions}
+            onChange={setKinds}
+            placeholder="Select stock categories"
           />
-          <select
-            aria-label="Assigned stock-count staff"
-            className="h-11 rounded border bg-background p-2"
-            value={staff}
-            onChange={(e) => setStaff(e.target.value)}
-          >
-            <option value="">Assign staff</option>
-            {catalog.data?.staff.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.name}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-4">
-            <label>
-              <input
-                type="checkbox"
-                checked={fabric}
-                onChange={(e) => setFabric(e.target.checked)}
-              />{" "}
-              Fabric thaans
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={products}
-                onChange={(e) => setProducts(e.target.checked)}
-              />{" "}
-              Finished products
-            </label>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {catalog.data?.locations.map((l) => (
-              <label key={l.id} className="rounded border px-2 py-1">
-                <input
-                  type="checkbox"
-                  checked={locations.includes(l.id)}
-                  onChange={(e) =>
-                    setLocations(
-                      e.target.checked ? [...locations, l.id] : locations.filter((x) => x !== l.id),
-                    )
-                  }
-                />{" "}
-                {l.name}
-              </label>
-            ))}
-          </div>
+          <SelectionField
+            label="Locations to include"
+            selected={locations}
+            options={locationOptions}
+            onChange={setLocations}
+            placeholder="Select one or more locations"
+          />
         </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Finished-garment categories can be selected separately or together. Every matching barcode
+          is frozen into one audit and grouped by category and location.
+        </p>
         <Button
-          className="mt-3"
+          className="mt-4"
           disabled={
-            create.isPending ||
-            !name.trim() ||
-            !staff ||
-            !locations.length ||
-            (!fabric && !products)
+            create.isPending || !name.trim() || !staff || !locations.length || !kinds.length
           }
           onClick={() => create.mutate()}
         >
-          Create and assign count
+          Create and assign audit
         </Button>
       </Panel>
-      {audits.data?.map((a) => {
-        const remaining = a.total - a.scanned;
-        return (
-          <Panel
-            key={a.id}
-            title={a.name}
-            description={`${a.assigned_to} · ${a.status}`}
-            actions={
-              a.status === "active" ? (
-                <Button variant="outline" onClick={() => finish.mutate(a.id)}>
-                  Finish audit
-                </Button>
-              ) : undefined
-            }
-          >
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StatCard label="Scanned" value={`${a.scanned} / ${a.total}`} />
-              <StatCard label="Remaining / missing" value={remaining} />
-              <StatCard
-                label="Progress"
-                value={`${a.total ? Math.round((a.scanned / a.total) * 100) : 0}%`}
-              />
-            </div>
-            <details className="mt-3">
-              <summary>See all expected items and missing details</summary>
-              <div className="mt-2 space-y-1 text-sm">
-                {a.items.map((i) => (
-                  <p
-                    key={i.barcode}
-                    className={i.scanned ? "text-emerald-700" : "text-destructive"}
-                  >
-                    {i.scanned ? "Scanned" : "Missing"} · {i.barcode} · {i.details["name"]} ·{" "}
-                    {i.details["location"]}
-                  </p>
-                ))}
-              </div>
-            </details>
-          </Panel>
-        );
-      })}
+      {audits.data?.map((audit) => (
+        <AuditCard key={audit.id} audit={audit} onFinish={() => finish.mutate(audit.id)} />
+      ))}
     </div>
+  );
+}
+function AuditCard({ audit, onFinish }: { audit: Audit; onFinish: () => void }) {
+  const remaining = audit.total - audit.scanned;
+  const groups = audit.items.reduce<Record<string, AuditItem[]>>((all, item) => {
+    const key = `${item.details["category"] ?? item.kind} · ${item.details["location"] ?? "Unknown location"}`;
+    (all[key] ??= []).push(item);
+    return all;
+  }, {});
+  return (
+    <Panel
+      title={audit.name}
+      description={`${audit.assigned_to} · ${audit.status}`}
+      actions={
+        audit.status === "active" ? (
+          <Button variant="outline" onClick={onFinish}>
+            Finish audit
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Scanned" value={`${audit.scanned} / ${audit.total}`} />
+        <StatCard label="Remaining / missing" value={remaining} />
+        <StatCard
+          label="Progress"
+          value={`${audit.total ? Math.round((audit.scanned / audit.total) * 100) : 0}%`}
+        />
+      </div>
+      <details className="mt-3">
+        <summary>See grouped expected items and missing details</summary>
+        <div className="mt-3 space-y-3 text-sm">
+          {Object.entries(groups).map(([group, items]) => (
+            <div key={group} className="rounded-md border p-3">
+              <p className="font-medium">
+                {group} · {items.filter((item) => item.scanned).length} / {items.length} scanned
+              </p>
+              {items.map((item) => (
+                <p
+                  key={item.barcode}
+                  className={item.scanned ? "text-emerald-700" : "text-destructive"}
+                >
+                  {item.scanned ? "Scanned" : "Missing"} · {item.barcode} · {item.details["name"]}
+                </p>
+              ))}
+            </div>
+          ))}
+        </div>
+      </details>
+    </Panel>
   );
 }
 function AssignedStockCount() {
@@ -198,7 +273,7 @@ function AssignedStockCount() {
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)("stock_count_my_task");
       if (error) throw error;
-      return data as unknown as { id: string; name: string; total: number; scanned: number } | null;
+      return data as { id: string; name: string; total: number; scanned: number } | null;
     },
   });
   const scan = useMutation({
@@ -219,8 +294,8 @@ function AssignedStockCount() {
   });
   if (!task.data)
     return (
-      <Panel title="Stock count">
-        <p>No active stock count is assigned to you.</p>
+      <Panel title="Stock audit">
+        <p>No active stock audit is assigned to you.</p>
       </Panel>
     );
   return (
@@ -236,7 +311,7 @@ function AssignedStockCount() {
         }}
       >
         <Input
-          aria-label="Stock count barcode"
+          aria-label="Stock audit barcode"
           autoFocus
           value={barcode}
           onChange={(e) => setBarcode(e.target.value)}
