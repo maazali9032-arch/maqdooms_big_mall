@@ -85,9 +85,12 @@ export type CounterReceipt = {
   tax?: GstInvoice | null;
   exchange?: {
     original_bill_code: string;
-    returned_barcode: string;
-    replacement_barcode: string;
-    selling_price_paise: string;
+    returns?: { barcode: string; name: string; value_paise: string }[];
+    replacements?: { barcode: string; name: string; value_paise: string }[];
+    return_credit_paise?: string;
+    replacement_value_paise?: string;
+    net_difference_paise?: string;
+    payment_method?: string;
   } | null;
 };
 function printThermal(node: HTMLElement, title: string) {

@@ -14,16 +14,18 @@ type Props = {
   onComplete: (receipt: CounterReceipt) => void;
 };
 
-/** A no-cash swap: only a physical shop-finished piece on the original bill may be returned. */
 export function FinishedProductExchange({ receipt, disabled, onComplete }: Props) {
   const [returnBarcode, setReturnBarcode] = useState("");
   const [replacementBarcode, setReplacementBarcode] = useState("");
+  const [returns, setReturns] = useState<string[]>([]);
+  const [replacements, setReplacements] = useState<string[]>([]);
   const [salesperson, setSalesperson] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
   const finishedLines = receipt.lines.filter((line) => line.kind === "product" && line.barcode);
   const exchange = useMutation({
     mutationFn: async () => {
-      if (!returnBarcode.trim() || !replacementBarcode.trim() || !salesperson)
-        throw new Error("Scan the returned and replacement pieces, then select the Salesperson");
+      if (!returns.length || !replacements.length || !salesperson)
+        throw new Error("Add returned and replacement pieces, then select the Salesperson");
       const { data: code, error } = await (
         supabase.rpc as unknown as (
           name: string,
@@ -32,9 +34,10 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
       )("complete_finished_product_exchange", {
         p_request: crypto.randomUUID(),
         p_original_bill: receipt.id,
-        p_return_barcode: returnBarcode.trim(),
-        p_replacement_barcode: replacementBarcode.trim(),
+        p_returns: returns,
+        p_replacements: replacements,
         p_salesperson: salesperson,
+        p_payment_method: paymentMethod,
       });
       if (error) throw error;
       if (!code) throw new Error("Exchange was saved but its new bill was not returned");
@@ -47,36 +50,51 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
       onComplete(newReceipt);
       setReturnBarcode("");
       setReplacementBarcode("");
+      setReturns([]);
+      setReplacements([]);
       setSalesperson("");
+      setPaymentMethod("cash");
       toast.success("Exchange completed and new bill created");
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Exchange failed"),
   });
-
   if (!finishedLines.length) return null;
   return (
     <Panel
-      title="Exchange shop-finished product"
-      description="Only a sold shop-finished piece from this bill can be exchanged. The replacement must be an available Showroom piece at the same selling price. Fabric and customer stitching orders cannot be exchanged."
+      title="Exchange shop-finished products"
+      description="Only sold shop-finished pieces from this bill can be returned. Scan one or more replacements from active Showroom floors; the new bill records the amount collected or refunded. Fabric and customer stitching orders cannot be exchanged."
     >
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Eligible original piece{finishedLines.length === 1 ? "" : "s"}:{" "}
-          {finishedLines.map((line) => line.barcode).join(", ")}
+          Eligible original pieces: {finishedLines.map((line) => line.barcode).join(", ")}
         </p>
-        <Input
-          aria-label="Returned finished product barcode"
-          placeholder="Scan returned finished product barcode"
+        <BarcodeList
+          label="Returned finished product barcode"
+          placeholder="Scan returned barcode, then add it"
           value={returnBarcode}
+          values={returns}
           disabled={disabled || exchange.isPending}
-          onChange={(event) => setReturnBarcode(event.target.value)}
+          onChange={setReturnBarcode}
+          onAdd={() => {
+            const code = returnBarcode.trim();
+            if (code && !returns.includes(code)) setReturns([...returns, code]);
+            setReturnBarcode("");
+          }}
+          onRemove={(code) => setReturns(returns.filter((value) => value !== code))}
         />
-        <Input
-          aria-label="Replacement finished product barcode"
-          placeholder="Scan replacement finished product barcode"
+        <BarcodeList
+          label="Replacement finished product barcode"
+          placeholder="Scan replacement barcode, then add it"
           value={replacementBarcode}
+          values={replacements}
           disabled={disabled || exchange.isPending}
-          onChange={(event) => setReplacementBarcode(event.target.value)}
+          onChange={setReplacementBarcode}
+          onAdd={() => {
+            const code = replacementBarcode.trim();
+            if (code && !replacements.includes(code)) setReplacements([...replacements, code]);
+            setReplacementBarcode("");
+          }}
+          onRemove={(code) => setReplacements(replacements.filter((value) => value !== code))}
         />
         <SalespersonPicker
           id="exchange-salesperson"
@@ -84,12 +102,25 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
           onChange={setSalesperson}
           disabled={disabled || exchange.isPending}
         />
+        <select
+          aria-label="Exchange payment or refund method"
+          className="h-11 w-full rounded border bg-background p-2"
+          value={paymentMethod}
+          disabled={disabled || exchange.isPending}
+          onChange={(event) => setPaymentMethod(event.target.value)}
+        >
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="upi">UPI</option>
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="mixed">Mixed</option>
+        </select>
         <Button
           disabled={
             disabled ||
             exchange.isPending ||
-            !returnBarcode.trim() ||
-            !replacementBarcode.trim() ||
+            !returns.length ||
+            !replacements.length ||
             !salesperson
           }
           onClick={() => exchange.mutate()}
@@ -98,5 +129,69 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
         </Button>
       </div>
     </Panel>
+  );
+}
+
+function BarcodeList({
+  label,
+  placeholder,
+  value,
+  values,
+  disabled,
+  onChange,
+  onAdd,
+  onRemove,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  values: string[];
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onAdd: () => void;
+  onRemove: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          aria-label={label}
+          placeholder={placeholder}
+          value={value}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onAdd();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={disabled || !value.trim()}
+          onClick={onAdd}
+        >
+          Add
+        </Button>
+      </div>
+      {values.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {values.map((code) => (
+            <Button
+              key={code}
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={disabled}
+              onClick={() => onRemove(code)}
+            >
+              {code} ×
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

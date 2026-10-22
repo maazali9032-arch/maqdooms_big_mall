@@ -119,9 +119,44 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <div className="invoice-cost-summary space-y-1 border-y py-2 text-xs">
           <p className="font-semibold">Finished-product exchange</p>
           <p>Original bill: {receipt.exchange.original_bill_code}</p>
-          <p>Returned piece: {receipt.exchange.returned_barcode}</p>
-          <p>Replacement piece: {receipt.exchange.replacement_barcode}</p>
-          <p>Equal-price exchange · no additional payment</p>
+          {receipt.exchange.returns?.map((item) => (
+            <p key={`return-${item.barcode}`}>
+              Return · {item.name} · {item.barcode} · {reportMoney(item.value_paise)}
+            </p>
+          ))}
+          {receipt.exchange.replacements?.map((item) => (
+            <p key={`replacement-${item.barcode}`}>
+              Replacement · {item.name} · {item.barcode} · {reportMoney(item.value_paise)}
+            </p>
+          ))}
+          <div className="invoice-row flex justify-between">
+            <span>Return credit</span>
+            <strong>{reportMoney(receipt.exchange.return_credit_paise ?? "0")}</strong>
+          </div>
+          <div className="invoice-row flex justify-between">
+            <span>Replacement value</span>
+            <strong>{reportMoney(receipt.exchange.replacement_value_paise ?? "0")}</strong>
+          </div>
+          <div className="invoice-row flex justify-between">
+            <strong>
+              {BigInt(receipt.exchange.net_difference_paise ?? "0") >= 0n
+                ? "Amount collected"
+                : "Amount refunded"}
+            </strong>
+            <strong>
+              {reportMoney(
+                (BigInt(receipt.exchange.net_difference_paise ?? "0") < 0n
+                  ? -BigInt(receipt.exchange.net_difference_paise ?? "0")
+                  : BigInt(receipt.exchange.net_difference_paise ?? "0")
+                ).toString(),
+              )}
+            </strong>
+          </div>
+          {receipt.exchange.payment_method && (
+            <p className="capitalize">
+              Method: {receipt.exchange.payment_method.replaceAll("_", " ")}
+            </p>
+          )}
         </div>
       )}
       <details className="screen-only invoice-accounting-reference">
