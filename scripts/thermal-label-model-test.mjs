@@ -107,7 +107,7 @@ check(
     css.includes(".label-content{min-width:0;display:flex") &&
     css.includes("transform:translateY(-4mm)") &&
     css.includes("text-align:center") &&
-    css.includes(".sticker svg{max-width:100%;height:6.5mm") &&
+    css.includes(".sticker svg{max-width:100%;height:7mm") &&
     css.includes(".sticker .code{text-align:center"),
   "Print CSS keeps compact label content within safe physical sticker insets",
 );

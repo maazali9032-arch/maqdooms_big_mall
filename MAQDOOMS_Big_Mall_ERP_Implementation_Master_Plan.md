@@ -2119,3 +2119,9 @@ The actual dialog test must assert the exact line order, barcode centring, botto
 Use one **Print 80 mm bill** action for customer invoices. Remove the smaller paper option. Retain the 80 mm page and right boundary, but apply a 4 mm internal left safety inset to prevent the demonstrated printer from cutting off left-side labels.
 
 Customer-bill CODE128 output must encode the exact existing short bill identity and render at a fixed integer-dot geometry: 203 DPI, three dots per module, 10 quiet modules on each side, and 15 mm bar height. Do not fluidly stretch the SVG. A six-character bill such as `B00007` must be approximately 41.29 mm wide. Preserve all database mappings, manual/scanner lookup behavior, reprint identity, GST content, permissions and billing transactions. Update `docs/COUNTER_RECEIPTS.md`; test the 80 mm receipt layout and a physical barcode scan after deployment. See History Section 87.
+
+# 89. DELIVER CUSTOMER PRINT INSET AND ENLARGE COMPACT LABEL SYMBOL — 22 OCTOBER 2026
+
+The 80 mm popup must preserve the complete customer-invoice container, not only its child markup, so the 4 mm left print-safety inset is present on physical receipts. Keep the right boundary and 80 mm page format unchanged.
+
+For compact six-character showroom labels, use three whole thermal dots per module when safe in the fixed 50.8 mm cell and print a 7 mm bar height. Preserve the centred identity group, 4 mm side insets, 2 × 6 page pitch, exact barcode identity and all inventory behavior. Recheck the physical receipt and label scanner results after deployment. See History Section 88.

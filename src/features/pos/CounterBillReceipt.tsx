@@ -88,7 +88,7 @@ function printThermal(node: HTMLElement, title: string) {
   const popup = window.open("", "_blank", "width=520,height=760");
   if (!popup) throw new Error("Allow pop-ups to print the invoice");
   popup.document.write(
-    `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>]/g, "")}</title><style>${receiptPrintStyles()}</style></head><body>${node.innerHTML}</body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><title>${title.replace(/[<>]/g, "")}</title><style>${receiptPrintStyles()}</style></head><body>${node.outerHTML}</body></html>`,
   );
   popup.document.close();
   popup.focus();

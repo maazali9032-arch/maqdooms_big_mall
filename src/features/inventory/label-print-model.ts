@@ -101,7 +101,10 @@ export function symbolSize(code: string, profile: LabelProfile) {
   const dotsPerMm = profile.dpi / 25.4;
   // Keep a generous physical quiet area on compact showroom stickers. At
   // 203 DPI this also avoids stretching six-character symbols across the label.
-  const dots = Math.floor(((profile.width - 12) * dotsPerMm) / modules);
+  // Six-character symbols have enough safe width for three full thermal dots
+  // per module. Keeping whole dots avoids fuzzy bar edges while making the
+  // printed barcode easier for a handheld scanner to read.
+  const dots = Math.max(1, Math.floor(((profile.width - 8) * dotsPerMm) / modules));
   return { bars, modules, dots, width: (modules * dots) / dotsPerMm };
 }
 
@@ -130,5 +133,5 @@ export function labelPrintCSS(raw: LabelProfile) {
   const pageStyle = sheet
     ? `padding:${p.margin}mm;grid-template-columns:repeat(${p.columns},${p.width}mm);grid-template-rows:repeat(${p.rows},${p.height}mm);column-gap:${p.gap}mm;row-gap:${p.rowGap}mm;`
     : `grid-template-columns:repeat(${p.columns},${p.width}mm);column-gap:${p.gap}mm;grid-auto-rows:${p.height}mm;`;
-  return `@page{size:${printWidth}mm ${printHeight}mm;margin:0}html,body{margin:0;padding:0;background:white;color:black}*{box-sizing:border-box}.label-page{display:grid;${pageStyle}width:${printWidth}mm;height:${printHeight}mm;break-after:page;page-break-after:always;overflow:hidden}.label-page:last-child{break-after:auto;page-break-after:auto}.sticker{position:relative;width:${p.width}mm;height:${p.height}mm;padding:1.2mm 4mm;font:7pt Arial,sans-serif;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;justify-content:center}.label-content{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.1mm;transform:translateY(-4mm)}.label-content.with-price{transform:translateY(-2mm)}.sticker p{flex:0 0 auto;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.05}.sticker .name{font-weight:bold;font-size:8pt}.sticker .code{text-align:center;font:700 6.8pt/1.05 monospace;letter-spacing:.15mm}.sticker .price{font-weight:bold;font-size:9pt}.sticker svg{max-width:100%;height:6.5mm;flex:0 0 6.5mm;align-self:center;shape-rendering:crispEdges}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
+  return `@page{size:${printWidth}mm ${printHeight}mm;margin:0}html,body{margin:0;padding:0;background:white;color:black}*{box-sizing:border-box}.label-page{display:grid;${pageStyle}width:${printWidth}mm;height:${printHeight}mm;break-after:page;page-break-after:always;overflow:hidden}.label-page:last-child{break-after:auto;page-break-after:auto}.sticker{position:relative;width:${p.width}mm;height:${p.height}mm;padding:1.2mm 4mm;font:7pt Arial,sans-serif;overflow:hidden;break-inside:avoid;display:flex;flex-direction:column;justify-content:center}.label-content{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:.1mm;transform:translateY(-4mm)}.label-content.with-price{transform:translateY(-2mm)}.sticker p{flex:0 0 auto;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.05}.sticker .name{font-weight:bold;font-size:8pt}.sticker .code{text-align:center;font:700 6.8pt/1.05 monospace;letter-spacing:.15mm}.sticker .price{font-weight:bold;font-size:9pt}.sticker svg{max-width:100%;height:7mm;flex:0 0 7mm;align-self:center;shape-rendering:crispEdges}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}`;
 }

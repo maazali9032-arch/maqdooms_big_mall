@@ -45,6 +45,8 @@ try {
   );
   assert(receiptSource.includes("Print 80 mm bill"));
   assert(!receiptSource.includes("Print 58 mm") && !receiptSource.includes("Print 56 mm"));
+  assert(receiptSource.includes("${node.outerHTML}"));
+  assert(!receiptSource.includes("${node.innerHTML}"));
   const printCss = receiptPrintStyles();
   assert(printCss.includes("@page{size:80mm auto") && printCss.includes("padding-left:4mm"));
   const billBarcode = receiptBarcodeGeometry("B00007");
