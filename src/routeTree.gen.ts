@@ -22,6 +22,7 @@ import { Route as AuthenticatedMyWorkRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPosRouteImport } from './routes/_authenticated/pos'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStockCountRouteImport } from './routes/_authenticated/stock-count'
 import { Route as AuthenticatedTailoringRouteImport } from './routes/_authenticated/tailoring'
 import { Route as AuthenticatedWhatsappRouteImport } from './routes/_authenticated/whatsapp'
 import { Route as AuthenticatedInventoryIndexRouteImport } from './routes/_authenticated/inventory.index'
@@ -92,6 +93,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStockCountRoute = AuthenticatedStockCountRouteImport.update({
+  id: '/stock-count',
+  path: '/stock-count',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTailoringRoute = AuthenticatedTailoringRouteImport.update({
   id: '/tailoring',
   path: '/tailoring',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/stock-count': typeof AuthenticatedStockCountRoute
   '/tailoring': typeof AuthenticatedTailoringRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/pos': typeof AuthenticatedPosRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/stock-count': typeof AuthenticatedStockCountRoute
   '/tailoring': typeof AuthenticatedTailoringRoute
   '/whatsapp': typeof AuthenticatedWhatsappRoute
   '/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/pos': typeof AuthenticatedPosRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/stock-count': typeof AuthenticatedStockCountRoute
   '/_authenticated/tailoring': typeof AuthenticatedTailoringRoute
   '/_authenticated/whatsapp': typeof AuthenticatedWhatsappRoute
   '/_authenticated/inventory/receiving': typeof AuthenticatedInventoryReceivingRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/reports'
     | '/settings'
+    | '/stock-count'
     | '/tailoring'
     | '/whatsapp'
     | '/inventory/receiving'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/pos'
     | '/reports'
     | '/settings'
+    | '/stock-count'
     | '/tailoring'
     | '/whatsapp'
     | '/inventory/receiving'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pos'
     | '/_authenticated/reports'
     | '/_authenticated/settings'
+    | '/_authenticated/stock-count'
     | '/_authenticated/tailoring'
     | '/_authenticated/whatsapp'
     | '/_authenticated/inventory/receiving'
@@ -340,6 +352,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stock-count': {
+      id: '/_authenticated/stock-count'
+      path: '/stock-count'
+      fullPath: '/stock-count'
+      preLoaderRoute: typeof AuthenticatedStockCountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tailoring': {
       id: '/_authenticated/tailoring'
       path: '/tailoring'
@@ -389,6 +408,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPosRoute: typeof AuthenticatedPosRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStockCountRoute: typeof AuthenticatedStockCountRoute
   AuthenticatedTailoringRoute: typeof AuthenticatedTailoringRoute
   AuthenticatedWhatsappRoute: typeof AuthenticatedWhatsappRoute
   AuthenticatedInventoryReceivingRoute: typeof AuthenticatedInventoryReceivingRoute
@@ -407,6 +427,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPosRoute: AuthenticatedPosRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStockCountRoute: AuthenticatedStockCountRoute,
   AuthenticatedTailoringRoute: AuthenticatedTailoringRoute,
   AuthenticatedWhatsappRoute: AuthenticatedWhatsappRoute,
   AuthenticatedInventoryReceivingRoute: AuthenticatedInventoryReceivingRoute,

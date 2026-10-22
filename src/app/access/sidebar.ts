@@ -94,6 +94,14 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       add("/tailoring", "fabric", "Fabric", "tailoring", Boxes, "production.view");
       add("/tailoring", "ongoing", "Ongoing Production", "tailoring", Scissors, "production.view");
     }
+    add(
+      "/stock-count",
+      undefined,
+      "Stock Count",
+      "stock_count",
+      ClipboardList,
+      "stock_count.perform",
+    );
     if (!roles.includes("stock_entry") && permissions.includes("production.receive"))
       add("/tailoring", "receipt", "Workshop receipt", "tailoring", Boxes, "production.receive");
     return namedSections([
@@ -200,6 +208,7 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       items: [
         { to: "/reports", label: "Reports & Analytics", icon: BarChart3, module: "reports" },
         { to: "/audit", label: "Audit Trail", icon: ClipboardList, module: "audit" },
+        { to: "/stock-count", label: "Stock Counts", icon: ClipboardList, module: "stock_count" },
         {
           to: "/reports",
           hash: "orders",

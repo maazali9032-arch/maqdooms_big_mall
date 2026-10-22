@@ -16,6 +16,7 @@ export type ModuleKey =
   | "whatsapp"
   | "reports"
   | "audit"
+  | "stock_count"
   | "access"
   | "gst"
   | "settings";
@@ -33,6 +34,7 @@ export const MODULE_PATHS: Record<ModuleKey, string> = {
   whatsapp: "/whatsapp",
   reports: "/reports",
   audit: "/audit",
+  stock_count: "/stock-count",
   access: "/access",
   gst: "/gst",
   settings: "/settings",
@@ -42,12 +44,12 @@ const ALL = Object.keys(MODULE_PATHS) as ModuleKey[];
 
 export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   owner: ALL,
-  stock_entry: ["stock_entry", "stock_transfer", "inventory", "settings"],
-  counter: ["pos", "settings"],
-  salesperson: ["salesperson_work", "settings"],
-  ecommerce_manager: ["ecommerce", "settings"],
-  tailor: ["tailoring", "settings"],
-  production: ["tailoring", "settings"],
+  stock_entry: ["stock_entry", "stock_transfer", "inventory", "stock_count", "settings"],
+  counter: ["pos", "stock_count", "settings"],
+  salesperson: ["salesperson_work", "stock_count", "settings"],
+  ecommerce_manager: ["ecommerce", "stock_count", "settings"],
+  tailor: ["tailoring", "stock_count", "settings"],
+  production: ["tailoring", "stock_count", "settings"],
 };
 
 /** Union of modules across all of the user's roles; Settings is always available. */
@@ -79,6 +81,8 @@ export function moduleForPath(pathname: string): ModuleKey | null {
  */
 export function canAccessPath(roles: string[], permissions: string[], pathname: string): boolean {
   if (pathname === "/gst" || pathname.startsWith("/gst/")) return roles.includes("owner");
+  if (pathname === "/stock-count" || pathname.startsWith("/stock-count/"))
+    return roles.includes("owner") || permissions.includes("stock_count.perform");
   if (
     pathname === "/tailoring" &&
     roles.includes("production") &&

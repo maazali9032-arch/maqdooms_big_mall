@@ -23,6 +23,7 @@ export const PAGE_NAMES: Record<string, string> = {
   "/reports": "Reports & Analytics",
   "/reports#orders": "Sales History",
   "/audit": "Audit Trail",
+  "/stock-count": "Stock Counts",
   "/my-work": "Salesperson Work",
   "/customers": "Customers",
   "/access": "Users & Permissions",
