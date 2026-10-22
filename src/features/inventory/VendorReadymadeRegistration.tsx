@@ -116,10 +116,15 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       await qc.invalidateQueries();
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
     },
-    onError: (error) =>
-      toast.error(
-        error instanceof Error ? error.message : "Ready-made stock could not be received",
-      ),
+    onError: (error) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : "Ready-made stock could not be received";
+      toast.error(message);
+    },
   });
   if (!allowed) return null;
   const total = rows.reduce((sum, row) => sum + validCount(row.quantity), 0);
