@@ -831,6 +831,8 @@ export function StockRegistration() {
                             <StockImageInput
                               label="Add image for this fabric type"
                               file={r.image}
+                              inheritedFile={batchImage}
+                              inheritedText="From batch"
                               onChange={(image) =>
                                 setRows((old) =>
                                   old.map((row) => (row.id === r.id ? { ...row, image } : row)),
@@ -922,6 +924,8 @@ export function StockRegistration() {
                                 compact
                                 label="Image"
                                 file={thaanDetail(r, n).image ?? null}
+                                inheritedFile={r.image ?? batchImage}
+                                inheritedText={r.image ? "From fabric type" : batchImage ? "From batch" : undefined}
                                 onChange={(image) =>
                                   setRows((old) =>
                                     old.map((row) => {

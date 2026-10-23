@@ -272,6 +272,8 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                   <StockImageInput
                     label="Add image for this readymade type"
                     file={row.image}
+                    inheritedFile={batchImage}
+                    inheritedText="From vendor batch"
                     onChange={(image) => updateRow(row.id, { image })}
                     disabled={receive.isPending}
                   />
@@ -361,6 +363,8 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                                 compact
                                 label="Image"
                                 file={piece.image ?? null}
+                                inheritedFile={row.image ?? batchImage}
+                                inheritedText={row.image ? "From type" : batchImage ? "From batch" : undefined}
                                 onChange={(image) => updatePiece(row, pieceIndex, { image })}
                                 disabled={receive.isPending}
                               />

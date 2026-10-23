@@ -359,6 +359,8 @@ export function ProductionReceipt({
                           <StockImageInput
                             label="Add image for this piece"
                             file={pieceImages[i + 1] ?? null}
+                            inheritedFile={jobImage}
+                            inheritedText="From production"
                             onChange={(image) =>
                               setPieceImages((current) => ({ ...current, [i + 1]: image }))
                             }
