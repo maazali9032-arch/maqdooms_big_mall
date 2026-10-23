@@ -19,6 +19,8 @@ import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { createStockBatch } from "./stock-batch-request";
+import { StockImageInput } from "./StockImageInput";
+import { saveStockImages } from "./stock-images";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   calculateTaxPaise,
@@ -65,6 +67,10 @@ type Work =
         actual_gst_paise: number | null;
         actual_supplier_paise: number | null;
       };
+      imagePlan?: {
+        batch: File | null;
+        types: { image: File | null; pieces: (File | null)[] }[];
+      };
     }
   | {
       kind: "details";
@@ -81,7 +87,8 @@ type EntryRow = {
   quantity: string;
   sharedLength: string;
   sharedCp: string;
-  details: { colour: string; length: string; cp: string }[];
+  image: File | null;
+  details: { colour: string; length: string; cp: string; image?: File | null }[];
 };
 const emptyRow = (): EntryRow => ({
   id: crypto.randomUUID(),
@@ -89,6 +96,7 @@ const emptyRow = (): EntryRow => ({
   quantity: "",
   sharedLength: "",
   sharedCp: "",
+  image: null,
   details: [],
 });
 const thaanDetail = (row: EntryRow, index: number) => ({
@@ -169,6 +177,7 @@ export function StockRegistration() {
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
+  const [batchImage, setBatchImage] = useState<File | null>(null);
   const [supplierInvoiceAvailable, setSupplierInvoiceAvailable] = useState<"no" | "yes">("no");
   const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
@@ -297,6 +306,32 @@ export function StockRegistration() {
                     p_cp: w.cp,
                   });
       if (result.error) throw result.error;
+      if (w.kind === "batch" && w.imagePlan) {
+        if (!userId) throw new Error("Sign in again before saving stock images");
+        const { data: created, error: catalogError } = await supabase.rpc(
+          "stock_registration_catalog",
+          { p_batch: String(result.data) },
+        );
+        if (catalogError) throw catalogError;
+        const createdBatch = (created as unknown as Batch[])[0];
+        if (!createdBatch) throw new Error("Created batch could not be loaded for its images");
+        await saveStockImages(
+          userId,
+          createdBatch.fabric_types.flatMap((fabric, typeIndex) =>
+            fabric.variants.flatMap((variant, pieceIndex) => {
+              const plan = w.imagePlan!.types[typeIndex];
+              const file = plan?.pieces[pieceIndex] ?? plan?.image ?? w.imagePlan!.batch;
+              return file && (variant as Variant & { thaan_id?: string }).thaan_id
+                ? [{
+                    kind: "thaan" as const,
+                    itemId: (variant as Variant & { thaan_id: string }).thaan_id,
+                    file,
+                  }]
+                : [];
+            }),
+          ),
+        );
+      }
       return result.data;
     },
     onSuccess: async (id, args) => {
@@ -307,6 +342,7 @@ export function StockRegistration() {
         setPrinted([]);
         setStage("labels");
         setRows([emptyRow()]);
+        setBatchImage(null);
       } else if (args.work.kind === "append" || args.work.kind === "fabric") {
         setExtraCount("");
         setExtraName("");
@@ -621,6 +657,17 @@ export function StockRegistration() {
                     <p className="ml-7 mt-1 text-xs text-muted-foreground">
                       Batch ID and individual barcode identities are generated on save.
                     </p>
+                    <div className="ml-7 mt-3">
+                      <StockImageInput
+                        label="Add one image for the entire batch"
+                        file={batchImage}
+                        onChange={setBatchImage}
+                        disabled={frozen}
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Used by every Thaan unless its fabric type or row has another image.
+                      </p>
+                    </div>
                   </div>
                   <div className="ml-2 space-y-5 border-l-2 border-primary/25 pl-3 sm:ml-4 sm:pl-5">
                     {rows.map((r, i) => (
@@ -780,6 +827,21 @@ export function StockRegistration() {
                               Apply to all {rowCount(r.quantity) || ""} Thaans
                             </Button>
                           </div>
+                          <div className="mt-3 border-t pt-3">
+                            <StockImageInput
+                              label="Add image for this fabric type"
+                              file={r.image}
+                              onChange={(image) =>
+                                setRows((old) =>
+                                  old.map((row) => (row.id === r.id ? { ...row, image } : row)),
+                                )
+                              }
+                              disabled={frozen}
+                            />
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Applies to this fabric type only and overrides the batch image.
+                            </p>
+                          </div>
                         </div>
                         <div
                           className="ml-2 mt-3 space-y-2 border-l border-primary/25 pl-3 sm:ml-4 sm:pl-4"
@@ -793,7 +855,7 @@ export function StockRegistration() {
                           {Array.from({ length: rowCount(r.quantity) }, (_, n) => (
                             <div
                               key={n}
-                              className="relative grid min-w-0 gap-2 rounded-md border bg-card p-3 before:absolute before:-left-3 before:top-5 before:w-3 before:border-t before:border-primary/25 sm:grid-cols-3 lg:grid-cols-[minmax(6rem,.8fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_2rem] sm:before:-left-4 sm:before:w-4"
+                              className="relative grid min-w-0 gap-2 rounded-md border bg-card p-3 before:absolute before:-left-3 before:top-5 before:w-3 before:border-t before:border-primary/25 sm:grid-cols-3 lg:grid-cols-[minmax(6rem,.8fr)_repeat(3,minmax(0,1fr))_auto_2rem] sm:before:-left-4 sm:before:w-4"
                             >
                               <div className="flex items-center gap-2 sm:col-span-3 lg:col-span-1">
                                 <Barcode className="size-4 shrink-0 text-primary" />
@@ -856,6 +918,22 @@ export function StockRegistration() {
                                   />
                                 </div>
                               ))}
+                              <StockImageInput
+                                compact
+                                label="Image"
+                                file={thaanDetail(r, n).image ?? null}
+                                onChange={(image) =>
+                                  setRows((old) =>
+                                    old.map((row) => {
+                                      if (row.id !== r.id) return row;
+                                      const details = [...row.details];
+                                      details[n] = { ...thaanDetail(row, n), image };
+                                      return { ...row, details };
+                                    }),
+                                  )
+                                }
+                                disabled={frozen}
+                              />
                               {gstEnabled &&
                                 supplierInvoiceAvailable === "yes" &&
                                 (() => {
@@ -1014,6 +1092,16 @@ export function StockRegistration() {
                                 : null,
                             })),
                           })),
+                          imagePlan: {
+                            batch: batchImage,
+                            types: rows.map((r) => ({
+                              image: r.image,
+                              pieces: Array.from(
+                                { length: Number(r.quantity) },
+                                (_, n) => thaanDetail(r, n).image ?? null,
+                              ),
+                            })),
+                          },
                           ...(supplierInvoiceAvailable === "yes"
                             ? {
                                 purchase: {

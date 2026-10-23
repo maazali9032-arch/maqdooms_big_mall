@@ -13,10 +13,15 @@ import { printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { fabricMoneyInput as receiptCost } from "./fabric-entry-input";
 import { reportMoney } from "@/features/reports/report-value";
+import { StockImageInput } from "./StockImageInput";
+import { saveStockImages } from "./stock-images";
 import type { Database } from "@/integrations/supabase/types";
 type Functions = Database["public"]["Functions"];
 type ScanRequest = { p_request: string; p_code: string };
-type PricedReceipt = ScanRequest & { p_prices: { piece_number: number; sp_paise: number }[] };
+type PricedReceipt = ScanRequest & {
+  p_prices: { piece_number: number; sp_paise: number }[];
+  images: { all: File | null; pieces: Record<number, File | null> };
+};
 type Piece = {
   id: string;
   job_id: string;
@@ -45,7 +50,7 @@ export function ProductionReceipt({
   hideScanner?: boolean;
   onBusyChange?: (busy: boolean) => void;
 }) {
-  const { isOwner, can } = useSession();
+  const { isOwner, can, userId } = useSession();
   const receiveAllowed = isOwner || can("production.receive");
   const priceAllowed = isOwner || can("stock.price_finished");
   const [code, setCode] = useState(""),
@@ -53,6 +58,8 @@ export function ProductionReceipt({
   const [reason, setReason] = useState("");
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [allPrice, setAllPrice] = useState("");
+  const [jobImage, setJobImage] = useState<File | null>(null);
+  const [pieceImages, setPieceImages] = useState<Record<number, File | null>>({});
   const [receiptPending, setReceiptPending] = useState<PricedReceipt | null>(null);
   const [pricePending, setPricePending] = useState<
     Functions["set_workshop_product_sp"]["Args"] | null
@@ -98,6 +105,8 @@ export function ProductionReceipt({
       setScanned(id);
       setPrices({});
       setAllPrice("");
+      setJobImage(null);
+      setPieceImages({});
       setReason("");
       refresh();
       onLoaded?.();
@@ -109,17 +118,33 @@ export function ProductionReceipt({
   const receivePriced = useMutation({
     mutationFn: async (request: PricedReceipt) => {
       setReceiptPending(request);
+      const { images, ...rpcRequest } = request;
       const { error } = await (
         supabase.rpc as unknown as (
           name: string,
           args: Record<string, unknown>,
         ) => Promise<{ error: Error | null }>
-      ).call(supabase, "receive_production_barcode_priced", request);
+      ).call(supabase, "receive_production_barcode_priced", rpcRequest);
       if (error) throw error;
+      const { data: received, error: piecesError } = await supabase.rpc(
+        "workshop_production_pieces",
+        { p_job: job.data!.id },
+      );
+      if (piecesError) throw piecesError;
+      if (!userId) throw new Error("Sign in again before saving stock images");
+      await saveStockImages(
+        userId,
+        (received as unknown as Piece[]).flatMap((piece) => {
+          const file = images.pieces[piece.piece_number] ?? images.all;
+          return file ? [{ kind: "finished_product" as const, itemId: piece.id, file }] : [];
+        }),
+      );
     },
     onSuccess: () => {
       setReceiptPending(null);
       setPrices({});
+      setJobImage(null);
+      setPieceImages({});
       refresh();
       onLoaded?.();
       toast.success("Finished pieces received with saved SP and barcodes");
@@ -142,7 +167,12 @@ export function ProductionReceipt({
         if (sp <= 0) throw new Error(`Enter a positive SP for piece ${i + 1}`);
         return { piece_number: i + 1, sp_paise: sp };
       });
-      receivePriced.mutate({ p_request: crypto.randomUUID(), p_code: job.data.code, p_prices });
+      receivePriced.mutate({
+        p_request: crypto.randomUUID(),
+        p_code: job.data.code,
+        p_prices,
+        images: { all: jobImage, pieces: pieceImages },
+      });
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -263,6 +293,17 @@ export function ProductionReceipt({
               )}
               {priceAllowed && (
                 <>
+                  <div className="rounded-lg bg-muted/30 p-3">
+                    <StockImageInput
+                      label="Add one image for all finished pieces"
+                      file={jobImage}
+                      onChange={setJobImage}
+                      disabled={frozen}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Each piece uses this image unless its own row has another image.
+                    </p>
+                  </div>
                   <div className="flex flex-wrap items-end gap-2">
                     <label className="text-sm">
                       SP for all pieces ₹
@@ -298,7 +339,7 @@ export function ProductionReceipt({
                     {Array.from({ length: job.data.quantity }, (_, i) => {
                       const spec = job.data.pieces?.find((p) => p.piece_number === i + 1);
                       return (
-                        <label key={i} className="space-y-1 rounded-lg border p-3 text-sm">
+                        <div key={i} className="space-y-1 rounded-lg border p-3 text-sm">
                           <strong>
                             Piece {i + 1} · {spec?.product ?? job.data.product}
                           </strong>
@@ -315,7 +356,15 @@ export function ProductionReceipt({
                               setPrices({ ...prices, [`piece-${i + 1}`]: e.target.value })
                             }
                           />
-                        </label>
+                          <StockImageInput
+                            label="Add image for this piece"
+                            file={pieceImages[i + 1] ?? null}
+                            onChange={(image) =>
+                              setPieceImages((current) => ({ ...current, [i + 1]: image }))
+                            }
+                            disabled={frozen}
+                          />
+                        </div>
                       );
                     })}
                   </div>

@@ -21,6 +21,8 @@ import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { quantityInput } from "./ledger-quantity";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { loadStockImageUrls } from "./stock-images";
+import { StockImage } from "./StockImage";
 export type WorkshopRow = {
   thaan_id: string;
   stock_id: string;
@@ -77,6 +79,11 @@ export function WorkshopFabricStock({
   onIncompleteChange?: (value: boolean) => void;
 }) {
   const catalog = useWorkshopInventory();
+  const imageUrls = useQuery({
+    queryKey: ["stock-item-images", "thaan", (catalog.data ?? []).map((row) => row.thaan_id)],
+    enabled: !!catalog.data?.length,
+    queryFn: () => loadStockImageUrls("thaan", (catalog.data ?? []).map((row) => row.thaan_id)),
+  });
   const { can, isOwner } = useSession();
   const qc = useQueryClient();
   const [localSearch, setLocalSearch] = useState("");
@@ -267,6 +274,7 @@ export function WorkshopFabricStock({
                         <thead className="bg-muted/50 text-xs text-muted-foreground">
                           <tr>
                             <th className="p-2">Thaan</th>
+                            <th>Image</th>
                             <th>Colour</th>
                             <th>Recorded length</th>
                             <th>Workshop available</th>
@@ -289,6 +297,12 @@ export function WorkshopFabricStock({
                                 <p className="mt-1 font-mono text-[10px] text-muted-foreground">
                                   {r.barcode}
                                 </p>
+                              </td>
+                              <td>
+                                <StockImage
+                                  src={imageUrls.data?.get(r.thaan_id)}
+                                  alt={`${r.name} ${r.barcode}`}
+                                />
                               </td>
                               <td>{r.colour || "Not recorded"}</td>
                               <td>{metres(r.saved_length_mm)}</td>

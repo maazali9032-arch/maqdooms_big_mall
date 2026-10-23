@@ -13,8 +13,10 @@ import { reportMoney } from "@/features/reports/report-value";
 import { BarcodeSticker } from "./BarcodeSticker";
 import { printFabricLabel } from "./fabric-label";
 import { fabricMoneyInput } from "./fabric-entry-input";
+import { StockImageInput } from "./StockImageInput";
+import { saveStockImages } from "./stock-images";
 
-type Piece = { style: string; size: string; cp: string; sp: string };
+type Piece = { style: string; size: string; cp: string; sp: string; image?: File | null };
 type Entry = {
   id: string;
   productName: string;
@@ -23,6 +25,7 @@ type Entry = {
   sharedSize: string;
   sharedCp: string;
   sharedSp: string;
+  image: File | null;
   pieces: Piece[];
 };
 type ResultPiece = { id: string; barcode: string; product: string; size: string; sp_paise: string };
@@ -43,6 +46,7 @@ const emptyEntry = (): Entry => ({
   sharedSize: "",
   sharedCp: "",
   sharedSp: "",
+  image: null,
   pieces: [],
 });
 const validCount = (value: string) =>
@@ -56,7 +60,7 @@ const pieceFor = (entry: Entry, index: number): Piece => ({
 });
 
 export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void }) {
-  const { isOwner, roles, can } = useSession();
+  const { isOwner, roles, can, userId } = useSession();
   const allowed = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const labels = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
@@ -70,6 +74,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
+  const [batchImage, setBatchImage] = useState<File | null>(null);
   const [rows, setRows] = useState<Entry[]>([emptyEntry()]);
   const [printed, setPrinted] = useState<ResultPiece[]>([]);
   const [batchCode, setBatchCode] = useState<string | null>(null);
@@ -84,6 +89,11 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   });
   const receive = useMutation({
     mutationFn: async () => {
+      const effectiveImages = rows.flatMap((row) =>
+        Array.from({ length: validCount(row.quantity) }, (_, index) =>
+          pieceFor(row, index).image ?? row.image ?? batchImage,
+        ),
+      );
       const items = rows.flatMap((row) =>
         Array.from({ length: validCount(row.quantity) }, (_, index) => {
           const piece = pieceFor(row, index);
@@ -105,7 +115,17 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
         p_items: items,
       });
       if (error) throw error;
-      return data as ReceiveResult;
+      const result = data as ReceiveResult;
+      if (!userId) throw new Error("Sign in again before saving stock images");
+      await saveStockImages(
+        userId,
+        result.pieces.flatMap((piece, index) =>
+          effectiveImages[index]
+            ? [{ kind: "finished_product" as const, itemId: piece.id, file: effectiveImages[index]! }]
+            : [],
+        ),
+      );
+      return result;
     },
     onSuccess: async (result) => {
       setPrinted(result.pieces);
@@ -113,6 +133,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       setRows([emptyEntry()]);
       setSupplier("");
       setRemarks("");
+      setBatchImage(null);
       await qc.invalidateQueries();
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
     },
@@ -183,6 +204,17 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
             />
           </div>
         </fieldset>
+        <div className="mt-4 border-t pt-4">
+          <StockImageInput
+            label="Add one image for this entire vendor batch"
+            file={batchImage}
+            onChange={setBatchImage}
+            disabled={receive.isPending}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Used by every garment unless its type or individual row has another image.
+          </p>
+        </div>
       </Panel>
       <Panel
         title="3. Readymade Types & Quantities"
@@ -236,6 +268,17 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                     Enter 1–500 pieces to create their rows.
                   </div>
                 </fieldset>
+                <div className="mt-3">
+                  <StockImageInput
+                    label="Add image for this readymade type"
+                    file={row.image}
+                    onChange={(image) => updateRow(row.id, { image })}
+                    disabled={receive.isPending}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Applies to this type only and overrides the batch image.
+                  </p>
+                </div>
                 <>
                   <fieldset
                     disabled={receive.isPending}
@@ -299,7 +342,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                           return (
                             <div
                               key={pieceIndex}
-                              className="grid gap-2 rounded-lg border bg-background p-3 sm:grid-cols-[180px_repeat(4,minmax(0,1fr))]"
+                              className="grid gap-2 rounded-lg border bg-background p-3 sm:grid-cols-[180px_repeat(4,minmax(0,1fr))_auto]"
                             >
                               <div className="self-center text-sm font-semibold">
                                 Garment {String(pieceIndex + 1).padStart(2, "0")}
@@ -313,6 +356,13 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                                 onChange={(event) =>
                                   updatePiece(row, pieceIndex, { style: event.target.value })
                                 }
+                              />
+                              <StockImageInput
+                                compact
+                                label="Image"
+                                file={piece.image ?? null}
+                                onChange={(image) => updatePiece(row, pieceIndex, { image })}
+                                disabled={receive.isPending}
                               />
                               <Input
                                 value={piece.size}

@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { formatDateTime } from "@/shared/utils/format";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { loadStockImageUrls } from "./stock-images";
+import { StockImage } from "./StockImage";
 
 type Piece = {
   size?: string | null;
@@ -111,6 +113,19 @@ export function FinishedProductInventory() {
       if (error) throw error;
       return data as unknown as Movement[];
     },
+  });
+  const inventoryImages = useQuery({
+    queryKey: [
+      "stock-item-images",
+      "finished_product",
+      (inventory.data?.pages.flat() ?? []).map((piece) => piece.id),
+    ],
+    enabled: !!inventory.data?.pages.length,
+    queryFn: () =>
+      loadStockImageUrls(
+        "finished_product",
+        (inventory.data?.pages.flat() ?? []).map((piece) => piece.id),
+      ),
   });
   const transfer = useMutation({
     mutationFn: async () => {
@@ -371,6 +386,7 @@ export function FinishedProductInventory() {
               <thead>
                 <tr>
                   <th>Move</th>
+                  <th>Image</th>
                   <th>Product Barcode / piece</th>
                   <th>Product / Design / job</th>
                   <th>Current location</th>
@@ -405,6 +421,9 @@ export function FinishedProductInventory() {
                           )
                         }
                       />
+                    </td>
+                    <td>
+                      <StockImage src={inventoryImages.data?.get(p.id)} alt={`${p.product} ${p.barcode}`} />
                     </td>
                     <td className="break-all">
                       <label

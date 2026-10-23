@@ -6,6 +6,8 @@ import { QueryState } from "@/shared/components/query-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/shared/utils/units";
+import { loadStockImageUrls } from "./stock-images";
+import { StockImage } from "./StockImage";
 
 type VendorPiece = {
   id: string;
@@ -42,6 +44,11 @@ export function VendorReadymadeStock() {
       if (error) throw error;
       return data as VendorPiece[];
     },
+  });
+  const imageUrls = useQuery({
+    queryKey: ["stock-item-images", "finished_product", (stock.data ?? []).map((piece) => piece.id)],
+    enabled: !!stock.data?.length,
+    queryFn: () => loadStockImageUrls("finished_product", (stock.data ?? []).map((piece) => piece.id)),
   });
 
   return (
@@ -81,6 +88,7 @@ export function VendorReadymadeStock() {
             <thead className="bg-muted/50">
               <tr>
                 {[
+                  "Image",
                   "R barcode",
                   "Garment",
                   "Style / size",
@@ -100,6 +108,9 @@ export function VendorReadymadeStock() {
             <tbody>
               {stock.data.map((piece) => (
                 <tr key={piece.id} className="border-b">
+                  <td className="p-2">
+                    <StockImage src={imageUrls.data?.get(piece.id)} alt={`${piece.product} ${piece.barcode}`} />
+                  </td>
                   <td className="p-2 font-mono text-xs">{piece.barcode}</td>
                   <td className="p-2 font-medium">{piece.product}</td>
                   <td className="p-2">
