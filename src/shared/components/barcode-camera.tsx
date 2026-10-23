@@ -135,7 +135,7 @@ export function BarcodeCameraButton({
       <Button
         type="button"
         variant="outline"
-        className="sm:hidden"
+        className="w-full sm:hidden"
         disabled={disabled}
         onClick={() => setOpen(true)}
       >

@@ -25,7 +25,7 @@ export function BarcodeEntry({
 }) {
   return (
     <form
-      className="flex min-w-0 flex-wrap gap-2"
+      className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap"
       onSubmit={(event) => {
         event.preventDefault();
         if (!disabled && value.trim()) onScan(value.trim());
@@ -36,12 +36,12 @@ export function BarcodeEntry({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder ?? "Scan or type a barcode and press Enter"}
-        className="min-w-0 flex-1"
+        className="col-span-2 min-w-0 w-full sm:flex-1"
         autoComplete="off"
         spellCheck={false}
         disabled={disabled}
       />
-      <Button type="submit" disabled={disabled || !value.trim()}>
+      <Button type="submit" className="w-full sm:w-auto" disabled={disabled || !value.trim()}>
         {action}
       </Button>
       <BarcodeCameraButton

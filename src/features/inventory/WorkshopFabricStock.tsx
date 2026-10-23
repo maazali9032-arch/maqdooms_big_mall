@@ -270,7 +270,7 @@ export function WorkshopFabricStock({
                       {rows[0]!.type_name}
                       <span className="font-normal text-muted-foreground">({rows.length})</span>
                     </h3>
-                    <div className="overflow-x-auto">
+                    <div className="hidden overflow-x-auto sm:block">
                       <table className="w-full min-w-[650px] text-left text-sm">
                         <thead className="bg-muted/50 text-xs text-muted-foreground">
                           <tr>
@@ -355,6 +355,47 @@ export function WorkshopFabricStock({
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                    <div className="space-y-2 sm:hidden">
+                      {rows.map((r) => (
+                        <article key={r.thaan_id} className="rounded-lg border bg-card p-3">
+                          <div className="flex gap-3">
+                            <StockImage
+                              src={imageUrls.data?.get(r.thaan_id)}
+                              alt={`${r.name} ${r.barcode}`}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <Button
+                                variant="link"
+                                className="h-auto justify-start whitespace-normal p-0 text-left font-semibold"
+                                onClick={() => open(r)}
+                              >
+                                {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
+                              </Button>
+                              <p className="mt-1 font-mono text-xs text-muted-foreground">{r.barcode}</p>
+                              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                <div><dt className="text-muted-foreground">Colour</dt><dd>{r.colour || "Not recorded"}</dd></div>
+                                <div><dt className="text-muted-foreground">Recorded</dt><dd>{metres(r.saved_length_mm)}</dd></div>
+                                <div><dt className="text-muted-foreground">Available</dt><dd>{r.unlocated ? "Needs reconciliation" : metres(r.workshop_mm)}</dd></div>
+                                <div><dt className="text-muted-foreground">State</dt><dd className={r.incomplete ? "text-amber-700" : ""}>{r.incomplete ? "Incomplete" : r.original_mm === null ? "Awaiting activation" : r.status}</dd></div>
+                              </dl>
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <ExistingStockImageEditor
+                              itemId={r.thaan_id}
+                              kind="thaan"
+                              name={r.name}
+                              barcode={r.barcode}
+                              imageUrl={imageUrls.data?.get(r.thaan_id)}
+                              canManage={isOwner || can("inventory.receive")}
+                            />
+                            <Button variant="outline" size="sm" onClick={() => setLabel(r)}>
+                              <Barcode className="size-4" /> Barcode
+                            </Button>
+                          </div>
+                        </article>
+                      ))}
                     </div>
                   </section>
                 ))}
