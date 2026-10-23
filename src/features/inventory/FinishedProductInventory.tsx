@@ -13,6 +13,7 @@ import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { loadStockImageUrls } from "./stock-images";
 import { StockImage } from "./StockImage";
+import { ExistingStockImageEditor } from "./ExistingStockImageEditor";
 
 type Piece = {
   size?: string | null;
@@ -424,6 +425,16 @@ export function FinishedProductInventory() {
                     </td>
                     <td>
                       <StockImage src={inventoryImages.data?.get(p.id)} alt={`${p.product} ${p.barcode}`} />
+                      <div className="mt-1">
+                        <ExistingStockImageEditor
+                          itemId={p.id}
+                          kind="finished_product"
+                          name={p.product}
+                          barcode={p.barcode}
+                          imageUrl={inventoryImages.data?.get(p.id)}
+                          canManage={isOwner || can("production.receive") || can("inventory.receive")}
+                        />
+                      </div>
                     </td>
                     <td className="break-all">
                       <label

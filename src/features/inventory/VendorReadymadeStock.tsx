@@ -6,8 +6,10 @@ import { QueryState } from "@/shared/components/query-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/shared/utils/units";
+import { useSession } from "@/app/providers/session";
 import { loadStockImageUrls } from "./stock-images";
 import { StockImage } from "./StockImage";
+import { ExistingStockImageEditor } from "./ExistingStockImageEditor";
 
 type VendorPiece = {
   id: string;
@@ -32,6 +34,7 @@ type Rpc = (
 ) => Promise<{ data: unknown; error: Error | null }>;
 
 export function VendorReadymadeStock() {
+  const { isOwner, can } = useSession();
   const [search, setSearch] = useState("");
   const [applied, setApplied] = useState("");
   const stock = useQuery({
@@ -110,6 +113,16 @@ export function VendorReadymadeStock() {
                 <tr key={piece.id} className="border-b">
                   <td className="p-2">
                     <StockImage src={imageUrls.data?.get(piece.id)} alt={`${piece.product} ${piece.barcode}`} />
+                    <div className="mt-1">
+                      <ExistingStockImageEditor
+                        itemId={piece.id}
+                        kind="finished_product"
+                        name={piece.product}
+                        barcode={piece.barcode}
+                        imageUrl={imageUrls.data?.get(piece.id)}
+                        canManage={isOwner || can("inventory.receive")}
+                      />
+                    </div>
                   </td>
                   <td className="p-2 font-mono text-xs">{piece.barcode}</td>
                   <td className="p-2 font-medium">{piece.product}</td>

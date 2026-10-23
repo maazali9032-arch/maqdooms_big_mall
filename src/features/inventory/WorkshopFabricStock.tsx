@@ -23,6 +23,7 @@ import { fabricMoneyInput } from "./fabric-entry-input";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { loadStockImageUrls } from "./stock-images";
 import { StockImage } from "./StockImage";
+import { ExistingStockImageEditor } from "./ExistingStockImageEditor";
 export type WorkshopRow = {
   thaan_id: string;
   stock_id: string;
@@ -303,6 +304,16 @@ export function WorkshopFabricStock({
                                   src={imageUrls.data?.get(r.thaan_id)}
                                   alt={`${r.name} ${r.barcode}`}
                                 />
+                                <div className="mt-1">
+                                  <ExistingStockImageEditor
+                                    itemId={r.thaan_id}
+                                    kind="thaan"
+                                    name={r.name}
+                                    barcode={r.barcode}
+                                    imageUrl={imageUrls.data?.get(r.thaan_id)}
+                                    canManage={isOwner || can("inventory.receive")}
+                                  />
+                                </div>
                               </td>
                               <td>{r.colour || "Not recorded"}</td>
                               <td>{metres(r.saved_length_mm)}</td>
