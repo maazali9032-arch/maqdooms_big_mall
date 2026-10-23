@@ -1,3 +1,9 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { CounterReceipt } from "@/features/pos/CounterBillReceipt";
+import { CustomerReceiptContent } from "@/features/pos/ReceiptContent";
+import { receiptPrintStyles } from "@/features/pos/receipt-format";
+
 export type CustomerTailoringBill = {
   salesperson_user_id?: string | null;
   order_code: string;
@@ -6,36 +12,71 @@ export type CustomerTailoringBill = {
   created_at: string;
   customer_snapshot: { name: string | null; phone?: string | null; whatsapp_phone?: string | null };
   final_customer_price_paise: number | null;
-  issues: { fabric_name: string; batch_code: string; quantity_mm: number }[];
+  issues: { fabric_name: string; batch_code: string; quantity_mm: number; barcode?: string }[];
 };
-const escape = (value: unknown) =>
-  String(value ?? "").replace(
-    /[&<>"']/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-  );
-export function customerTailoringBillHtml(bill: CustomerTailoringBill) {
+
+function receiptForCustomerTailoring(bill: CustomerTailoringBill): CounterReceipt {
   if (
     !Number.isSafeInteger(bill.final_customer_price_paise) ||
     bill.final_customer_price_paise! < 0
-  )
+  ) {
     throw new Error("Authorized final customer price required for bill");
-  // Explicit safe projection: never serialize Owner cost data into print content.
-  const price = BigInt(bill.final_customer_price_paise!);
-  const displayPrice = `${price / 100n}.${(price % 100n).toString().padStart(2, "0")}`;
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(bill.order_code)}</title>
-  <style>body{font:16px system-ui;max-width:700px;margin:24px auto;padding:0 16px}table{width:100%;border-collapse:collapse}td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left;overflow-wrap:anywhere}@page{margin:12mm}@media print{body{margin:0;padding:0}thead{display:table-header-group}tr{break-inside:avoid}}</style></head>
-  <body><h1>Maqdoom’s Big Mall</h1><h2>Customer Tailoring Order</h2><p>${escape(bill.order_code)}</p>
-  <p>${escape(bill.customer_snapshot.name)} · ${escape(bill.customer_snapshot.phone)}<br>WhatsApp: ${escape(bill.customer_snapshot.whatsapp_phone)}</p>
-  <p>Garment: ${escape(bill.garment)}<br>Location: ${escape(bill.source_name)}<br>Date: ${escape(bill.created_at)}${bill.salesperson_user_id ? `<br>Salesperson ID: ${escape(bill.salesperson_user_id)}` : ""}</p>
-  <table><thead><tr><th>Fabric / Batch</th><th>Required quantity</th></tr></thead><tbody>${bill.issues.map((i) => `<tr><td>${escape(i.fabric_name)} / ${escape(i.batch_code)}</td><td>${escape(i.quantity_mm / 1000)} m</td></tr>`).join("")}</tbody></table>
-  <h3>Final customer price: ₹${displayPrice}</h3></body></html>`;
+  }
+  const total = String(bill.final_customer_price_paise);
+  return {
+    id: bill.order_code,
+    code: bill.order_code,
+    created_at: bill.created_at,
+    total_paise: total,
+    paid_amount_paise: "0",
+    balance_paise: total,
+    paid: false,
+    paid_at: null,
+    source: bill.source_name,
+    salesperson: "",
+    customer: { name: bill.customer_snapshot.name, phone: bill.customer_snapshot.phone ?? null },
+    lines: [
+      {
+        id: bill.order_code,
+        kind: "tailoring",
+        barcode: null,
+        name: bill.garment,
+        size: null,
+        design: null,
+        quantity: "1",
+        unit: "job",
+        price_paise: null,
+        amount_paise: total,
+        job_id: null,
+        job_code: bill.order_code,
+        delivery_date: null,
+        fabrics: bill.issues.map((issue) => ({
+          barcode: issue.barcode ?? issue.batch_code,
+          name: issue.fabric_name,
+          quantity_mm: String(issue.quantity_mm),
+        })),
+      },
+    ],
+  };
 }
+
+export function customerTailoringBillHtml(bill: CustomerTailoringBill) {
+  const receipt = receiptForCustomerTailoring(bill);
+  const content = renderToStaticMarkup(
+    createElement(
+      "div",
+      { className: "thermal-invoice customer-invoice" },
+      createElement(CustomerReceiptContent, { receipt }),
+    ),
+  );
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${bill.order_code.replace(/[<>]/g, "")}</title><style>${receiptPrintStyles()}</style></head><body>${content}</body></html>`;
+}
+
 export function printCustomerTailoringBill(bill: CustomerTailoringBill) {
-  const html = customerTailoringBillHtml(bill);
-  const popup = window.open("", "_blank", "width=800,height=700");
+  const popup = window.open("", "_blank", "width=520,height=760");
   if (!popup) throw new Error("Allow the bill print window");
-  popup.document.write(html);
+  popup.document.write(customerTailoringBillHtml(bill));
   popup.document.close();
   popup.focus();
-  popup.print();
+  setTimeout(() => popup.print(), 150);
 }

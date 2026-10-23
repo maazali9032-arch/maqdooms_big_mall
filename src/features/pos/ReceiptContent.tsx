@@ -31,6 +31,11 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   const mallBrand = / big mall$/i.test(tradingName);
   const fabricOnly = receipt.lines.every((line) => line.kind === "fabric");
   const tailoring = receipt.lines.some((line) => line.kind === "tailoring");
+  const hasTailoringBreakdown = receipt.lines.some(
+    (line) =>
+      line.kind === "tailoring" &&
+      (line.fabric_amount_paise != null || line.stitching_paise != null),
+  );
   const received = receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0");
   const balance =
     receipt.balance_paise ?? (BigInt(receipt.total_paise) - BigInt(received)).toString();
@@ -280,7 +285,7 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           Item rates and amounts {priceMode === "inclusive" ? "include GST" : "exclude GST"}.
         </p>
       )}
-      {tailoring && (
+      {tailoring && hasTailoringBreakdown && (
         <div className="invoice-cost-summary space-y-1 border-t pt-2 text-xs">
           <p className="font-semibold">
             Sale summary
