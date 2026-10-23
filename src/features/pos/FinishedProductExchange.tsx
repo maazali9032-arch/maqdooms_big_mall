@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel } from "@/shared/components/page";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import type { CounterReceipt } from "./CounterBillReceipt";
 
 type Props = {
@@ -80,6 +81,10 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
             if (code && !returns.includes(code)) setReturns([...returns, code]);
             setReturnBarcode("");
           }}
+          onCameraScan={(code) => {
+            if (!returns.includes(code)) setReturns([...returns, code]);
+            setReturnBarcode("");
+          }}
           onRemove={(code) => setReturns(returns.filter((value) => value !== code))}
         />
         <BarcodeList
@@ -92,6 +97,10 @@ export function FinishedProductExchange({ receipt, disabled, onComplete }: Props
           onAdd={() => {
             const code = replacementBarcode.trim();
             if (code && !replacements.includes(code)) setReplacements([...replacements, code]);
+            setReplacementBarcode("");
+          }}
+          onCameraScan={(code) => {
+            if (!replacements.includes(code)) setReplacements([...replacements, code]);
             setReplacementBarcode("");
           }}
           onRemove={(code) => setReplacements(replacements.filter((value) => value !== code))}
@@ -140,6 +149,7 @@ function BarcodeList({
   disabled,
   onChange,
   onAdd,
+  onCameraScan,
   onRemove,
 }: {
   label: string;
@@ -149,6 +159,7 @@ function BarcodeList({
   disabled: boolean;
   onChange: (value: string) => void;
   onAdd: () => void;
+  onCameraScan: (code: string) => void;
   onRemove: (value: string) => void;
 }) {
   return (
@@ -175,6 +186,10 @@ function BarcodeList({
         >
           Add
         </Button>
+        <BarcodeCameraButton
+          disabled={disabled}
+          onScan={onCameraScan}
+        />
       </div>
       {values.length > 0 && (
         <div className="flex flex-wrap gap-2">

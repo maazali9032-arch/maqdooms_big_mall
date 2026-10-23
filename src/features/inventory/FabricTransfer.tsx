@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { quantityInput, quantityText } from "./ledger-quantity";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 
 type Stock = {
   id: string;
@@ -335,6 +336,13 @@ export function FabricTransfer() {
             ))}
           </datalist>
           <Button disabled={frozen || loading || !barcode.trim()}>Scan</Button>
+          <BarcodeCameraButton
+            disabled={frozen || loading || Boolean(loadError)}
+            onScan={(code) => {
+              setBarcode(code);
+              window.setTimeout(() => scan(), 0);
+            }}
+          />
         </form>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <span>From: {locations.data?.find((l) => l.id === sourceId)?.name ?? "Workshop"}</span>

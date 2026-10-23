@@ -7,6 +7,7 @@ import { Panel } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { quantityInput, quantityText } from "@/features/inventory/ledger-quantity";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import {
   consumableQuantity,
   issueItems,
@@ -593,6 +594,14 @@ export function OwnerProduction({
               >
                 Scan production fabric
               </Button>
+              <BarcodeCameraButton
+                disabled={scanFabric.isPending}
+                onScan={(code) => {
+                  setFabricBarcode(code);
+                  setScannedFabric(null);
+                  scanFabric.mutate(code);
+                }}
+              />
               {scannedFabric && (
                 <div className="rounded border p-3">
                   <p>

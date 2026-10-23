@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { BarcodeCameraButton } from "./barcode-camera";
 
 /** One entry path for manual typing, keyboard scanners and camera results. */
 export function BarcodeEntry({
@@ -43,6 +44,13 @@ export function BarcodeEntry({
       <Button type="submit" disabled={disabled || !value.trim()}>
         {action}
       </Button>
+      <BarcodeCameraButton
+        disabled={disabled}
+        onScan={(code) => {
+          onChange(code);
+          onScan(code);
+        }}
+      />
       {children}
     </form>
   );

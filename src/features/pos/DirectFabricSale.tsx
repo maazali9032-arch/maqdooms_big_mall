@@ -13,6 +13,7 @@ import { formatDateTime } from "@/shared/utils/format";
 import { fabricSaleCut } from "./fabric-sale-input";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import { CustomerTailoring, type TailoringSelection } from "@/features/tailoring/CustomerTailoring";
 import { customerTailoringCut } from "@/features/tailoring/customer-tailoring-input";
 
@@ -342,6 +343,13 @@ export function DirectFabricSale() {
           <Button disabled={frozen || stocks.isPending} onClick={scan}>
             Scan
           </Button>
+          <BarcodeCameraButton
+            disabled={frozen || stocks.isPending}
+            onScan={(code) => {
+              setBarcode(code);
+              window.setTimeout(() => scan(), 0);
+            }}
+          />
           <Button variant="outline" disabled={frozen} onClick={() => void stocks.refetch()}>
             Refresh stock
           </Button>

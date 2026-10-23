@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { quantityInput, quantityText } from "@/features/inventory/ledger-quantity";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import {
   definiteDatabaseRejection,
   consumableQuantity,
@@ -318,6 +319,13 @@ export function FinishedProducts({ allowLegacyReceipt = false }: { allowLegacyRe
           placeholder="Scan or enter Product Barcode"
         />
         <Button type="submit">Scan</Button>
+        <BarcodeCameraButton
+          onScan={(code) => {
+            setScan(code);
+            setBarcode(code);
+            void qc.invalidateQueries({ queryKey: ["finished-products", "catalog", code] });
+          }}
+        />
         <Button
           type="button"
           variant="outline"

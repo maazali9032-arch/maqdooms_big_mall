@@ -9,6 +9,7 @@ import { Panel } from "@/shared/components/page";
 import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import { ProductionDocument } from "@/features/tailoring/ProductionDocument";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import type { Database } from "@/integrations/supabase/types";
 type Request = Database["public"]["Functions"]["issue_additional_production_fabric"]["Args"];
 export function ProductionFabricIssue() {
@@ -145,6 +146,13 @@ export function ProductionFabricIssue() {
           >
             Scan Thaan
           </Button>
+          <BarcodeCameraButton
+            onScan={(code) => {
+              setBarcode(code);
+              setSource("");
+              setScan(code);
+            }}
+          />
         </div>
         {stock.error && <p role="alert">{stock.error.message}</p>}
         <select

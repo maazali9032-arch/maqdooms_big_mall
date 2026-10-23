@@ -10,6 +10,7 @@ import { useWorkshopInventory, type WorkshopRow } from "./WorkshopFabricStock";
 import { quantityInput } from "./ledger-quantity";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 
 type Entry = {
   record: WorkshopRow;
@@ -167,6 +168,13 @@ export function ScannedThaanRows() {
           disabled={frozen}
         />
         <Button disabled={frozen || !barcode.trim()}>Scan Thaan</Button>
+        <BarcodeCameraButton
+          disabled={frozen}
+          onScan={(code) => {
+            setBarcode(code);
+            window.setTimeout(() => void scan(), 0);
+          }}
+        />
       </form>
       {!!rows.length && (
         <div className="mt-4 space-y-3">

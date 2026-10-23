@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function BarcodeCamera({
   onScan,
@@ -114,5 +116,48 @@ export function BarcodeCamera({
         Stop camera
       </Button>
     </section>
+  );
+}
+
+/** Mobile-only camera entry for any barcode field. */
+export function BarcodeCameraButton({
+  onScan,
+  disabled = false,
+  label = "Scan with camera",
+}: {
+  onScan: (code: string) => void;
+  disabled?: boolean;
+  label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        className="sm:hidden"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        <Camera className="size-4" /> {label}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Scan barcode</DialogTitle>
+            <DialogDescription>Point the camera at the barcode. It will be entered automatically.</DialogDescription>
+          </DialogHeader>
+          {open && (
+            <BarcodeCamera
+              onScan={(code) => {
+                setOpen(false);
+                onScan(code);
+              }}
+              onStop={() => setOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

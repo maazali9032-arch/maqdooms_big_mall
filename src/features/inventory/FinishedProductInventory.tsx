@@ -14,6 +14,7 @@ import { definiteDatabaseRejection } from "./consumable-input";
 import { loadStockImageUrls } from "./stock-images";
 import { StockImage } from "./StockImage";
 import { ExistingStockImageEditor } from "./ExistingStockImageEditor";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 
 type Piece = {
   size?: string | null;
@@ -254,6 +255,10 @@ export function FinishedProductInventory() {
             >
               Scan piece to transfer
             </Button>
+            <BarcodeCameraButton
+              disabled={frozen || locations.isPending || !!locations.error}
+              onScan={(code) => scanPiece.mutate(code)}
+            />
           </form>
           {scanned && (
             <p>

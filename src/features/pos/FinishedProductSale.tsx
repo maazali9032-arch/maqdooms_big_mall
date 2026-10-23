@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { formatMoney } from "@/shared/utils/units";
 import { formatDateTime } from "@/shared/utils/format";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 
 type Cost = {
   versions: {
@@ -232,6 +233,13 @@ export function FinishedProductSale() {
               onFocus={(event) => event.currentTarget.select()}
             />
             <Button disabled={frozen || !barcode.trim()}>Scan</Button>
+            <BarcodeCameraButton
+              disabled={frozen}
+              onScan={(code) => {
+                setBarcode(code);
+                setScan(code);
+              }}
+            />
           </form>
           <p className="text-xs text-muted-foreground">
             Keyboard scanner: focus the barcode field and scan; Enter opens the product. Scan each

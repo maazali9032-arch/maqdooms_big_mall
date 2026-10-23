@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel, StatCard, StatusBadge } from "@/shared/components/page";
 import { cn } from "@/lib/utils";
+import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
 import { formatDateTime } from "@/shared/utils/format";
 
 type Catalog = {
@@ -505,6 +506,13 @@ function AssignedStockCount() {
           placeholder="Scan barcode"
         />
         <Button disabled={scan.isPending || !barcode.trim()}>Scan</Button>
+        <BarcodeCameraButton
+          disabled={scan.isPending}
+          onScan={(code) => {
+            setBarcode(code);
+            window.setTimeout(() => scan.mutate(), 0);
+          }}
+        />
       </form>
       <p className="mt-3 text-sm">
         Progress: {task.data.scanned} of {task.data.total} scanned.
