@@ -165,7 +165,7 @@ export function CounterBillReceipt({ receipt }: { receipt: CounterReceipt }) {
             <div className="mt-4 space-y-3">
               <div
                 ref={tailorPrintable}
-                className="thermal-invoice mx-auto max-w-2xl space-y-4 bg-white text-black"
+                className="thermal-invoice customer-invoice mx-auto max-w-[80mm] space-y-2 rounded border bg-white p-3 text-black shadow-sm"
               >
                 <TailorWorkOrderContent receipt={receipt} jobs={tailorOrder.data} />
               </div>
