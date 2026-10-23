@@ -186,7 +186,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       </Panel>
       <Panel
         title="3. Readymade Types & Quantities"
-        description="Enter the piece count. One editable physical-garment row is created for every piece, and each receives its own F barcode."
+        description="Enter the piece count. One editable physical-garment row is created for every piece, and each receives its own R barcode."
       >
         <div className="space-y-4">
           {rows.map((row, index) => {
@@ -304,7 +304,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                               <div className="self-center text-sm font-semibold">
                                 Garment {String(pieceIndex + 1).padStart(2, "0")}
                                 <p className="font-normal text-xs text-muted-foreground">
-                                  F barcode on save
+                                  R barcode on save
                                 </p>
                               </div>
                               <Input
@@ -360,7 +360,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       </Panel>
       <Panel bodyClassName="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          Total garments: {total}. Every piece will receive a unique F barcode and belongs to this
+          Total garments: {total}. Every piece will receive a unique R barcode and belongs to this
           vendor batch.
         </p>
         <Button
@@ -386,7 +386,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
             }
           }}
         >
-          <Barcode className="size-4" /> Generate F barcodes
+          <Barcode className="size-4" /> Generate R barcodes
         </Button>
       </Panel>
       {printed.length > 0 && (

@@ -47,7 +47,7 @@ export function VendorReadymadeStock() {
   return (
     <Panel
       title="Vendor readymade stock"
-      description="Purchased ready-made garments, grouped by their vendor batch and tracked as individual F-barcode pieces."
+      description="Purchased ready-made garments, grouped by their vendor batch and tracked as individual R-barcode pieces."
     >
       <form
         className="mb-4 flex gap-2"
@@ -72,7 +72,7 @@ export function VendorReadymadeStock() {
       {!stock.isPending && !stock.error && !stock.data?.length && (
         <EmptyState
           title="No vendor readymade stock"
-          description="Vendor-purchased garments will appear here after their F barcodes are generated."
+          description="Vendor-purchased garments will appear here after their R barcodes are generated."
         />
       )}
       {!!stock.data?.length && (
@@ -81,7 +81,7 @@ export function VendorReadymadeStock() {
             <thead className="bg-muted/50">
               <tr>
                 {[
-                  "F barcode",
+                  "R barcode",
                   "Garment",
                   "Style / size",
                   "Vendor batch",

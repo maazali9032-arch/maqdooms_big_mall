@@ -20,7 +20,7 @@ function ReceivingPage() {
     <>
       <PageHeader
         title="Stock Entry"
-        description="Scan existing fabric labels, create a fabric batch, or receive vendor readymade garments with individual F barcodes."
+        description="Scan existing fabric labels, create a fabric batch, or receive vendor readymade garments with individual R barcodes."
       />
       <StockRegistration />
     </>
