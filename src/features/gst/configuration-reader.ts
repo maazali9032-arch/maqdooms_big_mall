@@ -18,7 +18,10 @@ export async function readOwnerGstConfiguration(
     .maybeSingle();
   if (configuration.error) throw configuration.error;
   if (!configuration.data) return { configuration: null, rules: [] };
-  const saved = configuration.data as unknown as GstConfiguration;
+  const saved = {
+    ...(configuration.data as unknown as GstConfiguration),
+    price_mode: "inclusive" as const,
+  };
   const rules = await client
     .from("gst_tax_rules")
     .select("id,category,item_ref,label,classification_code,rate_bps")

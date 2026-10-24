@@ -3,6 +3,7 @@ import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import {
   calculateTaxPaise,
+  garmentGstRate,
   selectedGstRule,
   type GstSupplyType,
   type GstTransactionConfiguration,
@@ -172,13 +173,15 @@ export function gstPreview(
       amount: bigint,
       category: "fabric_sale" | "finished_sale" | "tailoring",
       itemRef: string,
+      rateOverride?: number,
     ) => {
       const rule = selectedGstRule(configuration, category, itemRef);
       if (!rule) throw new Error(`Configure the default ${category} GST rule`);
+      const discountedAmount = discounted(amount);
       const tax = calculateTaxPaise(
-        discounted(amount),
-        rule.rate_bps,
-        config.price_mode,
+        discountedAmount,
+        rateOverride ?? rule.rate_bps,
+        "inclusive",
         supplyType,
       );
       taxable += tax.taxablePaise;
@@ -188,18 +191,24 @@ export function gstPreview(
       igst += tax.igstPaise;
       final += tax.finalPaise;
     };
-    for (const row of rows)
+    for (const row of rows.filter((item) => !item.group)) {
+      const discountedAmount = discounted(rowAmount(row));
       add(
         rowAmount(row),
         row.scan.kind === "product" ? "finished_sale" : "fabric_sale",
         `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
+        row.scan.kind === "product" ? garmentGstRate(configuration, discountedAmount) : undefined,
       );
-    for (const group of groups)
+    }
+    for (const group of groups) {
+      const amount = tailoringAmounts(rows, group).total;
       add(
-        BigInt(fabricMoneyInput(group.stitching)),
-        "tailoring",
-        `SERVICE:${group.garment.trim().toUpperCase()}`,
+        amount,
+        "finished_sale",
+        `PRODUCT:${group.garment.trim().toUpperCase()}`,
+        garmentGstRate(configuration, discounted(amount)),
       );
+    }
     return { taxable, gst, cgst, sgst, igst, final };
   } catch {
     return null;

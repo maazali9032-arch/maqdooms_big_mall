@@ -35,6 +35,12 @@ export type GstConfiguration = {
 export type GstTransactionConfiguration = {
   configuration: GstConfiguration | null;
   rules: GstRule[];
+  garment_slabs?: {
+    threshold_paise: string | number;
+    lower_rate_bps: number;
+    higher_rate_bps: number;
+    effective_from?: string;
+  };
 };
 
 export type TaxBreakdown = {
@@ -104,6 +110,17 @@ export function selectedGstRule(
     data?.rules.find((rule) => rule.category === category && rule.item_ref === itemRef) ??
     defaultGstRule(data, category)
   );
+}
+
+export function garmentGstRate(
+  data: GstTransactionConfiguration | undefined,
+  discountedUnitSpPaise: bigint,
+) {
+  const slab = data?.garment_slabs;
+  const threshold = BigInt(slab?.threshold_paise ?? 250000);
+  return discountedUnitSpPaise <= threshold
+    ? (slab?.lower_rate_bps ?? 500)
+    : (slab?.higher_rate_bps ?? 1800);
 }
 
 export function formatGstRate(rateBps: number) {

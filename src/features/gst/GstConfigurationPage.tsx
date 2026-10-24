@@ -107,6 +107,7 @@ export function GstConfigurationPage() {
     void _id;
     setDraft({
       ...configuration,
+      price_mode: "inclusive",
       effective_from: gstLocalDateTime(
         new Date(Math.max(Date.now(), Date.parse(configuration.effective_from))),
       ),
@@ -151,6 +152,7 @@ export function GstConfigurationPage() {
         p_request: crypto.randomUUID(),
         p_configuration: {
           ...draft,
+          price_mode: "inclusive",
           effective_from:
             !effectiveDateEdited && new Date(draft.effective_from).getTime() <= Date.now()
               ? new Date().toISOString()
@@ -400,25 +402,12 @@ export function GstConfigurationPage() {
 
       <Panel title="Calculation and display options">
         <div className="space-y-5">
-          <div>
-            <h3 className="mb-2 font-semibold">POS selling-price mode</h3>
-            <Choice
-              name="price-mode"
-              value={draft.price_mode}
-              onChange={(price_mode) => setDraft({ ...draft, price_mode })}
-              options={[
-                {
-                  value: "inclusive",
-                  title: "A — GST-inclusive",
-                  detail: "Entered SP is the final customer price; GST is extracted.",
-                },
-                {
-                  value: "exclusive",
-                  title: "B — GST-exclusive",
-                  detail: "Entered SP is taxable value; GST is added.",
-                },
-              ]}
-            />
+          <div className="rounded-xl border bg-muted/30 p-3 text-sm">
+            <h3 className="font-semibold">POS selling-price mode: GST-inclusive</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The entered and discounted SP is always the final customer price. GST is extracted
+              from that amount and is never added on top.
+            </p>
           </div>
           <div>
             <h3 className="mb-2 font-semibold">Customer invoice display</h3>
