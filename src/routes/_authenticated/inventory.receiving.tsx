@@ -9,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/inventory/receiving")({
       {
         name: "description",
         content:
-          "Fabric Thaans and vendor-purchased ready-made garments with individually barcoded physical stock.",
+          "Fabric Thaans, vendor-purchased ready-made garments and unit-tracked tailoring materials.",
       },
     ],
   }),
@@ -20,7 +20,7 @@ function ReceivingPage() {
     <>
       <PageHeader
         title="Stock Entry"
-        description="Scan existing fabric labels, create a fabric batch, or receive vendor readymade garments with individual R barcodes."
+        description="Scan existing labels or create a batch for fabric Thaans, vendor readymade garments or unit-tracked tailoring materials."
       />
       <StockRegistration />
     </>

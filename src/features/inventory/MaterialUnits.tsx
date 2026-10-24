@@ -62,7 +62,15 @@ const paise = (value: string) => {
   return Math.round(amount * 100);
 };
 
-export function MaterialUnits() {
+export function MaterialUnits({
+  showReceiving = true,
+  showInventory = true,
+  onCancel,
+}: {
+  showReceiving?: boolean;
+  showInventory?: boolean;
+  onCancel?: () => void;
+}) {
   const { isOwner, can, roles } = useSession();
   const mayReceive = isOwner || (roles.includes("stock_entry") && can("materials.receive_units"));
   const qc = useQueryClient();
@@ -76,6 +84,7 @@ export function MaterialUnits() {
   const [correctionReason, setCorrectionReason] = useState<Record<string, string>>({});
   const units = useQuery({
     queryKey: ["material-units", search],
+    enabled: showInventory,
     queryFn: async () => {
       const { data, error } = await rpc("material_unit_catalog", { p_search: search || null });
       if (error) throw error;
@@ -85,7 +94,7 @@ export function MaterialUnits() {
   const correctionsAllowed = isOwner || can("materials.correct_consumption");
   const consumption = useQuery({
     queryKey: ["material-consumption-history"],
-    enabled: correctionsAllowed,
+    enabled: showInventory && correctionsAllowed,
     queryFn: async () => {
       const { data, error } = await rpc("material_consumption_history", { p_limit: 100 });
       if (error) throw error;
@@ -185,10 +194,17 @@ export function MaterialUnits() {
   };
   return (
     <div className="space-y-4">
-      {mayReceive && (
+      {showReceiving && mayReceive && (
         <Panel
           title="Receive material-unit batch"
           description="Create one purchase batch with multiple material types. Every physical container or roll receives its own permanent M barcode."
+          actions={
+            onCancel ? (
+              <Button variant="outline" onClick={onCancel} disabled={receive.isPending}>
+                Cancel batch
+              </Button>
+            ) : undefined
+          }
         >
           <fieldset disabled={receive.isPending || !!pending} className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
@@ -379,67 +395,71 @@ export function MaterialUnits() {
           </fieldset>
         </Panel>
       )}
-      <Panel
-        title="Material units"
-        description="Search a material, MB batch or scan its M barcode. Balances remain with the assigned Master Tailor until consumed."
-      >
-        <div className="mb-4">
-          <BarcodeEntry
-            value={search}
-            onChange={setSearch}
-            onScan={(value) => setSearch(value)}
-            label="Material-unit search or barcode"
-            placeholder="Material, MB batch or M barcode"
-          />
-        </div>
-        {units.error && <p role="alert">{units.error.message}</p>}
-        {!units.isPending && !units.error && !units.data?.length && <p>No material units found.</p>}
-        <div ref={labels} className="space-y-4">
-          {[...grouped.entries()].map(([name, rows]) => (
-            <details key={name} open className="rounded-xl border p-3">
-              <summary className="cursor-pointer font-semibold">
-                {name} ({rows.length})
-              </summary>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {rows.map((unit) => (
-                  <div key={unit.id} className="rounded-lg border p-3">
-                    <BarcodeSticker
-                      barcode={unit.barcode}
-                      name={unit.material_name}
-                      description={`${unit.initial_quantity} ${unit.unit} · ${unit.batch_code}`}
-                      price={`CP ₹${(Number(unit.landed_cost_paise) / 100).toFixed(2)}`}
-                    />
-                    <p className="mt-2 text-sm">
-                      Remaining:{" "}
-                      <strong>
-                        {unit.remaining_quantity} / {unit.initial_quantity} {unit.unit}
-                      </strong>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {unit.tailor_name
-                        ? `${unit.factory_name} · ${unit.tailor_name}`
-                        : "Unassigned · Workshop custody"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
-        {!!units.data?.length && (
-          <Button
-            className="mt-4"
-            variant="outline"
-            onClick={() =>
-              labels.current && printFabricLabel(labels.current, "Material unit barcodes")
-            }
-          >
-            <Printer className="mr-2 size-4" />
-            Print visible M barcodes
-          </Button>
-        )}
-      </Panel>
-      {correctionsAllowed && (
+      {showInventory && (
+        <Panel
+          title="Material units"
+          description="Search a material, MB batch or scan its M barcode. Balances remain with the assigned Master Tailor until consumed."
+        >
+          <div className="mb-4">
+            <BarcodeEntry
+              value={search}
+              onChange={setSearch}
+              onScan={(value) => setSearch(value)}
+              label="Material-unit search or barcode"
+              placeholder="Material, MB batch or M barcode"
+            />
+          </div>
+          {units.error && <p role="alert">{units.error.message}</p>}
+          {!units.isPending && !units.error && !units.data?.length && (
+            <p>No material units found.</p>
+          )}
+          <div ref={labels} className="space-y-4">
+            {[...grouped.entries()].map(([name, rows]) => (
+              <details key={name} open className="rounded-xl border p-3">
+                <summary className="cursor-pointer font-semibold">
+                  {name} ({rows.length})
+                </summary>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {rows.map((unit) => (
+                    <div key={unit.id} className="rounded-lg border p-3">
+                      <BarcodeSticker
+                        barcode={unit.barcode}
+                        name={unit.material_name}
+                        description={`${unit.initial_quantity} ${unit.unit} · ${unit.batch_code}`}
+                        price={`CP ₹${(Number(unit.landed_cost_paise) / 100).toFixed(2)}`}
+                      />
+                      <p className="mt-2 text-sm">
+                        Remaining:{" "}
+                        <strong>
+                          {unit.remaining_quantity} / {unit.initial_quantity} {unit.unit}
+                        </strong>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {unit.tailor_name
+                          ? `${unit.factory_name} · ${unit.tailor_name}`
+                          : "Unassigned · Workshop custody"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+          {!!units.data?.length && (
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() =>
+                labels.current && printFabricLabel(labels.current, "Material unit barcodes")
+              }
+            >
+              <Printer className="mr-2 size-4" />
+              Print visible M barcodes
+            </Button>
+          )}
+        </Panel>
+      )}
+      {showInventory && correctionsAllowed && (
         <Panel
           title="Consumption corrections"
           description="Submitted work is immutable. Reversal restores every M-unit balance; the Master Tailor can then submit a corrected record."

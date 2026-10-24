@@ -74,7 +74,6 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
-  const [batchImage, setBatchImage] = useState<File | null>(null);
   const [rows, setRows] = useState<Entry[]>([emptyEntry()]);
   const [printed, setPrinted] = useState<ResultPiece[]>([]);
   const [batchCode, setBatchCode] = useState<string | null>(null);
@@ -90,8 +89,9 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   const receive = useMutation({
     mutationFn: async () => {
       const effectiveImages = rows.flatMap((row) =>
-        Array.from({ length: validCount(row.quantity) }, (_, index) =>
-          pieceFor(row, index).image ?? row.image ?? batchImage,
+        Array.from(
+          { length: validCount(row.quantity) },
+          (_, index) => pieceFor(row, index).image ?? row.image,
         ),
       );
       const items = rows.flatMap((row) =>
@@ -121,7 +121,13 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
         userId,
         result.pieces.flatMap((piece, index) =>
           effectiveImages[index]
-            ? [{ kind: "finished_product" as const, itemId: piece.id, file: effectiveImages[index]! }]
+            ? [
+                {
+                  kind: "finished_product" as const,
+                  itemId: piece.id,
+                  file: effectiveImages[index]!,
+                },
+              ]
             : [],
         ),
       );
@@ -133,7 +139,6 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       setRows([emptyEntry()]);
       setSupplier("");
       setRemarks("");
-      setBatchImage(null);
       await qc.invalidateQueries();
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
     },
@@ -204,17 +209,6 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
             />
           </div>
         </fieldset>
-        <div className="mt-4 border-t pt-4">
-          <StockImageInput
-            label="Add one image for this entire vendor batch"
-            file={batchImage}
-            onChange={setBatchImage}
-            disabled={receive.isPending}
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Used by every garment unless its type or individual row has another image.
-          </p>
-        </div>
       </Panel>
       <Panel
         title="3. Readymade Types & Quantities"
@@ -272,13 +266,11 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                   <StockImageInput
                     label="Add image for this readymade type"
                     file={row.image}
-                    inheritedFile={batchImage}
-                    inheritedText="From vendor batch"
                     onChange={(image) => updateRow(row.id, { image })}
                     disabled={receive.isPending}
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Applies to this type only and overrides the batch image.
+                    Used by every garment in this type unless that row has its own image.
                   </p>
                 </div>
                 <>
@@ -363,8 +355,8 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                                 compact
                                 label="Image"
                                 file={piece.image ?? null}
-                                inheritedFile={row.image ?? batchImage}
-                                inheritedText={row.image ? "From type" : batchImage ? "From batch" : undefined}
+                                inheritedFile={row.image}
+                                inheritedText={row.image ? "From type" : undefined}
                                 onChange={(image) => updatePiece(row, pieceIndex, { image })}
                                 disabled={receive.isPending}
                               />

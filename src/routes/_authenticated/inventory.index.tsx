@@ -33,16 +33,6 @@ function InventoryPage() {
         <FinishedProductWorkspace />
       </>
     );
-  if (nav.activeId === "consumables")
-    return (
-      <>
-        <PageHeader
-          title="Materials & Consumables"
-          description="Materials used for tailoring and production."
-        />
-        <MaterialUnits />
-      </>
-    );
   if (nav.activeId === "locations")
     return isOwner ? (
       <>
@@ -57,30 +47,37 @@ function InventoryPage() {
 function StockInventory({ active, onChange }: { active: string; onChange: (id: string) => void }) {
   const [search, setSearch] = useState(""),
     [incomplete, setIncomplete] = useState(false);
+  const normalizedActive = active === "consumables" ? "material-stock" : active;
   const chosen = [
     "fabric-stock",
     "readymade-stock",
+    "material-stock",
     "showroom-stock",
     "movements",
     "archived",
-  ].includes(active)
-    ? active
+  ].includes(normalizedActive)
+    ? normalizedActive
     : "fabric-stock";
   return (
     <>
       <PageHeader
-        title="Fabric Stock"
-        description="Fabric stock grouped by batch, fabric type and individual Thaan."
+        title={chosen === "material-stock" ? "Materials & Consumables" : "Fabric Stock"}
+        description={
+          chosen === "material-stock"
+            ? "Physical tailoring-material units, their current custody, quantity and unit-wise CP."
+            : "Fabric stock grouped by batch, fabric type and individual Thaan."
+        }
       />
       {chosen === "fabric-stock" && <FabricStockSummary />}
       <Tabs value={chosen} onValueChange={onChange}>
         <TabsList
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-5"
+          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-3 xl:grid-cols-6"
           aria-label="Fabric inventory views"
         >
           {[
             ["fabric-stock", "Fabric stock & scan"],
             ["readymade-stock", "Readymade stock"],
+            ["material-stock", "Materials stock"],
             ["showroom-stock", "Showroom floors"],
             ["movements", "Stock movements"],
             ["archived", "Depleted / archived"],
@@ -100,6 +97,9 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
         </TabsContent>
         <TabsContent value="readymade-stock">
           <VendorReadymadeStock />
+        </TabsContent>
+        <TabsContent value="material-stock">
+          <MaterialUnits showReceiving={false} />
         </TabsContent>
         <TabsContent value="movements">
           <StockActivity />

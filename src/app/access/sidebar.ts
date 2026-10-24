@@ -141,13 +141,6 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
           icon: Boxes,
           module: "inventory",
         },
-        {
-          to: "/inventory",
-          hash: "consumables",
-          label: "Materials & Consumables",
-          icon: Boxes,
-          module: "inventory",
-        },
         owner
           ? {
               to: "/inventory",

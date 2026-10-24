@@ -7,6 +7,7 @@ export const PAGE_NAMES: Record<string, string> = {
   "/inventory#fabric-stock": "Fabric Stock",
   "/inventory#finished-products": "Finished Products",
   "/inventory#consumables": "Materials & Consumables",
+  "/inventory#material-stock": "Materials & Consumables",
   "/inventory#locations": "Locations & Floors",
   "/pos": "Counter / POS",
   "/tailoring#fabric": "New Production",

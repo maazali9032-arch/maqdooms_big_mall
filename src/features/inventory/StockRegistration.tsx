@@ -3,7 +3,17 @@ import { VendorReadymadeRegistration } from "./VendorReadymadeRegistration";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowRight, Barcode, FileText, Info, Layers, Plus, Shirt, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Barcode,
+  FileText,
+  Info,
+  Layers,
+  PackagePlus,
+  Plus,
+  Shirt,
+  Trash2,
+} from "lucide-react";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuppliers } from "@/features/inventory";
@@ -21,6 +31,7 @@ import { definiteDatabaseRejection } from "./consumable-input";
 import { createStockBatch } from "./stock-batch-request";
 import { StockImageInput } from "./StockImageInput";
 import { saveStockImages } from "./stock-images";
+import { MaterialUnits } from "./MaterialUnits";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   calculateTaxPaise,
@@ -68,7 +79,6 @@ type Work =
         actual_supplier_paise: number | null;
       };
       imagePlan?: {
-        batch: File | null;
         types: { image: File | null; pieces: (File | null)[] }[];
       };
     }
@@ -166,7 +176,7 @@ export function StockRegistration() {
   const suppliers = useSuppliers();
   const gst = useGstConfiguration();
   const [stage, setStage] = useState<"home" | "create" | "labels">("home");
-  const [batchType, setBatchType] = useState<"fabric" | "vendor_finished">("fabric");
+  const [batchType, setBatchType] = useState<"fabric" | "vendor_finished" | "materials">("fabric");
   const [provider, setProvider] = useState("");
   const [date, setDate] = useState(() =>
     new Intl.DateTimeFormat("en-CA", {
@@ -177,7 +187,6 @@ export function StockRegistration() {
     }).format(new Date()),
   );
   const [remarks, setRemarks] = useState("");
-  const [batchImage, setBatchImage] = useState<File | null>(null);
   const [supplierInvoiceAvailable, setSupplierInvoiceAvailable] = useState<"no" | "yes">("no");
   const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
@@ -320,13 +329,15 @@ export function StockRegistration() {
           createdBatch.fabric_types.flatMap((fabric, typeIndex) =>
             fabric.variants.flatMap((variant, pieceIndex) => {
               const plan = w.imagePlan!.types[typeIndex];
-              const file = plan?.pieces[pieceIndex] ?? plan?.image ?? w.imagePlan!.batch;
+              const file = plan?.pieces[pieceIndex] ?? plan?.image;
               return file && (variant as Variant & { thaan_id?: string }).thaan_id
-                ? [{
-                    kind: "thaan" as const,
-                    itemId: (variant as Variant & { thaan_id: string }).thaan_id,
-                    file,
-                  }]
+                ? [
+                    {
+                      kind: "thaan" as const,
+                      itemId: (variant as Variant & { thaan_id: string }).thaan_id,
+                      file,
+                    },
+                  ]
                 : [];
             }),
           ),
@@ -342,7 +353,6 @@ export function StockRegistration() {
         setPrinted([]);
         setStage("labels");
         setRows([emptyRow()]);
-        setBatchImage(null);
       } else if (args.work.kind === "append" || args.work.kind === "fabric") {
         setExtraCount("");
         setExtraName("");
@@ -379,7 +389,7 @@ export function StockRegistration() {
             <ScannedThaanRows />
             <Panel
               title="Create Batch"
-              description="Register arrival details and Thaan counts, then print labels by fabric type."
+              description="Choose fabrics, vendor garments or tailoring materials, then enter the batch details for that stock type."
             >
               <Button
                 disabled={frozen || !can("stock.generate_labels")}
@@ -391,8 +401,7 @@ export function StockRegistration() {
                 Create Batch
               </Button>
               <p className="mt-3 text-sm text-muted-foreground">
-                Colour, actual length and CP can be entered during creation or after attaching
-                labels.
+                Each physical Thaan, garment or material unit receives its own barcode.
               </p>
             </Panel>
           </div>
@@ -434,9 +443,9 @@ export function StockRegistration() {
         <>
           <Panel
             title="1. Choose Stock Item Type"
-            description="Select whether you are adding fabric Thaans or ready-made garments purchased from a vendor."
+            description="Choose the stock being received. The batch form below changes for fabrics, vendor garments or tailoring materials."
           >
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               <Button
                 type="button"
                 variant="outline"
@@ -493,10 +502,42 @@ export function StockRegistration() {
                   />
                 </span>
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-pressed={batchType === "materials"}
+                disabled={frozen || (!isOwner && !can("materials.receive_units"))}
+                onClick={() => setBatchType("materials")}
+                className={`h-auto min-h-20 justify-start whitespace-normal px-4 py-3 text-left ${
+                  batchType === "materials"
+                    ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40"
+                    : "border-border bg-background text-foreground hover:bg-muted/40"
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <PackagePlus className="size-6" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="block text-base font-semibold">Materials & Consumables</span>
+                    <span className="mt-1 block text-sm font-normal text-muted-foreground">
+                      Buttons, fusing, padding and other tailoring supplies tracked by physical
+                      unit.
+                    </span>
+                  </span>
+                  <span
+                    className={`ml-auto size-5 shrink-0 rounded-full border-2 ${batchType === "materials" ? "border-primary bg-primary shadow-[inset_0_0_0_4px_hsl(var(--background))]" : "border-muted-foreground/40"}`}
+                    aria-hidden="true"
+                  />
+                </span>
+              </Button>
             </div>
           </Panel>
           {batchType === "vendor_finished" && (
             <VendorReadymadeRegistration onCancel={() => setStage("home")} />
+          )}
+          {batchType === "materials" && (
+            <MaterialUnits showInventory={false} onCancel={() => setStage("home")} />
           )}
           {batchType === "fabric" && (
             <>
@@ -657,17 +698,6 @@ export function StockRegistration() {
                     <p className="ml-7 mt-1 text-xs text-muted-foreground">
                       Batch ID and individual barcode identities are generated on save.
                     </p>
-                    <div className="ml-7 mt-3">
-                      <StockImageInput
-                        label="Add one image for the entire batch"
-                        file={batchImage}
-                        onChange={setBatchImage}
-                        disabled={frozen}
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Used by every Thaan unless its fabric type or row has another image.
-                      </p>
-                    </div>
                   </div>
                   <div className="ml-2 space-y-5 border-l-2 border-primary/25 pl-3 sm:ml-4 sm:pl-5">
                     {rows.map((r, i) => (
@@ -831,8 +861,6 @@ export function StockRegistration() {
                             <StockImageInput
                               label="Add image for this fabric type"
                               file={r.image}
-                              inheritedFile={batchImage}
-                              inheritedText="From batch"
                               onChange={(image) =>
                                 setRows((old) =>
                                   old.map((row) => (row.id === r.id ? { ...row, image } : row)),
@@ -841,7 +869,8 @@ export function StockRegistration() {
                               disabled={frozen}
                             />
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Applies to this fabric type only and overrides the batch image.
+                              Used by every Thaan in this fabric type unless that row has its own
+                              image.
                             </p>
                           </div>
                         </div>
@@ -924,8 +953,8 @@ export function StockRegistration() {
                                 compact
                                 label="Image"
                                 file={thaanDetail(r, n).image ?? null}
-                                inheritedFile={r.image ?? batchImage}
-                                inheritedText={r.image ? "From fabric type" : batchImage ? "From batch" : undefined}
+                                inheritedFile={r.image}
+                                inheritedText={r.image ? "From fabric type" : undefined}
                                 onChange={(image) =>
                                   setRows((old) =>
                                     old.map((row) => {
@@ -1097,7 +1126,6 @@ export function StockRegistration() {
                             })),
                           })),
                           imagePlan: {
-                            batch: batchImage,
                             types: rows.map((r) => ({
                               image: r.image,
                               pieces: Array.from(
