@@ -222,7 +222,19 @@ function CounterContent({
       setBarcode("");
       return;
     }
-    setRows([...rows, { key, scan: record, cut, source, metres: "", price: "", selected: false }]);
+    setRows([
+      ...rows,
+      {
+        key,
+        scan: record,
+        cut,
+        source,
+        metres: "",
+        cutUnit: "m",
+        price: "",
+        selected: false,
+      },
+    ]);
     setBarcode("");
     setAmbiguous(null);
   }
@@ -481,7 +493,7 @@ function CounterContent({
                 {rows.map((r) => (
                   <div
                     key={r.key}
-                    className="grid grid-cols-2 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_130px_180px_auto]"
+                    className="grid grid-cols-2 gap-2 rounded-xl border p-3 md:grid-cols-[minmax(0,1fr)_110px_130px_180px_auto]"
                   >
                     <div className="col-span-2 min-w-0 md:col-span-1">
                       <div className="flex items-start gap-2">
@@ -524,9 +536,31 @@ function CounterContent({
                     </div>
                     {r.scan.kind === "fabric" ? (
                       <label className="text-xs">
-                        Cut metres
+                        Cut unit
+                        <select
+                          aria-label={`Cut unit ${r.scan.barcode}`}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={r.cutUnit}
+                          onChange={(e) =>
+                            updateRow(r.key, {
+                              cutUnit: e.target.value as CounterRow["cutUnit"],
+                            })
+                          }
+                        >
+                          <option value="m">Metre</option>
+                          <option value="cm">Centimetre</option>
+                          <option value="mm">Millimetre</option>
+                          <option value="in">Inch</option>
+                        </select>
+                      </label>
+                    ) : (
+                      <span className="hidden md:block" />
+                    )}
+                    {r.scan.kind === "fabric" ? (
+                      <label className="text-xs">
+                        Cut quantity
                         <Input
-                          aria-label={`Cut metres ${r.scan.barcode}`}
+                          aria-label={`Cut quantity ${r.scan.barcode}`}
                           inputMode="decimal"
                           value={r.metres}
                           onChange={(e) => updateRow(r.key, { metres: e.target.value })}

@@ -41,10 +41,29 @@ export type CounterRow = {
   cut?: ReserveCut;
   source: { id: string; name: string };
   metres: string;
+  cutUnit: FabricCutUnit;
   price: string;
   selected: boolean;
   group?: string;
 };
+export type FabricCutUnit = "m" | "cm" | "mm" | "in";
+
+export function fabricCutQuantityMm(value: string, unit: FabricCutUnit) {
+  if (unit === "m") return quantityInput(value, "mm");
+  if (!/^\d+(?:\.\d{1,3})?$/.test(value.trim()))
+    throw new Error("Enter a positive cut quantity with at most three decimal places");
+  const entered = Number(value);
+  const multiplier = unit === "cm" ? 10 : unit === "in" ? 25.4 : 1;
+  const millimetres = Math.round(entered * multiplier);
+  if (
+    !Number.isFinite(entered) ||
+    entered <= 0 ||
+    !Number.isSafeInteger(millimetres) ||
+    millimetres <= 0
+  )
+    throw new Error("Enter a valid cut quantity");
+  return millimetres;
+}
 export type TailoringGroup = {
   id: string;
   keys: string[];
@@ -66,7 +85,7 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
     rows
       .filter((r) => r.scan.kind === "fabric")
       .map((r) => {
-        const mm = quantityInput(r.metres, "mm");
+        const mm = fabricCutQuantityMm(r.metres, r.cutUnit);
         if (mm > availableAt(r)) throw new Error(`${r.scan.barcode}: cut exceeds available stock`);
         return [r.key, mm];
       }),
@@ -119,7 +138,8 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
 function rowAmount(row: CounterRow) {
   return row.scan.kind === "product"
     ? BigInt(row.scan.sp_paise!)
-    : (BigInt(quantityInput(row.metres, "mm")) * BigInt(fabricMoneyInput(row.price)) + 500n) /
+    : (BigInt(fabricCutQuantityMm(row.metres, row.cutUnit)) * BigInt(fabricMoneyInput(row.price)) +
+        500n) /
         1000n;
 }
 export function tailoringAmounts(rows: CounterRow[], group: TailoringGroup) {
