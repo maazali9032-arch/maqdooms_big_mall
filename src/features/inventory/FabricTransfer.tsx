@@ -12,6 +12,7 @@ import { quantityInput, quantityText } from "./ledger-quantity";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
+import { MaterialUnitTransfer } from "./MaterialUnitTransfer";
 
 type Stock = {
   id: string;
@@ -69,7 +70,8 @@ export function FabricTransfer() {
   const canFabricTransfer = (isOwner || roles.includes("stock_entry")) && can("stock.transfer");
   const canFinishedTransfer =
     isOwner || (roles.includes("stock_entry") && can("stock.transfer_finished"));
-  const allowed = canFabricTransfer || canFinishedTransfer;
+  const canMaterialTransfer = isOwner || can("materials.transfer_units");
+  const allowed = canFabricTransfer || canFinishedTransfer || canMaterialTransfer;
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const labels = useRef<HTMLDivElement>(null);
@@ -219,7 +221,9 @@ export function FabricTransfer() {
         p_reason: reason.trim(),
       });
       if (error) throw error;
-      toast.success(`${finishedPieces.length} ready-made ${finishedPieces.length === 1 ? "piece" : "pieces"} transferred`);
+      toast.success(
+        `${finishedPieces.length} ready-made ${finishedPieces.length === 1 ? "piece" : "pieces"} transferred`,
+      );
       setFinishedPieces([]);
       setFinishedDestination("");
       setReason("");
@@ -305,6 +309,7 @@ export function FabricTransfer() {
   if (!allowed) return <p>Stock transfer permission required. Contact the Owner.</p>;
   return (
     <div className="space-y-4">
+      {canMaterialTransfer && <MaterialUnitTransfer />}
       <Panel
         title="Stock Transfer"
         description="Scan fabric Thaans or one ready-made piece. Fabric transfers use metres; ready-made products transfer as a complete piece with the same barcode."
@@ -379,7 +384,10 @@ export function FabricTransfer() {
             </div>
             <div className="mt-3 space-y-2">
               {finishedPieces.map((piece) => (
-                <div key={piece.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+                <div
+                  key={piece.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
+                >
                   <div>
                     <span className="font-mono">{piece.barcode}</span>
                     <span className="text-muted-foreground">
@@ -390,7 +398,9 @@ export function FabricTransfer() {
                     variant="ghost"
                     size="sm"
                     disabled={busy}
-                    onClick={() => setFinishedPieces((current) => current.filter((item) => item.id !== piece.id))}
+                    onClick={() =>
+                      setFinishedPieces((current) => current.filter((item) => item.id !== piece.id))
+                    }
                   >
                     Remove
                   </Button>
@@ -429,7 +439,8 @@ export function FabricTransfer() {
                 disabled={busy || !finishedDestination}
                 onClick={() => void postFinishedPieces()}
               >
-                Transfer {finishedPieces.length} ready-made {finishedPieces.length === 1 ? "piece" : "pieces"}
+                Transfer {finishedPieces.length} ready-made{" "}
+                {finishedPieces.length === 1 ? "piece" : "pieces"}
               </Button>
             </div>
           </div>

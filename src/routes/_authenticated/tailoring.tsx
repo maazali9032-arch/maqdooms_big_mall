@@ -8,6 +8,7 @@ import { ProductionOngoing } from "@/features/tailoring/ProductionOngoing";
 import { OwnerFactoryDefinitions } from "@/features/tailoring/OwnerFactoryDefinitions";
 import { ProductDesignDefinitions } from "@/features/tailoring/ProductDesignDefinitions";
 import { ProductionReceipt } from "@/features/inventory/ProductionReceipt";
+import { TailorMaterialWork } from "@/features/tailoring/TailorMaterialWork";
 export const Route = createFileRoute("/_authenticated/tailoring")({
   head: () => ({ meta: [{ title: "Tailoring & Production — Maqdoom's Big Mall ERP" }] }),
   component: TailoringPage,
@@ -15,7 +16,13 @@ export const Route = createFileRoute("/_authenticated/tailoring")({
 function TailoringPage() {
   const { activeId } = useWorkflowRoute();
   const { isOwner, can, roles } = useSession();
-  const id = activeId || (roles.includes("production") && !isOwner ? "fabric" : "customer");
+  const id =
+    activeId ||
+    (roles.includes("tailor_staff")
+      ? "work"
+      : roles.includes("production") && !isOwner
+        ? "fabric"
+        : "customer");
   const view =
     id === "hierarchy"
       ? {
@@ -27,21 +34,29 @@ function TailoringPage() {
             title: "Products & Designs",
             content: isOwner ? <ProductDesignDefinitions /> : <p>Owner access required.</p>,
           }
-        : id === "fabric"
-          ? { title: "New Production", content: <MixedProduction /> }
-          : id === "receipt"
-            ? {
-                title: "Workshop Receipt",
-                content:
-                  isOwner || can("production.receive") ? (
-                    <ProductionReceipt />
-                  ) : (
-                    <p>Workshop receipt access required.</p>
-                  ),
-              }
-            : id === "customer"
-              ? { title: "Customer Tailoring", content: <CustomerTailoringWork /> }
-              : { title: "Ongoing Production", content: <ProductionOngoing /> };
+        : id === "work"
+          ? {
+              title:
+                roles.includes("tailor_staff") && !roles.includes("tailor")
+                  ? "My Work"
+                  : "Record Completed Work",
+              content: <TailorMaterialWork />,
+            }
+          : id === "fabric"
+            ? { title: "New Production", content: <MixedProduction /> }
+            : id === "receipt"
+              ? {
+                  title: "Workshop Receipt",
+                  content:
+                    isOwner || can("production.receive") ? (
+                      <ProductionReceipt />
+                    ) : (
+                      <p>Workshop receipt access required.</p>
+                    ),
+                }
+              : id === "customer"
+                ? { title: "Customer Tailoring", content: <CustomerTailoringWork /> }
+                : { title: "Ongoing Production", content: <ProductionOngoing /> };
   return (
     <>
       <PageHeader

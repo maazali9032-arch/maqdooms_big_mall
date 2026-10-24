@@ -33,7 +33,10 @@ export function OwnerFactoryDefinitions() {
   const [form, setForm] = useState(empty),
     [factory, setFactory] = useState(""),
     [user, setUser] = useState(""),
+    [staffUser, setStaffUser] = useState(""),
+    [staffMaster, setStaffMaster] = useState(""),
     [create, setCreate] = useState(false),
+    [createRole, setCreateRole] = useState("tailor"),
     [pending, setPending] = useState<Action | null>(null);
   const hierarchy = useQuery({
     queryKey: ["tailoring-hierarchy"],
@@ -73,6 +76,25 @@ export function OwnerFactoryDefinitions() {
       if (definiteDatabaseRejection(e)) setPending(null);
       toast.error(e.message);
     },
+  });
+  const assignStaff = useMutation({
+    mutationFn: async () => {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ error: Error | null }>;
+      const { error } = await rpc("owner_assign_tailor_staff", {
+        p_staff: staffUser,
+        p_tailor: staffMaster,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setStaffUser("");
+      void qc.invalidateQueries();
+      toast.success("Tailor Staff assigned to one Master Tailor and factory");
+    },
+    onError: (error) => toast.error(error.message),
   });
   if (!isOwner) return <p>Owner access required.</p>;
   const data = hierarchy.data;
@@ -156,6 +178,60 @@ export function OwnerFactoryDefinitions() {
           </div>
         </div>
         <div className="rounded-xl border p-3">
+          <h3 className="font-semibold">Assign Tailor Staff</h3>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Tailor Staff have no barcode. Their login is assigned to one Master Tailor and that
+            Tailor’s single factory.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <select
+              className="min-h-11 rounded border bg-background p-2"
+              value={staffUser}
+              onChange={(event) => setStaffUser(event.target.value)}
+            >
+              <option value="">Choose Tailor Staff login</option>
+              {users.data
+                ?.filter((entry) => entry.roles?.includes("tailor_staff"))
+                .map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name}
+                  </option>
+                ))}
+            </select>
+            <select
+              className="min-h-11 rounded border bg-background p-2"
+              value={staffMaster}
+              onChange={(event) => setStaffMaster(event.target.value)}
+            >
+              <option value="">Choose Master Tailor</option>
+              {data?.tailors
+                .filter((entry) => entry.active && entry.profile_id)
+                .map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.real_name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              disabled={!staffUser || !staffMaster || assignStaff.isPending}
+              onClick={() => assignStaff.mutate()}
+            >
+              Save Tailor Staff assignment
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateRole("tailor");
+                setCreate(true);
+              }}
+            >
+              Create Tailor Staff login
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-xl border p-3">
           <h3 className="font-semibold">Add / move a Tailor</h3>
           <p className="mb-3 text-sm text-muted-foreground">
             Choose an existing user or create a login. Saving grants the Tailor role and preserves
@@ -195,7 +271,13 @@ export function OwnerFactoryDefinitions() {
             <Button disabled={!factory || !user} onClick={assign}>
               Save Tailor in factory
             </Button>
-            <Button variant="outline" onClick={() => setCreate(true)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCreateRole("tailor_staff");
+                setCreate(true);
+              }}
+            >
               Create staff login
             </Button>
           </div>
@@ -271,7 +353,7 @@ export function OwnerFactoryDefinitions() {
       )}
       {create && (
         <CreateStaff
-          initialRole="tailor"
+          initialRole={createRole}
           onClose={() => setCreate(false)}
           onCreated={(id) => {
             setUser(id);

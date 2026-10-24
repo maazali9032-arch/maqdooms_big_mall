@@ -87,9 +87,12 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
     if (roles.includes("salesperson"))
       add("/my-work", undefined, "My Work", "salesperson_work", UserRound);
     if (roles.includes("tailor")) {
+      add("/tailoring", "work", "Record Completed Work", "tailoring", Scissors);
       add("/tailoring", "customer", "Customer Tailoring", "tailoring", Scissors);
       add("/tailoring", "production", "Production Tailoring", "tailoring", Scissors);
     }
+    if (roles.includes("tailor_staff"))
+      add("/tailoring", "work", "My Work", "tailoring", UserRound);
     if (roles.includes("production")) {
       add("/tailoring", "fabric", "Fabric", "tailoring", Boxes, "production.view");
       add("/tailoring", "ongoing", "Ongoing Production", "tailoring", Scissors, "production.view");

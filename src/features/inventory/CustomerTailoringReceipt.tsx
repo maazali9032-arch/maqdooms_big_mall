@@ -54,6 +54,13 @@ export function CustomerTailoringReceipt({
   const [name, setName] = useState("");
   const [size, setSize] = useState("");
   const [sp, setSp] = useState("");
+  const [stitchingCost, setStitchingCost] = useState("");
+  const [cost, setCost] = useState<{
+    fabric_cp_paise: number;
+    consumables_cp_paise: number;
+    stitching_cp_paise: number;
+    total_cp_paise: number;
+  } | null>(null);
   const [item, setItem] = useState<FinishedItem | null>(null);
   const jobs = useQuery({
     queryKey: ["customer-tailoring", "workshop-receipt", lookup],
@@ -67,8 +74,16 @@ export function CustomerTailoringReceipt({
   const jobRows = resolvedJobs ?? jobs.data;
   const receive = useMutation({
     mutationFn: async () => {
-      if (!jobId || !name.trim() || !size.trim() || !sp.trim())
-        throw new Error("Choose the tailoring job and enter name, size and SP");
+      if (!jobId || !name.trim() || !size.trim() || !sp.trim() || !stitchingCost.trim())
+        throw new Error(
+          "Choose the tailoring job and enter name, size, saved customer price and stitching CP",
+        );
+      const costResult = await rpc("save_customer_tailoring_completion_cost", {
+        p_job: jobId,
+        p_stitching_cp_paise: fabricMoneyInput(stitchingCost),
+      });
+      if (costResult.error) throw costResult.error;
+      setCost(costResult.data as typeof cost);
       const { data, error } = await rpc("receive_customer_tailoring_finished_item", {
         p_request: crypto.randomUUID(),
         p_job: jobId,
@@ -145,7 +160,7 @@ export function CustomerTailoringReceipt({
         </p>
       )}
       {selected && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <label className="text-sm">
             Finished-product name
             <Input value={name} onChange={(event) => setName(event.target.value)} />
@@ -155,10 +170,26 @@ export function CustomerTailoringReceipt({
             <Input value={size} onChange={(event) => setSize(event.target.value)} />
           </label>
           <label className="text-sm">
-            SP ₹
+            Customer bill price ₹
             <Input inputMode="decimal" value={sp} onChange={(event) => setSp(event.target.value)} />
           </label>
+          <label className="text-sm">
+            Whole-job stitching CP ₹
+            <Input
+              inputMode="decimal"
+              value={stitchingCost}
+              onChange={(event) => setStitchingCost(event.target.value)}
+            />
+          </label>
         </div>
+      )}
+      {cost && (
+        <p className="rounded-lg bg-muted/40 p-3 text-sm">
+          Final CP: fabric {reportMoney(String(cost.fabric_cp_paise))} + consumables{" "}
+          {reportMoney(String(cost.consumables_cp_paise))} + stitching{" "}
+          {reportMoney(String(cost.stitching_cp_paise))} ={" "}
+          <strong>{reportMoney(String(cost.total_cp_paise))}</strong>
+        </p>
       )}
       {selected && (
         <Button disabled={receive.isPending} onClick={() => receive.mutate()}>

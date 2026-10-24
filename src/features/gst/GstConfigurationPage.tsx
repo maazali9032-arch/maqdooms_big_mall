@@ -18,6 +18,7 @@ import {
   type GstConfiguration,
   type GstRule,
 } from "./tax";
+import { GarmentGstSlabs } from "./GarmentGstSlabs";
 
 const labels: Record<GstCategory, string> = {
   purchase: "Stock purchases",
@@ -199,6 +200,7 @@ export function GstConfigurationPage() {
 
   return (
     <div className="space-y-4">
+      <GarmentGstSlabs />
       <Panel
         title="Activation and effective date"
         description="Saving creates a new immutable version. Changes apply from save time unless you choose a different effective date. Scheduled future versions retain their date."

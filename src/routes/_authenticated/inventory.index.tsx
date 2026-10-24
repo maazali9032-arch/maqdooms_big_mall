@@ -5,7 +5,7 @@ import { PageHeader, StatCard } from "@/shared/components/page";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FabricStock } from "@/features/inventory/FabricStock";
 import { FinishedProductWorkspace } from "@/features/inventory/FinishedProductWorkspace";
-import { Consumables } from "@/features/inventory/Consumables";
+import { MaterialUnits } from "@/features/inventory/MaterialUnits";
 import { LocationDefinitions } from "@/features/inventory/LocationDefinitions";
 import { StockActivity } from "@/features/inventory/StockActivity";
 import { FabricArchive } from "@/features/inventory/FabricArchive";
@@ -40,7 +40,7 @@ function InventoryPage() {
           title="Materials & Consumables"
           description="Materials used for tailoring and production."
         />
-        <Consumables />
+        <MaterialUnits />
       </>
     );
   if (nav.activeId === "locations")

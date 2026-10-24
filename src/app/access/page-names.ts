@@ -15,6 +15,7 @@ export const PAGE_NAMES: Record<string, string> = {
   "/tailoring#production": "Production Tailoring",
   "/tailoring#receipt": "Finished Products",
   "/tailoring#customer": "Customer Tailoring",
+  "/tailoring#work": "Tailor Work",
   "/tailoring#hierarchy": "Factories & Tailors",
   "/tailoring#catalog": "Products & Designs",
   "/ecommerce": "E-commerce",

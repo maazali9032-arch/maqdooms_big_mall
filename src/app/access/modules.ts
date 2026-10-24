@@ -49,6 +49,7 @@ export const ROLE_MODULES: Record<string, ModuleKey[]> = {
   salesperson: ["salesperson_work", "stock_count", "settings"],
   ecommerce_manager: ["ecommerce", "stock_count", "settings"],
   tailor: ["tailoring", "stock_count", "settings"],
+  tailor_staff: ["tailoring", "settings"],
   production: ["tailoring", "stock_count", "settings"],
 };
 

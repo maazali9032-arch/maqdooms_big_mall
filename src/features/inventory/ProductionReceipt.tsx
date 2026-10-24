@@ -20,6 +20,7 @@ type Functions = Database["public"]["Functions"];
 type ScanRequest = { p_request: string; p_code: string };
 type PricedReceipt = ScanRequest & {
   p_prices: { piece_number: number; sp_paise: number }[];
+  stitching_paise: number;
   images: { all: File | null; pieces: Record<number, File | null> };
 };
 type Piece = {
@@ -58,6 +59,7 @@ export function ProductionReceipt({
   const [reason, setReason] = useState("");
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [allPrice, setAllPrice] = useState("");
+  const [stitchingCost, setStitchingCost] = useState("");
   const [jobImage, setJobImage] = useState<File | null>(null);
   const [pieceImages, setPieceImages] = useState<Record<number, File | null>>({});
   const [receiptPending, setReceiptPending] = useState<PricedReceipt | null>(null);
@@ -105,6 +107,7 @@ export function ProductionReceipt({
       setScanned(id);
       setPrices({});
       setAllPrice("");
+      setStitchingCost("");
       setJobImage(null);
       setPieceImages({});
       setReason("");
@@ -118,7 +121,17 @@ export function ProductionReceipt({
   const receivePriced = useMutation({
     mutationFn: async (request: PricedReceipt) => {
       setReceiptPending(request);
-      const { images, ...rpcRequest } = request;
+      const { images, stitching_paise, ...rpcRequest } = request;
+      const saveCost = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ error: Error | null }>
+      ).call(supabase, "save_production_completion_cost", {
+        p_job: job.data!.id,
+        p_stitching_total_paise: stitching_paise,
+      });
+      if (saveCost.error) throw saveCost.error;
       const { error } = await (
         supabase.rpc as unknown as (
           name: string,
@@ -171,6 +184,7 @@ export function ProductionReceipt({
         p_request: crypto.randomUUID(),
         p_code: job.data.code,
         p_prices,
+        stitching_paise: receiptCost(stitchingCost),
         images: { all: jobImage, pieces: pieceImages },
       });
     } catch (error) {
@@ -293,6 +307,18 @@ export function ProductionReceipt({
               )}
               {priceAllowed && (
                 <>
+                  <label className="block text-sm">
+                    Whole-job stitching CP ₹
+                    <Input
+                      inputMode="decimal"
+                      value={stitchingCost}
+                      onChange={(event) => setStitchingCost(event.target.value)}
+                      placeholder="Total stitching cost for this complete job"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      The complete amount is divided equally across all pieces when CP is finalized.
+                    </span>
+                  </label>
                   <div className="rounded-lg bg-muted/30 p-3">
                     <StockImageInput
                       label="Add one image for all finished pieces"
