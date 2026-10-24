@@ -35,10 +35,7 @@ type DraftLine = {
   unit: string;
   unitCount: string;
   quantityEach: string;
-  netCostEach: string;
-  recoverableGstEach: string;
-  nonrecoverableGstEach: string;
-  directCostEach: string;
+  purchaseCostEach: string;
 };
 const rpc = supabase.rpc.bind(supabase) as unknown as (
   name: string,
@@ -51,10 +48,7 @@ const blankLine = (): DraftLine => ({
   unit: "pc",
   unitCount: "1",
   quantityEach: "",
-  netCostEach: "",
-  recoverableGstEach: "0",
-  nonrecoverableGstEach: "0",
-  directCostEach: "0",
+  purchaseCostEach: "",
 });
 const paise = (value: string) => {
   const amount = Number(value);
@@ -77,8 +71,14 @@ export function MaterialUnits({
   const labels = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [supplier, setSupplier] = useState("");
-  const [reference, setReference] = useState("");
-  const [sharedExpense, setSharedExpense] = useState("0");
+  const [supplierGstin, setSupplierGstin] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [taxableAmount, setTaxableAmount] = useState("");
+  const [gstAmount, setGstAmount] = useState("");
+  const [invoiceTotal, setInvoiceTotal] = useState("");
+  const [transportCharges, setTransportCharges] = useState("0");
+  const [itcStatus, setItcStatus] = useState("pending");
   const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   const [correctionReason, setCorrectionReason] = useState<Record<string, string>>({});
@@ -138,14 +138,19 @@ export function MaterialUnits({
   const receive = useMutation({
     mutationFn: async (args: Record<string, unknown>) => {
       setPending(args);
-      const { error } = await rpc("receive_material_unit_batch", args);
+      const { error } = await rpc("receive_material_unit_batch_with_purchase", args);
       if (error) throw error;
     },
     onSuccess: () => {
       setPending(null);
       setSupplier("");
-      setReference("");
-      setSharedExpense("0");
+      setSupplierGstin("");
+      setInvoiceNumber("");
+      setInvoiceDate("");
+      setTaxableAmount("");
+      setGstAmount("");
+      setInvoiceTotal("");
+      setTransportCharges("0");
       setLines([blankLine()]);
       void qc.invalidateQueries({ queryKey: ["material-units"] });
       toast.success("Material batch saved and M barcodes generated");
@@ -159,6 +164,12 @@ export function MaterialUnits({
     try {
       if (pending) return receive.mutate(pending);
       if (!supplier.trim()) throw new Error("Enter the supplier");
+      if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
+        throw new Error("Enter the supplier's valid 15-character GSTIN");
+      if (!invoiceNumber.trim() || !invoiceDate)
+        throw new Error("Supplier invoice number and date are required");
+      if (paise(invoiceTotal) !== paise(taxableAmount) + paise(gstAmount))
+        throw new Error("Invoice total must equal taxable amount plus GST");
       const names = lines.map((line) => line.name.trim().toLowerCase());
       if (names.some((name) => !name) || new Set(names).size !== names.length)
         throw new Error("Each material type needs a unique name");
@@ -169,10 +180,10 @@ export function MaterialUnits({
           throw new Error("Enter a valid unit count and quantity for every material");
         const unit = {
           quantity,
-          net_purchase_paise: paise(line.netCostEach),
-          recoverable_gst_paise: paise(line.recoverableGstEach),
-          nonrecoverable_gst_paise: paise(line.nonrecoverableGstEach),
-          direct_cost_paise: paise(line.directCostEach),
+          net_purchase_paise: paise(line.purchaseCostEach),
+          recoverable_gst_paise: 0,
+          nonrecoverable_gst_paise: 0,
+          direct_cost_paise: 0,
         };
         return {
           name: line.name.trim(),
@@ -184,9 +195,19 @@ export function MaterialUnits({
       receive.mutate({
         p_request: crypto.randomUUID(),
         p_supplier: supplier.trim(),
-        p_reference: reference.trim() || null,
-        p_shared_expense_paise: paise(sharedExpense),
+        p_reference: invoiceNumber.trim(),
+        p_shared_expense_paise: paise(transportCharges),
         p_lines,
+        p_purchase: {
+          supplier_gstin: supplierGstin.trim(),
+          invoice_number: invoiceNumber.trim(),
+          invoice_date: invoiceDate,
+          itc_status: itcStatus,
+          actual_taxable_paise: paise(taxableAmount),
+          actual_gst_paise: paise(gstAmount),
+          actual_supplier_paise: paise(invoiceTotal),
+          transport_paise: paise(transportCharges),
+        },
       });
     } catch (error) {
       toast.error((error as Error).message);
@@ -213,17 +234,72 @@ export function MaterialUnits({
                 <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} />
               </label>
               <label className="text-sm">
-                Supplier invoice / reference
-                <Input value={reference} onChange={(e) => setReference(e.target.value)} />
-              </label>
-              <label className="text-sm">
-                Shared expenses ₹
+                Transport / other charges ₹
                 <Input
                   inputMode="decimal"
-                  value={sharedExpense}
-                  onChange={(e) => setSharedExpense(e.target.value)}
+                  value={transportCharges}
+                  onChange={(e) => setTransportCharges(e.target.value)}
                 />
               </label>
+            </div>
+            <div className="rounded-xl border p-3">
+              <h3 className="mb-3 font-semibold">Supplier GST & purchase invoice</h3>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Enter the invoice exactly as received. Unit purchase CP below is GST-inclusive; GST
+                is not added again.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <Input
+                  aria-label="Supplier GSTIN"
+                  placeholder="Supplier GSTIN"
+                  value={supplierGstin}
+                  onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                />
+                <Input
+                  aria-label="Supplier invoice number"
+                  placeholder="Invoice number"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                />
+                <Input
+                  aria-label="Supplier invoice date"
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                />
+                <select
+                  aria-label="Input tax credit status"
+                  className="h-11 rounded border bg-background p-2"
+                  value={itcStatus}
+                  onChange={(e) => setItcStatus(e.target.value)}
+                >
+                  <option value="pending">ITC pending review</option>
+                  <option value="eligible">ITC eligible</option>
+                  <option value="ineligible">ITC ineligible</option>
+                  <option value="reversed">ITC reversed</option>
+                </select>
+                <Input
+                  aria-label="Invoice taxable amount"
+                  inputMode="decimal"
+                  placeholder="Taxable amount ₹"
+                  value={taxableAmount}
+                  onChange={(e) => setTaxableAmount(e.target.value)}
+                />
+                <Input
+                  aria-label="Invoice GST amount"
+                  inputMode="decimal"
+                  placeholder="GST amount ₹"
+                  value={gstAmount}
+                  onChange={(e) => setGstAmount(e.target.value)}
+                />
+                <Input
+                  aria-label="Invoice total"
+                  inputMode="decimal"
+                  placeholder="Invoice total incl. GST ₹"
+                  value={invoiceTotal}
+                  onChange={(e) => setInvoiceTotal(e.target.value)}
+                />
+              </div>
             </div>
             {lines.map((line, index) => (
               <div key={line.key} className="rounded-xl border p-3">
@@ -313,60 +389,16 @@ export function MaterialUnits({
                     />
                   </label>
                   <label className="text-sm">
-                    Net purchase per unit ₹
+                    Purchase CP per unit, including GST ₹
                     <Input
                       inputMode="decimal"
-                      value={line.netCostEach}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, netCostEach: e.target.value } : row,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Recoverable GST per unit ₹
-                    <Input
-                      inputMode="decimal"
-                      value={line.recoverableGstEach}
+                      value={line.purchaseCostEach}
                       onChange={(e) =>
                         setLines((rows) =>
                           rows.map((row) =>
                             row.key === line.key
-                              ? { ...row, recoverableGstEach: e.target.value }
+                              ? { ...row, purchaseCostEach: e.target.value }
                               : row,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Nonrecoverable GST per unit ₹
-                    <Input
-                      inputMode="decimal"
-                      value={line.nonrecoverableGstEach}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key
-                              ? { ...row, nonrecoverableGstEach: e.target.value }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Direct cost per unit ₹
-                    <Input
-                      inputMode="decimal"
-                      value={line.directCostEach}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, directCostEach: e.target.value } : row,
                           ),
                         )
                       }
@@ -389,8 +421,8 @@ export function MaterialUnits({
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Shared expenses are allocated by each unit’s net purchase value. Recoverable GST is
-              tracked outside inventory CP; nonrecoverable GST and direct costs are included.
+              Transport and other charges are divided equally across all physical units and added to
+              each unit's landed CP.
             </p>
           </fieldset>
         </Panel>

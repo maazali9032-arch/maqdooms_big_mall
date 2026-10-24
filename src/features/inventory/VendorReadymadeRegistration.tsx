@@ -73,7 +73,14 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       day: "2-digit",
     }).format(new Date()),
   );
-  const [remarks, setRemarks] = useState("");
+  const [supplierGstin, setSupplierGstin] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [taxableAmount, setTaxableAmount] = useState("");
+  const [gstAmount, setGstAmount] = useState("");
+  const [invoiceTotal, setInvoiceTotal] = useState("");
+  const [transportCharges, setTransportCharges] = useState("0");
+  const [itcStatus, setItcStatus] = useState("pending");
   const [rows, setRows] = useState<Entry[]>([emptyEntry()]);
   const [printed, setPrinted] = useState<ResultPiece[]>([]);
   const [batchCode, setBatchCode] = useState<string | null>(null);
@@ -94,25 +101,44 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
           (_, index) => pieceFor(row, index).image ?? row.image,
         ),
       );
+      const transportPaise = fabricMoneyInput(transportCharges);
+      const pieceCount = rows.reduce((sum, row) => sum + validCount(row.quantity), 0);
       const items = rows.flatMap((row) =>
         Array.from({ length: validCount(row.quantity) }, (_, index) => {
           const piece = pieceFor(row, index);
+          const flatIndex =
+            rows
+              .slice(0, rows.indexOf(row))
+              .reduce((sum, item) => sum + validCount(item.quantity), 0) + index;
+          const allocatedTransport =
+            Math.floor(transportPaise / pieceCount) +
+            (flatIndex < transportPaise % pieceCount ? 1 : 0);
           return {
             product_name: row.productName.trim(),
             vendor_style: piece.style.trim() || null,
             size: piece.size.trim(),
             quantity: 1,
-            cp_paise: fabricMoneyInput(piece.cp),
+            cp_paise: fabricMoneyInput(piece.cp) + allocatedTransport,
             sp_paise: fabricMoneyInput(piece.sp),
           };
         }),
       );
-      const { data, error } = await customRpc("receive_vendor_finished_products", {
+      const { data, error } = await customRpc("receive_vendor_finished_products_with_purchase", {
         p_request: crypto.randomUUID(),
         p_supplier: supplier.trim(),
         p_arrival_date: arrivalDate,
-        p_remarks: remarks.trim() || null,
+        p_remarks: null,
         p_items: items,
+        p_purchase: {
+          supplier_gstin: supplierGstin.trim(),
+          invoice_number: invoiceNumber.trim(),
+          invoice_date: invoiceDate,
+          itc_status: itcStatus,
+          actual_taxable_paise: fabricMoneyInput(taxableAmount),
+          actual_gst_paise: fabricMoneyInput(gstAmount),
+          actual_supplier_paise: fabricMoneyInput(invoiceTotal),
+          transport_paise: transportPaise,
+        },
       });
       if (error) throw error;
       const result = data as ReceiveResult;
@@ -138,7 +164,13 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       setBatchCode(result.batch_code ?? null);
       setRows([emptyEntry()]);
       setSupplier("");
-      setRemarks("");
+      setSupplierGstin("");
+      setInvoiceNumber("");
+      setInvoiceDate("");
+      setTaxableAmount("");
+      setGstAmount("");
+      setInvoiceTotal("");
+      setTransportCharges("0");
       await qc.invalidateQueries();
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
     },
@@ -200,18 +232,75 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
             />
           </div>
           <div>
-            <Label htmlFor="vendor-remarks">Remarks (optional)</Label>
+            <Label htmlFor="vendor-transport">Transport / other charges (₹)</Label>
             <Input
-              id="vendor-remarks"
-              value={remarks}
-              onChange={(event) => setRemarks(event.target.value)}
-              placeholder="Invoice reference or delivery note"
+              id="vendor-transport"
+              inputMode="decimal"
+              value={transportCharges}
+              onChange={(e) => setTransportCharges(e.target.value)}
             />
           </div>
         </fieldset>
       </Panel>
       <Panel
-        title="3. Readymade Types & Quantities"
+        title="3. Supplier GST & purchase invoice"
+        description="Enter the supplier invoice exactly as received. Garment CP is GST-inclusive; the system does not add GST again."
+      >
+        <fieldset disabled={receive.isPending} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Input
+            aria-label="Supplier GSTIN"
+            placeholder="Supplier GSTIN"
+            value={supplierGstin}
+            onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+          />
+          <Input
+            aria-label="Supplier invoice number"
+            placeholder="Invoice number"
+            value={invoiceNumber}
+            onChange={(e) => setInvoiceNumber(e.target.value)}
+          />
+          <Input
+            aria-label="Supplier invoice date"
+            type="date"
+            value={invoiceDate}
+            onChange={(e) => setInvoiceDate(e.target.value)}
+          />
+          <select
+            aria-label="Input tax credit status"
+            className="h-11 rounded border bg-background p-2"
+            value={itcStatus}
+            onChange={(e) => setItcStatus(e.target.value)}
+          >
+            <option value="pending">ITC pending review</option>
+            <option value="eligible">ITC eligible</option>
+            <option value="ineligible">ITC ineligible</option>
+            <option value="reversed">ITC reversed</option>
+          </select>
+          <Input
+            aria-label="Invoice taxable amount"
+            inputMode="decimal"
+            placeholder="Taxable amount ₹"
+            value={taxableAmount}
+            onChange={(e) => setTaxableAmount(e.target.value)}
+          />
+          <Input
+            aria-label="Invoice GST amount"
+            inputMode="decimal"
+            placeholder="GST amount ₹"
+            value={gstAmount}
+            onChange={(e) => setGstAmount(e.target.value)}
+          />
+          <Input
+            aria-label="Invoice total"
+            inputMode="decimal"
+            placeholder="Invoice total incl. GST ₹"
+            value={invoiceTotal}
+            onChange={(e) => setInvoiceTotal(e.target.value)}
+          />
+        </fieldset>
+      </Panel>
+      <Panel
+        title="4. Readymade Types & Quantities"
         description="Enter the piece count. One editable physical-garment row is created for every piece, and each receives its own R barcode."
       >
         <div className="space-y-4">
@@ -294,7 +383,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                       />
                     </div>
                     <div>
-                      <Label>CP for all, excluding GST (₹)</Label>
+                      <Label>Purchase CP for all, including GST (₹)</Label>
                       <Input
                         inputMode="decimal"
                         value={row.sharedCp}
@@ -427,6 +516,16 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                   if (fabricMoneyInput(piece.cp) < 0 || fabricMoneyInput(piece.sp) <= 0)
                     throw new Error("CP must be zero or more and SP must be positive");
                 }
+              if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
+                throw new Error("Enter the supplier's valid 15-character GSTIN");
+              if (!invoiceNumber.trim() || !invoiceDate)
+                throw new Error("Supplier invoice number and date are required");
+              if (
+                fabricMoneyInput(invoiceTotal) !==
+                fabricMoneyInput(taxableAmount) + fabricMoneyInput(gstAmount)
+              )
+                throw new Error("Invoice total must equal taxable amount plus GST");
+              fabricMoneyInput(transportCharges);
               receive.mutate();
             } catch (error) {
               toast.error(error instanceof Error ? error.message : "Check CP and SP");

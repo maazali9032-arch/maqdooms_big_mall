@@ -7,7 +7,6 @@ import {
   ArrowRight,
   Barcode,
   FileText,
-  Info,
   Layers,
   PackagePlus,
   Plus,
@@ -25,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { quantityInput } from "./ledger-quantity";
-import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { reportQuantity } from "@/features/reports/report-value";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { createStockBatch } from "./stock-batch-request";
@@ -33,13 +32,6 @@ import { StockImageInput } from "./StockImageInput";
 import { saveStockImages } from "./stock-images";
 import { MaterialUnits } from "./MaterialUnits";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
-  calculateTaxPaise,
-  defaultGstRule,
-  selectedGstRule,
-  formatGstRate,
-  useGstConfiguration,
-} from "@/features/gst/tax";
 type Variant = {
   id: string;
   code: string;
@@ -77,6 +69,7 @@ type Work =
         actual_taxable_paise: number | null;
         actual_gst_paise: number | null;
         actual_supplier_paise: number | null;
+        transport_paise: number;
       };
       imagePlan?: {
         types: { image: File | null; pieces: (File | null)[] }[];
@@ -174,7 +167,6 @@ export function StockRegistration() {
   const allowed = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const qc = useQueryClient();
   const suppliers = useSuppliers();
-  const gst = useGstConfiguration();
   const [stage, setStage] = useState<"home" | "create" | "labels">("home");
   const [batchType, setBatchType] = useState<"fabric" | "vendor_finished" | "materials">("fabric");
   const [provider, setProvider] = useState("");
@@ -186,8 +178,6 @@ export function StockRegistration() {
       day: "2-digit",
     }).format(new Date()),
   );
-  const [remarks, setRemarks] = useState("");
-  const [supplierInvoiceAvailable, setSupplierInvoiceAvailable] = useState<"no" | "yes">("no");
   const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
@@ -197,6 +187,7 @@ export function StockRegistration() {
   const [actualTaxable, setActualTaxable] = useState("");
   const [actualGst, setActualGst] = useState("");
   const [actualSupplier, setActualSupplier] = useState("");
+  const [transportCharges, setTransportCharges] = useState("0");
   const [rows, setRows] = useState<EntryRow[]>([emptyRow()]);
   const [batchId, setBatchId] = useState("");
   const [groupIndex, setGroupIndex] = useState(0);
@@ -239,42 +230,6 @@ export function StockRegistration() {
     (sum, r) => sum + (/^\d+$/.test(r.quantity) ? Number(r.quantity) : 0),
     0,
   );
-  const purchaseRule = defaultGstRule(gst.data, "purchase");
-  const gstEnabled = Boolean(gst.data?.configuration?.enabled && purchaseRule);
-  const supplierStateCode = supplierGstin.trim().slice(0, 2);
-  const purchaseSupply =
-    /^\d{2}$/.test(supplierStateCode) && supplierStateCode !== gst.data?.configuration?.state_code
-      ? "inter_state"
-      : "intra_state";
-  const purchaseTotals = (() => {
-    try {
-      let base = 0n,
-        gstTotal = 0n,
-        supplier = 0n;
-      for (const row of rows)
-        for (let index = 0; index < rowCount(row.quantity); index++) {
-          const detail = thaanDetail(row, index);
-          if (!detail.length.trim() || !detail.cp.trim()) continue;
-          const amount =
-            (BigInt(quantityInput(detail.length, "mm")) * BigInt(fabricMoneyInput(detail.cp)) +
-              500n) /
-            1000n;
-          const rule = selectedGstRule(
-            gst.data,
-            "purchase",
-            `FABRIC:${row.name.trim().toUpperCase()}`,
-          );
-          if (!rule) throw new Error("Purchase GST rule required");
-          const tax = calculateTaxPaise(amount, rule.rate_bps, "exclusive", purchaseSupply);
-          base += amount;
-          gstTotal += tax.gstPaise;
-          supplier += tax.finalPaise;
-        }
-      return { base, gst: gstTotal, supplier };
-    } catch {
-      return null;
-    }
-  })();
   const action = useMutation({
     mutationFn: async (args: Pending) => {
       setPending(args);
@@ -541,18 +496,6 @@ export function StockRegistration() {
           )}
           {batchType === "fabric" && (
             <>
-              <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 px-4 py-3">
-                <Info className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-medium">
-                    Optional: enter actual details now or leave blank and complete by scanning.
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Positive actual length and CP are required before stock becomes available.
-                    Colour is optional. Details can be added later.
-                  </p>
-                </div>
-              </div>
               <Panel
                 title="2. Batch Information"
                 actions={<FileText className="size-5 text-primary" aria-hidden="true" />}
@@ -581,110 +524,75 @@ export function StockRegistration() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="batch-remarks">Remarks (optional)</Label>
+                    <Label htmlFor="transport-charges">Transport / other charges (₹)</Label>
                     <Input
-                      id="batch-remarks"
-                      value={remarks}
-                      onChange={(e) => setRemarks(e.target.value)}
+                      id="transport-charges"
+                      inputMode="decimal"
+                      value={transportCharges}
+                      onChange={(e) => setTransportCharges(e.target.value)}
                     />
                   </div>
                 </fieldset>
               </Panel>
-              {gstEnabled && (
-                <Panel
-                  title="3. Supplier invoice available?"
-                  description="CP remains the base cost excluding GST. Record supplier-invoice values only when you have the invoice."
-                >
-                  <fieldset disabled={frozen} className="space-y-3">
-                    <div
-                      className="flex flex-wrap gap-2"
-                      role="radiogroup"
-                      aria-label="Supplier invoice available"
+              <Panel
+                title="3. Supplier GST & purchase invoice"
+                description="Enter the supplier invoice exactly as received. Purchase CP below is GST-inclusive; the system does not add GST again."
+              >
+                <fieldset disabled={frozen} className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <Input
+                      aria-label="Supplier GSTIN"
+                      placeholder="Supplier GSTIN"
+                      value={supplierGstin}
+                      onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                    />
+                    <Input
+                      aria-label="Supplier invoice number"
+                      placeholder="Supplier invoice number"
+                      value={supplierInvoice}
+                      onChange={(e) => setSupplierInvoice(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Supplier invoice date"
+                      type="date"
+                      value={supplierInvoiceDate}
+                      onChange={(e) => setSupplierInvoiceDate(e.target.value)}
+                    />
+                    <select
+                      aria-label="Input tax credit status"
+                      className="h-11 rounded border bg-background p-2"
+                      value={itcStatus}
+                      onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
                     >
-                      <Button
-                        type="button"
-                        variant={supplierInvoiceAvailable === "no" ? "default" : "outline"}
-                        onClick={() => setSupplierInvoiceAvailable("no")}
-                      >
-                        No
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={supplierInvoiceAvailable === "yes" ? "default" : "outline"}
-                        onClick={() => setSupplierInvoiceAvailable("yes")}
-                      >
-                        Yes
-                      </Button>
-                    </div>
-                    {supplierInvoiceAvailable === "no" ? (
-                      <p className="text-sm text-muted-foreground">
-                        Stock can be received without a supplier invoice. No purchase GST or ITC
-                        record will be created.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-sm text-muted-foreground">
-                          The active purchase rule is {formatGstRate(purchaseRule!.rate_bps)} (
-                          {purchaseRule!.classification_code}). Supplier values are optional and
-                          reconcile the calculated estimate; they do not claim ITC automatically.
-                        </p>
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                          <Input
-                            aria-label="Supplier GSTIN"
-                            placeholder="Supplier GSTIN (optional)"
-                            value={supplierGstin}
-                            onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                          />
-                          <Input
-                            aria-label="Supplier invoice number"
-                            placeholder="Supplier invoice number"
-                            value={supplierInvoice}
-                            onChange={(e) => setSupplierInvoice(e.target.value)}
-                          />
-                          <Input
-                            aria-label="Supplier invoice date"
-                            type="date"
-                            value={supplierInvoiceDate}
-                            onChange={(e) => setSupplierInvoiceDate(e.target.value)}
-                          />
-                          <select
-                            aria-label="Input tax credit status"
-                            className="h-11 rounded border bg-background p-2"
-                            value={itcStatus}
-                            onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
-                          >
-                            <option value="pending">ITC pending review</option>
-                            <option value="eligible">ITC eligible</option>
-                            <option value="ineligible">ITC ineligible</option>
-                            <option value="reversed">ITC reversed</option>
-                          </select>
-                          <Input
-                            aria-label="Actual taxable amount"
-                            inputMode="decimal"
-                            placeholder="Invoice taxable ₹ (optional)"
-                            value={actualTaxable}
-                            onChange={(e) => setActualTaxable(e.target.value)}
-                          />
-                          <Input
-                            aria-label="Actual GST amount"
-                            inputMode="decimal"
-                            placeholder="Invoice GST ₹ (optional)"
-                            value={actualGst}
-                            onChange={(e) => setActualGst(e.target.value)}
-                          />
-                          <Input
-                            aria-label="Actual supplier total"
-                            inputMode="decimal"
-                            placeholder="Supplier total ₹ (optional)"
-                            value={actualSupplier}
-                            onChange={(e) => setActualSupplier(e.target.value)}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </fieldset>
-                </Panel>
-              )}
+                      <option value="pending">ITC pending review</option>
+                      <option value="eligible">ITC eligible</option>
+                      <option value="ineligible">ITC ineligible</option>
+                      <option value="reversed">ITC reversed</option>
+                    </select>
+                    <Input
+                      aria-label="Actual taxable amount"
+                      inputMode="decimal"
+                      placeholder="Invoice taxable ₹"
+                      value={actualTaxable}
+                      onChange={(e) => setActualTaxable(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Actual GST amount"
+                      inputMode="decimal"
+                      placeholder="Invoice GST ₹"
+                      value={actualGst}
+                      onChange={(e) => setActualGst(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Actual supplier total"
+                      inputMode="decimal"
+                      placeholder="Invoice total incl. GST ₹"
+                      value={actualSupplier}
+                      onChange={(e) => setActualSupplier(e.target.value)}
+                    />
+                  </div>
+                </fieldset>
+              </Panel>
               <Panel
                 title="Fabric Types & Quantities"
                 description="Choose your fabrics and the number of physical Thaans for each."
@@ -779,7 +687,7 @@ export function StockRegistration() {
                             </div>
                             <div>
                               <Label htmlFor={"bulk-cp-" + r.id}>
-                                Base CP for all / metre, excluding GST (₹)
+                                Purchase CP for all / metre, including GST (₹)
                               </Label>
                               <Input
                                 id={"bulk-cp-" + r.id}
@@ -903,7 +811,7 @@ export function StockRegistration() {
                                 [
                                   ["colour", "Colour (optional)"],
                                   ["length", "Length (metres)"],
-                                  ["cp", "Base CP per metre, excluding GST (optional)"],
+                                  ["cp", "Purchase CP per metre, including GST"],
                                 ] as const
                               ).map(([field, label]) => (
                                 <div key={field} className="min-w-0">
@@ -967,38 +875,6 @@ export function StockRegistration() {
                                 }
                                 disabled={frozen}
                               />
-                              {gstEnabled &&
-                                supplierInvoiceAvailable === "yes" &&
-                                (() => {
-                                  try {
-                                    const detail = thaanDetail(r, n);
-                                    if (!detail.length.trim() || !detail.cp.trim()) return null;
-                                    const base =
-                                      (BigInt(quantityInput(detail.length, "mm")) *
-                                        BigInt(fabricMoneyInput(detail.cp)) +
-                                        500n) /
-                                      1000n;
-                                    const tax = calculateTaxPaise(
-                                      base,
-                                      selectedGstRule(
-                                        gst.data,
-                                        "purchase",
-                                        `FABRIC:${r.name.trim().toUpperCase()}`,
-                                      )!.rate_bps,
-                                      "exclusive",
-                                      purchaseSupply,
-                                    );
-                                    return (
-                                      <p className="text-[11px] text-muted-foreground sm:col-span-3 lg:col-span-4">
-                                        Base {reportMoney(String(base))} · Estimated GST{" "}
-                                        {reportMoney(String(tax.gstPaise))} · Estimated supplier
-                                        amount {reportMoney(String(tax.finalPaise))}
-                                      </p>
-                                    );
-                                  } catch {
-                                    return null;
-                                  }
-                                })()}
                               <Button
                                 type="button"
                                 size="icon"
@@ -1058,13 +934,7 @@ export function StockRegistration() {
                   <p>Total Thaans: {total}</p>
                   <p>Fabric Types: {rows.length}</p>
                   <p>Estimated Barcodes: {total}</p>
-                  {gstEnabled && supplierInvoiceAvailable === "yes" && purchaseTotals && (
-                    <p>
-                      Base {reportMoney(String(purchaseTotals.base))} · Estimated GST{" "}
-                      {reportMoney(String(purchaseTotals.gst))} · Estimated supplier total{" "}
-                      {reportMoney(String(purchaseTotals.supplier))}
-                    </p>
-                  )}
+                  <p>Transport is divided by total metres and added equally to every metre.</p>
                 </div>
                 <div className="flex flex-wrap gap-2 sm:shrink-0">
                   <Button
@@ -1095,6 +965,29 @@ export function StockRegistration() {
                           );
                           return;
                         }
+                        if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
+                          throw new Error("Enter the supplier's valid 15-character GSTIN");
+                        if (!supplierInvoice.trim() || !supplierInvoiceDate)
+                          throw new Error("Supplier invoice number and date are required");
+                        fabricMoneyInput(actualTaxable);
+                        fabricMoneyInput(actualGst);
+                        const invoiceTotal = fabricMoneyInput(actualSupplier);
+                        if (
+                          invoiceTotal !==
+                          fabricMoneyInput(actualTaxable) + fabricMoneyInput(actualGst)
+                        )
+                          throw new Error("Invoice total must equal taxable amount plus GST");
+                        fabricMoneyInput(transportCharges);
+                        for (const row of rows)
+                          for (let index = 0; index < Number(row.quantity); index++) {
+                            const detail = thaanDetail(row, index);
+                            if (!detail.length.trim() || !detail.cp.trim())
+                              throw new Error(
+                                "Length and GST-inclusive purchase CP are required for every Thaan",
+                              );
+                            quantityInput(detail.length, "mm");
+                            fabricMoneyInput(detail.cp);
+                          }
                         if (
                           rows.some((r) =>
                             r.details
@@ -1111,7 +1004,7 @@ export function StockRegistration() {
                           kind: "batch",
                           provider: provider.trim(),
                           date,
-                          remarks: remarks.trim() || null,
+                          remarks: null,
                           fabrics: rows.map((r) => ({
                             name: r.name.trim(),
                             quantity: Number(r.quantity),
@@ -1120,9 +1013,19 @@ export function StockRegistration() {
                               length_mm: thaanDetail(r, n).length.trim()
                                 ? quantityInput(thaanDetail(r, n).length, "mm")
                                 : null,
-                              cp_paise_per_m: thaanDetail(r, n).cp.trim()
-                                ? fabricMoneyInput(thaanDetail(r, n).cp)
-                                : null,
+                              cp_paise_per_m:
+                                fabricMoneyInput(thaanDetail(r, n).cp) +
+                                Math.round(
+                                  (fabricMoneyInput(transportCharges) * 1000) /
+                                    rows.reduce(
+                                      (sum, entry) =>
+                                        sum +
+                                        Array.from({ length: Number(entry.quantity) }, (_, index) =>
+                                          quantityInput(thaanDetail(entry, index).length, "mm"),
+                                        ).reduce((a, b) => a + b, 0),
+                                      0,
+                                    ),
+                                ),
                             })),
                           })),
                           imagePlan: {
@@ -1134,25 +1037,16 @@ export function StockRegistration() {
                               ),
                             })),
                           },
-                          ...(supplierInvoiceAvailable === "yes"
-                            ? {
-                                purchase: {
-                                  supplier_gstin: supplierGstin.trim(),
-                                  invoice_number: supplierInvoice.trim(),
-                                  invoice_date: supplierInvoiceDate,
-                                  itc_status: itcStatus,
-                                  actual_taxable_paise: actualTaxable.trim()
-                                    ? fabricMoneyInput(actualTaxable)
-                                    : null,
-                                  actual_gst_paise: actualGst.trim()
-                                    ? fabricMoneyInput(actualGst)
-                                    : null,
-                                  actual_supplier_paise: actualSupplier.trim()
-                                    ? fabricMoneyInput(actualSupplier)
-                                    : null,
-                                },
-                              }
-                            : {}),
+                          purchase: {
+                            supplier_gstin: supplierGstin.trim(),
+                            invoice_number: supplierInvoice.trim(),
+                            invoice_date: supplierInvoiceDate,
+                            itc_status: itcStatus,
+                            actual_taxable_paise: fabricMoneyInput(actualTaxable),
+                            actual_gst_paise: fabricMoneyInput(actualGst),
+                            actual_supplier_paise: fabricMoneyInput(actualSupplier),
+                            transport_paise: fabricMoneyInput(transportCharges),
+                          },
                         });
                       } catch (error) {
                         toast.error(
