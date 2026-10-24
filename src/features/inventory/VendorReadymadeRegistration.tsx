@@ -258,21 +258,22 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                       placeholder="For example: 12"
                     />
                   </div>
-                  <div className="text-sm text-muted-foreground self-end pb-2">
-                    Enter 1–500 pieces to create their rows.
+                  <div>
+                    <Label>Image for this type (optional)</Label>
+                    <div className="mt-1 min-h-10 rounded-md border bg-background px-2 py-1.5">
+                      <StockImageInput
+                        compact
+                        label="Add image"
+                        file={row.image}
+                        onChange={(image) => updateRow(row.id, { image })}
+                        disabled={receive.isPending}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Used by its garments unless a row has its own image.
+                    </p>
                   </div>
                 </fieldset>
-                <div className="mt-3">
-                  <StockImageInput
-                    label="Add image for this readymade type"
-                    file={row.image}
-                    onChange={(image) => updateRow(row.id, { image })}
-                    disabled={receive.isPending}
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Used by every garment in this type unless that row has its own image.
-                  </p>
-                </div>
                 <>
                   <fieldset
                     disabled={receive.isPending}
