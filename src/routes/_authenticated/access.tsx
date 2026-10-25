@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   KeyRound,
+  Hash,
   MoreVertical,
   Search,
   ShieldCheck,
@@ -13,6 +14,7 @@ import {
 import {
   useRoles,
   useSetActive,
+  useSetSalespersonCode,
   useSetStockAuditAccess,
   useSetUserRole,
   useStaff,
@@ -24,6 +26,14 @@ import { formatDateTime, initials, relativeTime } from "@/shared/utils/format";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,12 +77,15 @@ function AccessPage() {
   const roles = useRoles();
   const setRole = useSetUserRole();
   const setActive = useSetActive();
+  const saveSalespersonCode = useSetSalespersonCode();
   const stockAuditAccess = useStockAuditAccess();
   const posTerminals = usePosTerminals();
   const setStockAuditAccess = useSetStockAuditAccess();
   const [search, setSearch] = useState("");
   const [creatingStaff, setCreatingStaff] = useState(false);
   const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
+  const [salespersonCodeUserId, setSalespersonCodeUserId] = useState<string | null>(null);
+  const [salespersonCode, setSalespersonCode] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
   const [roleFilter, setRoleFilter] = useState("all");
   const [posFilter, setPosFilter] = useState("all");
@@ -280,6 +293,11 @@ function AccessPage() {
                             <span className="block truncate text-xs text-muted-foreground">
                               {user.email}
                             </span>
+                            {user.roles.includes("salesperson") && user.salesperson_code ? (
+                              <span className="mt-0.5 block text-[11px] font-medium text-primary">
+                                Salesperson #{user.salesperson_code}
+                              </span>
+                            ) : null}
                           </span>
                         </div>
                       </td>
@@ -416,6 +434,17 @@ function AccessPage() {
                               <ShieldCheck className="mr-2 size-4" />
                               Manage permissions
                             </DropdownMenuItem>
+                            {user.roles.includes("salesperson") ? (
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setSalespersonCodeUserId(user.id);
+                                  setSalespersonCode(user.salesperson_code ?? "");
+                                }}
+                              >
+                                <Hash className="mr-2 size-4" />
+                                Edit salesperson number
+                              </DropdownMenuItem>
+                            ) : null}
                             <DropdownMenuItem
                               disabled={protectsLastOwner}
                               onSelect={() => void updateActive(user)}
@@ -449,6 +478,61 @@ function AccessPage() {
           onClose={() => setPermissionUserId(null)}
         />
       )}
+      <Dialog
+        open={Boolean(salespersonCodeUserId)}
+        onOpenChange={(open) => {
+          if (!open && !saveSalespersonCode.isPending) setSalespersonCodeUserId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit salesperson number</DialogTitle>
+            <DialogDescription>
+              This digits-only number identifies the credited salesperson on future customer bills.
+              Existing bills keep their original snapshot.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="text-sm font-medium">
+            Salesperson number
+            <Input
+              className="mt-1 numeric"
+              inputMode="numeric"
+              autoFocus
+              maxLength={12}
+              value={salespersonCode}
+              onChange={(event) => setSalespersonCode(event.target.value.replace(/\D/g, ""))}
+              placeholder="For example: 101"
+            />
+          </label>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={saveSalespersonCode.isPending}
+              onClick={() => setSalespersonCodeUserId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!salespersonCode || saveSalespersonCode.isPending}
+              onClick={async () => {
+                if (!salespersonCodeUserId) return;
+                try {
+                  await saveSalespersonCode.mutateAsync({
+                    userId: salespersonCodeUserId,
+                    code: salespersonCode,
+                  });
+                  toast.success("Salesperson number updated");
+                  setSalespersonCodeUserId(null);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Update failed");
+                }
+              }}
+            >
+              {saveSalespersonCode.isPending ? "Saving…" : "Save number"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <PosTerminalManagement staff={staffList} />
       <details className="panel group overflow-hidden">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 sm:px-5">

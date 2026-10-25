@@ -1,10 +1,18 @@
 import { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { CalendarDays, Copy, RefreshCw } from "lucide-react";
+import {
+  CalendarDays,
+  Copy,
+  IndianRupee,
+  RefreshCw,
+  Ruler,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/app/providers/session";
 import { supabase } from "@/integrations/supabase/client";
-import { Panel, StatusBadge } from "@/shared/components/page";
+import { Panel, StatCard, StatusBadge } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/shared/utils/format";
@@ -83,6 +91,16 @@ export function SalespersonWork() {
       return (start === null || time >= start) && (end === null || time < end + 86_400_000);
     });
   }, [from, rows, to]);
+  const summary = useMemo(() => {
+    const total = visible.reduce((sum, row) => sum + BigInt(row.final_customer_price_paise), 0n);
+    const fabric = visible.reduce((sum, row) => sum + BigInt(row.fabric_mm ?? "0"), 0n);
+    return {
+      total,
+      fabric,
+      salespeople: new Set(visible.map((row) => row.salesperson_user_id)).size,
+    };
+  }, [visible]);
+  const salespersonCode = (id: string) => people.data?.find((person) => person.id === id)?.code;
 
   async function copyBill(code: string) {
     await navigator.clipboard.writeText(code);
@@ -106,6 +124,7 @@ export function SalespersonWork() {
             {people.data?.map((person) => (
               <option key={person.id} value={person.id}>
                 {person.name}
+                {person.code ? ` · #${person.code}` : ""}
               </option>
             ))}
           </select>
@@ -137,6 +156,34 @@ export function SalespersonWork() {
         </Button>
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-2 xl:grid-cols-4">
+        <StatCard
+          label="Bills"
+          value={visible.length}
+          hint="In the current view"
+          icon={ShoppingBag}
+        />
+        <StatCard
+          label="Attributed sales"
+          value={reportMoney(summary.total.toString())}
+          hint="Completed bill value"
+          icon={IndianRupee}
+          tone="success"
+        />
+        <StatCard
+          label="Fabric sold"
+          value={reportQuantity(summary.fabric.toString(), "mm")}
+          hint="Across visible bills"
+          icon={Ruler}
+        />
+        <StatCard
+          label="Salespeople"
+          value={summary.salespeople}
+          hint={isOwner ? "Credited in this view" : "Your attributed work"}
+          icon={Users}
+        />
+      </div>
+
       {work.error ? (
         <p role="alert">Work could not load. Check access or retry.</p>
       ) : work.isPending ? (
@@ -146,10 +193,10 @@ export function SalespersonWork() {
           {rows.length ? "No work matches the selected dates." : "No attributed work yet."}
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {visible.map((row) => (
-            <article key={row.id} className="overflow-hidden rounded-xl border bg-card shadow-sm">
-              <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
+            <article key={row.id} className="overflow-hidden rounded-lg border bg-card shadow-sm">
+              <header className="flex flex-wrap items-start justify-between gap-2 border-b px-3 py-2.5">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="max-w-[220px] truncate font-semibold" title={row.code}>
@@ -180,7 +227,7 @@ export function SalespersonWork() {
                 </p>
               </header>
 
-              <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_1.2fr_1.5fr]">
+              <div className="grid gap-3 bg-surface/30 px-3 py-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.2fr_1.2fr_1.5fr]">
                 <Metric
                   label="Bill total"
                   value={reportMoney(row.final_customer_price_paise)}
@@ -191,7 +238,10 @@ export function SalespersonWork() {
                   value={row.fabric_mm !== null ? reportQuantity(row.fabric_mm, "mm") : "—"}
                   prominent
                 />
-                <Metric label="Salesperson" value={row.salesperson_name} />
+                <Metric
+                  label="Salesperson"
+                  value={`${row.salesperson_name}${salespersonCode(row.salesperson_user_id) ? ` · #${salespersonCode(row.salesperson_user_id)}` : ""}`}
+                />
                 <Metric label="POS operator" value={row.operator_name || "Recorded staff"} />
                 <Metric
                   label="Payment"
@@ -206,7 +256,7 @@ export function SalespersonWork() {
               </div>
 
               {!!row.fabrics.length && (
-                <div className="mx-4 mb-4 overflow-hidden rounded-lg border">
+                <div className="mx-3 mb-3 overflow-hidden rounded-md border">
                   <p className="bg-muted px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Items
                   </p>
@@ -227,7 +277,7 @@ export function SalespersonWork() {
               )}
 
               {!!row.tailoring_jobs?.length && (
-                <details className="mx-4 mb-4 rounded-lg border px-3 py-2 text-sm">
+                <details className="mx-3 mb-3 rounded-md border px-3 py-2 text-sm">
                   <summary className="cursor-pointer font-medium">Linked tailoring work</summary>
                   <div className="mt-2 divide-y">
                     {row.tailoring_jobs.map((job) => (
@@ -241,7 +291,7 @@ export function SalespersonWork() {
               )}
 
               {row.job_id && (
-                <p className="mx-4 mb-4 rounded-lg bg-muted px-3 py-2 text-sm">
+                <p className="mx-3 mb-3 rounded-md bg-muted px-3 py-2 text-sm">
                   {row.job_code} · {row.garment} · {row.job_status} · {row.factory_name} →{" "}
                   {row.section_name || "No Section"} → {row.tailor_name}
                 </p>

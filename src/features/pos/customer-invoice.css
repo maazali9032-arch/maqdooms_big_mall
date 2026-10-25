@@ -42,6 +42,15 @@
   margin: 5px 0;
   overflow-wrap: anywhere;
 }
+.invoice-salesperson-code {
+  margin: 3px 0 0;
+  text-align: right;
+  font:
+    700 8px/1.2 Arial,
+    sans-serif;
+  color: #555;
+  letter-spacing: 0.2px;
+}
 .invoice-barcode {
   text-align: center;
   margin: 12px 0 8px;

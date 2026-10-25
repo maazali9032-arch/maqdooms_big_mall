@@ -87,6 +87,26 @@ export function useSetActive() {
   });
 }
 
+export function useSetSalespersonCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { userId: string; code: string }) => {
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: Error | null }>
+      )("owner_set_salesperson_code", {
+        p_user: input.userId,
+        p_code: input.code,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["staff"] }),
+  });
+}
+
 export function useStockAuditAccess() {
   return useQuery({
     queryKey: ["stock-audit-access"],
@@ -105,7 +125,12 @@ export function useSetStockAuditAccess() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { userId: string; granted: boolean }) => {
-      const { error } = await (supabase.rpc as any)("owner_set_user_permission", {
+      const { error } = await (
+        supabase.rpc as unknown as (
+          name: string,
+          args: Record<string, unknown>,
+        ) => Promise<{ data: unknown; error: Error | null }>
+      )("owner_set_user_permission", {
         p_user: input.userId,
         p_permission: "stock_count.perform",
         p_granted: input.granted,

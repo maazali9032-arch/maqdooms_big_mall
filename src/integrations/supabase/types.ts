@@ -407,6 +407,7 @@ export type Database = {
           full_name: string;
           id: string;
           last_login: string | null;
+          salesperson_code: string | null;
         };
         Insert: {
           active?: boolean;
@@ -415,6 +416,7 @@ export type Database = {
           full_name?: string;
           id: string;
           last_login?: string | null;
+          salesperson_code?: string | null;
         };
         Update: {
           active?: boolean;
@@ -423,6 +425,7 @@ export type Database = {
           full_name?: string;
           id?: string;
           last_login?: string | null;
+          salesperson_code?: string | null;
         };
         Relationships: [];
       };

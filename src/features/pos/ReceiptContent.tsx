@@ -92,6 +92,9 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           {receipt.customer.phone ? ` · ${receipt.customer.phone}` : ""}
         </p>
       )}
+      {receipt.salesperson_code && (
+        <p className="invoice-salesperson-code">Salesperson #{receipt.salesperson_code}</p>
+      )}
       {receipt.tax?.customer.gstin && (
         <p className="text-xs">Customer GSTIN: {receipt.tax.customer.gstin}</p>
       )}

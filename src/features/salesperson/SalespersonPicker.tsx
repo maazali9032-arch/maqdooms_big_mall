@@ -32,6 +32,7 @@ export function SalespersonPicker({
         {options.data?.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name?.trim() || "Name not recorded"}
+            {p.code ? ` · #${p.code}` : ""}
           </option>
         ))}
       </select>

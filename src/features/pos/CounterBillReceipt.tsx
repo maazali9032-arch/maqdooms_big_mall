@@ -70,6 +70,7 @@ export type CounterReceipt = {
   paid_at: string | null;
   source: string;
   salesperson: string;
+  salesperson_code?: string | null;
   customer: { name: string | null; phone: string | null };
   lines: {
     id: string;
