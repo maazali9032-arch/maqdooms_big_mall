@@ -1,4 +1,4 @@
-import { reportMoney } from "@/features/reports/report-value";
+import { reportInteger, reportMoney } from "@/features/reports/report-value";
 import type { GstInvoice } from "@/features/pos/CounterBillReceipt";
 
 /** Both screen and thermal printing render these fields from the immutable invoice, never live config. */
@@ -16,7 +16,7 @@ export function GstInvoiceSummary({ tax }: { tax: GstInvoice }) {
   return (
     <div className="invoice-tax-summary space-y-1 border-t border-dashed pt-2 text-xs">
       {tax.invoice_display === "final_first" && payable}
-      {tax.discount_paise && BigInt(tax.discount_paise) > 0n && (
+      {tax.discount_paise && reportInteger(tax.discount_paise) > 0n && (
         <div className="flex justify-between text-emerald-700">
           <span>
             {tax.discount_mode === "amount"

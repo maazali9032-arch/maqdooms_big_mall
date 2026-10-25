@@ -1,4 +1,5 @@
 import { indiaDay, shiftDay } from "./evidence-model";
+import { reportInteger } from "./report-value";
 
 export function monthPeriod(month: string) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Choose a valid month");
@@ -19,8 +20,8 @@ export function precedingPeriod(from: string, through: string) {
   return { from: shiftDay(from, -days), through: shiftDay(from, -1) };
 }
 export function growthLabel(current: string, previous: string) {
-  const c = BigInt(current),
-    p = BigInt(previous);
+  const c = reportInteger(current),
+    p = reportInteger(previous);
   if (p === 0n)
     return c === 0n ? "No sales in either period" : "No previous-period sales to compare";
   const delta = c - p,

@@ -1,7 +1,7 @@
 import { deliveryDate, receiptBarcodeGeometry } from "./receipt-format";
 import { Fragment } from "react";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
-import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { reportInteger, reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { GstInvoiceSummary } from "@/features/gst/GstInvoicePresentation";
 import type { CounterReceipt } from "./CounterBillReceipt";
 
@@ -30,13 +30,13 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   const tradingName = receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall";
   const mallBrand = / big mall$/i.test(tradingName);
   const fabricOnly = receipt.lines.every((line) => line.kind === "fabric");
-  const recordedReceived = BigInt(
+  const recordedReceived = reportInteger(
     receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0"),
   );
-  const invoiceTotal = BigInt(receipt.total_paise);
+  const invoiceTotal = reportInteger(receipt.total_paise);
   const received = recordedReceived > invoiceTotal ? invoiceTotal : recordedReceived;
   const calculatedBalance = invoiceTotal - received;
-  const balance = BigInt(
+  const balance = reportInteger(
     receipt.balance_paise ?? (calculatedBalance > 0n ? calculatedBalance : 0n).toString(),
   );
   const priceMode = receipt.tax?.price_mode ?? "inclusive";
@@ -126,15 +126,15 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           </div>
           <div className="invoice-row flex justify-between">
             <strong>
-              {BigInt(receipt.exchange.net_difference_paise ?? "0") >= 0n
+              {reportInteger(receipt.exchange.net_difference_paise ?? "0") >= 0n
                 ? "Amount collected"
                 : "Amount refunded"}
             </strong>
             <strong>
               {reportMoney(
-                (BigInt(receipt.exchange.net_difference_paise ?? "0") < 0n
-                  ? -BigInt(receipt.exchange.net_difference_paise ?? "0")
-                  : BigInt(receipt.exchange.net_difference_paise ?? "0")
+                (reportInteger(receipt.exchange.net_difference_paise ?? "0") < 0n
+                  ? -reportInteger(receipt.exchange.net_difference_paise ?? "0")
+                  : reportInteger(receipt.exchange.net_difference_paise ?? "0")
                 ).toString(),
               )}
             </strong>
@@ -175,7 +175,10 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
               ? components
                   .reduce(
                     (sum, tax) =>
-                      sum + BigInt(priceMode === "exclusive" ? tax.taxable_paise : tax.final_paise),
+                      sum +
+                      reportInteger(
+                        priceMode === "exclusive" ? tax.taxable_paise : tax.final_paise,
+                      ),
                     0n,
                   )
                   .toString()

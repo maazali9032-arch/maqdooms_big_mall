@@ -16,7 +16,7 @@ import { Panel, StatCard, StatusBadge } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateTime } from "@/shared/utils/format";
-import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { reportInteger, reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { useSalespeople } from "./use-salespeople";
 
 type Work = {
@@ -92,8 +92,11 @@ export function SalespersonWork() {
     });
   }, [from, rows, to]);
   const summary = useMemo(() => {
-    const total = visible.reduce((sum, row) => sum + BigInt(row.final_customer_price_paise), 0n);
-    const fabric = visible.reduce((sum, row) => sum + BigInt(row.fabric_mm ?? "0"), 0n);
+    const total = visible.reduce(
+      (sum, row) => sum + reportInteger(row.final_customer_price_paise),
+      0n,
+    );
+    const fabric = visible.reduce((sum, row) => sum + reportInteger(row.fabric_mm ?? "0"), 0n);
     return {
       total,
       fabric,

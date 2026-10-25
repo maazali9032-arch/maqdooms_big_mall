@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
 import { Panel, StatCard } from "@/shared/components/page";
 import { QueryState } from "@/shared/components/query-state";
-import { reportDateRange, reportMoney, reportQuantity } from "./report-value";
+import { reportDateRange, reportInteger, reportMoney, reportQuantity } from "./report-value";
 import { precedingPeriod, growthLabel } from "./business-period";
 import { ColumnChart, DonutChart } from "./OwnerVisuals";
 import { RecordTable } from "./EvidenceViews";
@@ -99,7 +99,7 @@ export function MonthlyBusiness({
     )
     .map((r) => ({
       ...r,
-      value: BigInt(
+      value: reportInteger(
         metric === "revenue"
           ? r.revenue_paise
           : metric === "margin"
@@ -155,7 +155,7 @@ export function MonthlyBusiness({
                 <ColumnChart
                   values={query.data.daily_sales.map((d) => ({
                     name: d.day,
-                    value: BigInt(d.revenue_paise),
+                    value: reportInteger(d.revenue_paise),
                   }))}
                   money
                 />
@@ -164,8 +164,11 @@ export function MonthlyBusiness({
                 <h3 className="mb-2 text-sm font-semibold">Counter vs E-commerce</h3>
                 <DonutChart
                   values={[
-                    { name: "Counter", value: BigInt(query.data.current.counter_paise) },
-                    { name: "E-commerce", value: BigInt(query.data.current.ecommerce_paise) },
+                    { name: "Counter", value: reportInteger(query.data.current.counter_paise) },
+                    {
+                      name: "E-commerce",
+                      value: reportInteger(query.data.current.ecommerce_paise),
+                    },
                   ].filter((r) => r.value > 0n)}
                 />
               </div>

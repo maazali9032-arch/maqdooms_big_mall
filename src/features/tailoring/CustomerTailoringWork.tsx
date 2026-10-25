@@ -8,7 +8,7 @@ import { QueryState } from "@/shared/components/query-state";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/shared/utils/format";
-import { reportMoney, reportQuantity } from "@/features/reports/report-value";
+import { reportInteger, reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "@/features/pos/CounterBillReceipt";
 type Job = {
   id: string;
@@ -171,7 +171,9 @@ export function CustomerTailoringWork() {
                 Fabric margin{" "}
                 {job.cp_paise === null || job.total_paise === null
                   ? "Unknown"
-                  : reportMoney(String(BigInt(job.total_paise) - BigInt(job.cp_paise)))}{" "}
+                  : reportMoney(
+                      String(reportInteger(job.total_paise) - reportInteger(job.cp_paise)),
+                    )}{" "}
                 <span className="block text-xs text-muted-foreground">
                   Includes later fabric issues. Labour and other unrecorded costs are excluded.
                 </span>
