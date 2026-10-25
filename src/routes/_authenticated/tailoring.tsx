@@ -62,9 +62,11 @@ function TailoringPage() {
       <PageHeader
         title={view.title}
         description={
-          id === "hierarchy" || id === "catalog"
-            ? "Owner administration · shared work definitions"
-            : "Recorded work and its linked fabric."
+          id === "hierarchy"
+            ? "Manage factories, Master Tailors and their staff. Expand each factory to view and update its team."
+            : id === "catalog"
+              ? "Owner administration · shared work definitions"
+              : "Recorded work and its linked fabric."
         }
       />
       {view.content}
