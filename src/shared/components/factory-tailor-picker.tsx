@@ -36,6 +36,9 @@ export function FactoryTailorPicker({
   const factories = [
     ...new Map((query.data ?? []).map((a) => [a.factory_id, a.factory_name])).entries(),
   ];
+  const availableTailors = (query.data ?? []).filter(
+    (assignment) => assignment.factory_id === factory,
+  );
   return (
     <div className="space-y-3">
       <QueryState
@@ -43,63 +46,105 @@ export function FactoryTailorPicker({
         error={query.error}
         retry={() => void query.refetch()}
       />
-      <label className="block text-sm">
-        Factory
-        <select
-          aria-label="Assignment factory"
-          className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"
-          value={factory}
-          onChange={(e) => {
-            onFactory(e.target.value);
-            onSelected([]);
-          }}
-        >
-          <option value="">Select factory</option>
-          {factories.map(([id, name]) => (
-            <option key={id} value={id}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {factory && (
-        <fieldset className="rounded-lg border p-3">
-          <legend className="px-1 text-sm">
-            {multiple ? "Select one or more tailors" : "Select tailor"}
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {(query.data ?? [])
-              .filter((a) => a.factory_id === factory)
-              .map((a) => (
-                <label
-                  className="flex min-h-11 items-center gap-2 rounded border p-2 text-sm"
-                  key={a.id}
-                >
-                  <input
-                    type={multiple ? "checkbox" : "radio"}
-                    name="job-tailor"
-                    checked={selected.includes(a.id)}
-                    onChange={() =>
-                      onSelected(
-                        multiple
-                          ? selected.includes(a.id)
-                            ? selected.filter((id) => id !== a.id)
-                            : [...selected, a.id]
-                          : [a.id],
-                      )
-                    }
-                  />
-                  <span>
-                    {a.tailor_name}
-                    <span className="block text-xs text-muted-foreground">{a.tailor_code}</span>
-                  </span>
-                </label>
+      {!multiple ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm">
+            Factory
+            <select
+              aria-label="Assignment factory"
+              className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"
+              value={factory}
+              onChange={(event) => {
+                onFactory(event.target.value);
+                onSelected([]);
+              }}
+            >
+              <option value="">Select factory</option>
+              {factories.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
               ))}
-          </div>
-          {!(query.data ?? []).some((a) => a.factory_id === factory) && (
-            <p>No active tailors are assigned to this factory.</p>
+            </select>
+          </label>
+          <label className="block text-sm">
+            Master Tailor
+            <select
+              aria-label="Assignment master tailor"
+              className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"
+              value={selected[0] ?? ""}
+              disabled={!factory}
+              onChange={(event) => onSelected(event.target.value ? [event.target.value] : [])}
+            >
+              <option value="">Select master tailor</option>
+              {availableTailors.map((assignment) => (
+                <option key={assignment.id} value={assignment.id}>
+                  {assignment.tailor_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {factory && !availableTailors.length && (
+            <p className="text-sm sm:col-span-2">No active tailors are assigned to this factory.</p>
           )}
-        </fieldset>
+        </div>
+      ) : (
+        <>
+          <label className="block text-sm">
+            Factory
+            <select
+              aria-label="Assignment factory"
+              className="mt-1 min-h-11 w-full rounded-lg border bg-background px-3"
+              value={factory}
+              onChange={(event) => {
+                onFactory(event.target.value);
+                onSelected([]);
+              }}
+            >
+              <option value="">Select factory</option>
+              {factories.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {factory && (
+            <fieldset className="rounded-lg border p-3">
+              <legend className="px-1 text-sm">
+                {multiple ? "Select one or more tailors" : "Select tailor"}
+              </legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {availableTailors.map((a) => (
+                  <label
+                    className="flex min-h-11 items-center gap-2 rounded border p-2 text-sm"
+                    key={a.id}
+                  >
+                    <input
+                      type={multiple ? "checkbox" : "radio"}
+                      name="job-tailor"
+                      checked={selected.includes(a.id)}
+                      onChange={() =>
+                        onSelected(
+                          multiple
+                            ? selected.includes(a.id)
+                              ? selected.filter((id) => id !== a.id)
+                              : [...selected, a.id]
+                            : [a.id],
+                        )
+                      }
+                    />
+                    <span>
+                      {a.tailor_name}
+                      <span className="block text-xs text-muted-foreground">{a.tailor_code}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {!availableTailors.length && <p>No active tailors are assigned to this factory.</p>}
+            </fieldset>
+          )}
+        </>
       )}
     </div>
   );

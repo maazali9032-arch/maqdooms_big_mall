@@ -37,6 +37,7 @@ export type GstInvoice = {
   gross_paise?: string;
   discount_paise?: string;
   discount_bps?: number;
+  discount_mode?: "percent" | "amount";
   lines: {
     id: string;
     source_item_id: string;
@@ -60,6 +61,7 @@ export type CounterReceipt = {
   gross_paise?: string;
   discount_paise?: string;
   discount_bps?: number;
+  discount_mode?: "percent" | "amount";
   discount_edit_until?: string | null;
   paid_amount_paise?: string;
   balance_paise?: string;

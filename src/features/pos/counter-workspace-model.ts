@@ -71,7 +71,8 @@ export type TailoringGroup = {
   delivery: string;
   factory: string;
   assignment: string;
-  stitching: string;
+  sp: string;
+  size: string;
   design?: string;
   customDesign?: string;
   notes?: string;
@@ -109,9 +110,17 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
           },
     );
   const tailoring = groups.map((g) => {
-    if (!g.garment.trim() || !g.delivery || !g.assignment || !g.keys.length)
+    if (
+      !g.garment.trim() ||
+      !g.size.trim() ||
+      !g.delivery ||
+      !g.assignment ||
+      !g.sp.trim() ||
+      fabricMoneyInput(g.sp) <= 0 ||
+      !g.keys.length
+    )
       throw new Error(
-        "Enter garment, delivery date, factory, tailor and stitching charge for each tailoring job",
+        "Enter garment, size, delivery date, factory, tailor and selling price for each tailoring job",
       );
     return {
       items: g.keys.map((key) => {
@@ -120,14 +129,14 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
         return {
           inventory_item_id: r.cut.inventory_item_id,
           quantity: quantities.get(key)!,
-          sp_paise_per_m: fabricMoneyInput(r.price),
           source_location_id: r.source.id,
         };
       }),
       garment: g.garment.trim(),
       delivery_date: g.delivery,
       assignment_id: g.assignment,
-      stitching_paise: fabricMoneyInput(g.stitching),
+      sp_paise: fabricMoneyInput(g.sp),
+      size: g.size.trim(),
       ...(g.design ? { design_id: g.design === "custom" ? null : g.design } : {}),
       ...(g.design === "custom" ? { custom_design: g.customDesign?.trim() } : {}),
       ...(g.notes?.trim() ? { notes: g.notes.trim() } : {}),
@@ -143,24 +152,21 @@ function rowAmount(row: CounterRow) {
         1000n;
 }
 export function tailoringAmounts(rows: CounterRow[], group: TailoringGroup) {
-  const fabric = group.keys.reduce((sum, key) => {
-    const row = rows.find((r) => r.key === key && r.scan.kind === "fabric");
+  for (const key of group.keys) {
+    const row = rows.find((candidate) => candidate.key === key && candidate.scan.kind === "fabric");
     if (!row) throw new Error("Tailoring fabric selection changed");
-    return sum + rowAmount(row);
-  }, 0n);
-  const stitching = BigInt(fabricMoneyInput(group.stitching));
-  return { fabric, stitching, total: fabric + stitching };
+    fabricCutQuantityMm(row.metres, row.cutUnit);
+  }
+  return { total: BigInt(fabricMoneyInput(group.sp)) };
 }
-export function previewTotal(
-  rows: CounterRow[],
-  groups: TailoringGroup[],
-  draftStitching?: string,
-) {
+export function previewTotal(rows: CounterRow[], groups: TailoringGroup[], draftSp?: string) {
   try {
     return (
-      rows.reduce((sum, r) => sum + rowAmount(r), 0n) +
-      groups.reduce((sum, g) => sum + BigInt(fabricMoneyInput(g.stitching)), 0n) +
-      (draftStitching === undefined ? 0n : BigInt(fabricMoneyInput(draftStitching)))
+      rows
+        .filter((row) => !row.group && !(draftSp !== undefined && row.selected))
+        .reduce((sum, row) => sum + rowAmount(row), 0n) +
+      groups.reduce((sum, group) => sum + BigInt(fabricMoneyInput(group.sp)), 0n) +
+      (draftSp === undefined ? 0n : BigInt(fabricMoneyInput(draftSp)))
     );
   } catch {
     return null;
@@ -172,15 +178,65 @@ export function gstPreview(
   groups: TailoringGroup[],
   configuration: GstTransactionConfiguration | undefined,
   supplyType: GstSupplyType,
-  discountBps = 0,
+  discountMode: "percent" | "amount" = "percent",
+  discountValue = 0n,
 ) {
   const config = configuration?.configuration;
-  if (!Number.isInteger(discountBps) || discountBps < 0 || discountBps > 10000) return null;
-  const discounted = (amount: bigint) => (amount * BigInt(10000 - discountBps) + 5000n) / 10000n;
+  if (
+    discountValue < 0n ||
+    (discountMode === "percent" && discountValue > 10000n) ||
+    !["percent", "amount"].includes(discountMode)
+  )
+    return null;
+  const entries = [
+    ...rows
+      .filter((item) => !item.group)
+      .map((row) => ({
+        amount: rowAmount(row),
+        category: (row.scan.kind === "product" ? "finished_sale" : "fabric_sale") as
+          "fabric_sale" | "finished_sale",
+        itemRef: `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
+      })),
+    ...groups.map((group) => ({
+      amount: tailoringAmounts(rows, group).total,
+      category: "finished_sale" as const,
+      itemRef: `PRODUCT:${group.garment.trim().toUpperCase()}`,
+    })),
+  ];
+  const gross = entries.reduce((sum, entry) => sum + entry.amount, 0n);
+  const target = discountMode === "amount" ? gross - discountValue : gross;
+  if (target < 0n) return null;
+  let allocated = 0n;
+  const discountedEntries = entries.map((entry, index) => {
+    if (discountMode === "percent") {
+      return {
+        ...entry,
+        discountedAmount: (entry.amount * (10000n - discountValue) + 5000n) / 10000n,
+      };
+    }
+    const amount =
+      index === entries.length - 1
+        ? target - allocated
+        : gross === 0n
+          ? 0n
+          : (entry.amount * target + gross / 2n) / gross;
+    const safeAmount = amount > target - allocated ? target - allocated : amount;
+    allocated += safeAmount;
+    return { ...entry, discountedAmount: safeAmount };
+  });
+  const discountedTotal = discountedEntries.reduce(
+    (sum, entry) => sum + entry.discountedAmount,
+    0n,
+  );
   if (!config?.enabled) {
-    const total = previewTotal(rows, groups);
-    const final = total === null ? null : discounted(total);
-    return final === null ? null : { taxable: final, gst: 0n, cgst: 0n, sgst: 0n, igst: 0n, final };
+    return {
+      taxable: discountedTotal,
+      gst: 0n,
+      cgst: 0n,
+      sgst: 0n,
+      igst: 0n,
+      final: discountedTotal,
+    };
   }
   try {
     let taxable = 0n,
@@ -190,14 +246,13 @@ export function gstPreview(
       igst = 0n,
       final = 0n;
     const add = (
-      amount: bigint,
+      discountedAmount: bigint,
       category: "fabric_sale" | "finished_sale" | "tailoring",
       itemRef: string,
       rateOverride?: number,
     ) => {
       const rule = selectedGstRule(configuration, category, itemRef);
       if (!rule) throw new Error(`Configure the default ${category} GST rule`);
-      const discountedAmount = discounted(amount);
       const tax = calculateTaxPaise(
         discountedAmount,
         rateOverride ?? rule.rate_bps,
@@ -211,22 +266,14 @@ export function gstPreview(
       igst += tax.igstPaise;
       final += tax.finalPaise;
     };
-    for (const row of rows.filter((item) => !item.group)) {
-      const discountedAmount = discounted(rowAmount(row));
+    for (const entry of discountedEntries) {
       add(
-        rowAmount(row),
-        row.scan.kind === "product" ? "finished_sale" : "fabric_sale",
-        `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
-        row.scan.kind === "product" ? garmentGstRate(configuration, discountedAmount) : undefined,
-      );
-    }
-    for (const group of groups) {
-      const amount = tailoringAmounts(rows, group).total;
-      add(
-        amount,
-        "finished_sale",
-        `PRODUCT:${group.garment.trim().toUpperCase()}`,
-        garmentGstRate(configuration, discounted(amount)),
+        entry.discountedAmount,
+        entry.category,
+        entry.itemRef,
+        entry.category === "finished_sale"
+          ? garmentGstRate(configuration, entry.discountedAmount)
+          : undefined,
       );
     }
     return { taxable, gst, cgst, sgst, igst, final };

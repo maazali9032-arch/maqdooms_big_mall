@@ -19,6 +19,7 @@ import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { FactoryTailorPicker } from "@/shared/components/factory-tailor-picker";
 import { SalespersonPicker } from "@/features/salesperson/SalespersonPicker";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
+import { fabricMoneyInput } from "@/features/inventory/fabric-entry-input";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
@@ -45,8 +46,10 @@ type BillRequest = {
   p_salesperson: string;
   p_name: string;
   p_contact: string;
+  p_birth_date: string | null;
   p_advance_paise?: number;
-  p_discount_bps: number;
+  p_discount_mode: "percent" | "amount";
+  p_discount_value: number;
   p_tax_context: {
     configuration_id: string | null;
     customer_gstin: string;
@@ -58,11 +61,52 @@ const blankGroup = () => ({
   delivery: "",
   factory: "",
   assignment: "",
-  stitching: "",
+  sp: "",
+  size: "",
   design: "",
   customDesign: "",
   notes: "",
 });
+const birthMonths = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+function parsedBirthDate(day: string, month: string, year: string) {
+  if (!day.trim() && !month.trim() && !year.trim()) return null;
+  const dayNumber = Number(day);
+  const yearNumber = Number(year);
+  const monthNumber = birthMonths.indexOf(month.trim().toUpperCase()) + 1;
+  if (!Number.isInteger(dayNumber) || !Number.isInteger(yearNumber) || monthNumber < 1)
+    throw new Error("Enter the complete birth date as day, three-letter month and year");
+  const date = new Date(Date.UTC(yearNumber, monthNumber - 1, dayNumber));
+  if (
+    year.length !== 4 ||
+    yearNumber < 1900 ||
+    date.getUTCFullYear() !== yearNumber ||
+    date.getUTCMonth() !== monthNumber - 1 ||
+    date.getUTCDate() !== dayNumber ||
+    date > new Date()
+  )
+    throw new Error("Enter a valid customer birth date");
+  return `${yearNumber}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+}
+function discountInput(mode: "percent" | "amount", value: string) {
+  if (mode === "amount") return fabricMoneyInput(value || "0");
+  const bps = Math.round(Number(value || "0") * 100);
+  if (!Number.isFinite(bps) || bps < 0 || bps > 10000)
+    throw new Error("Enter a discount from 0 to 100%");
+  return bps;
+}
 export function CounterWorkspace() {
   const { isOwner, roles, can } = useSession();
   if (!isOwner && !roles.includes("counter")) return <p>Counter access required.</p>;
@@ -101,7 +145,12 @@ function CounterContent({
     [name, setName] = useState(""),
     [contact, setContact] = useState(""),
     [advance, setAdvance] = useState("0");
-  const [discountPercent, setDiscountPercent] = useState("0");
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
+  const [discountMode, setDiscountMode] = useState<"percent" | "amount">("percent");
+  const [discountValue, setDiscountValue] = useState("0");
+  const [ownerDiscountMode, setOwnerDiscountMode] = useState<"percent" | "amount">("percent");
   const [ownerDiscount, setOwnerDiscount] = useState("");
   const [businessInvoice, setBusinessInvoice] = useState(false);
   const [customerGstin, setCustomerGstin] = useState("");
@@ -246,7 +295,7 @@ function CounterContent({
           name: string,
           args: Record<string, unknown>,
         ) => Promise<{ data: string | null; error: Error | null }>
-      )("complete_counter_bill_gst_discount", {
+      )("complete_counter_bill_gst_discount_value", {
         ...args,
         p_advance_paise: args.p_advance_paise ?? null,
       });
@@ -267,8 +316,12 @@ function CounterContent({
       setForm(blankGroup());
       setName("");
       setContact("");
+      setBirthDay("");
+      setBirthMonth("");
+      setBirthYear("");
       setAdvance("0");
-      setDiscountPercent("0");
+      setDiscountMode("percent");
+      setDiscountValue("0");
       setBusinessInvoice(false);
       setCustomerGstin("");
       void qc.invalidateQueries();
@@ -300,15 +353,17 @@ function CounterContent({
   });
   const reviseDiscount = useMutation({
     mutationFn: async () => {
-      const bps = Math.round(Number(ownerDiscount) * 100);
-      if (!Number.isFinite(bps) || bps < 0 || bps > 10000)
-        throw new Error("Enter a discount from 0 to 100%");
+      const value = discountInput(ownerDiscountMode, ownerDiscount);
       const { data, error } = await (
         supabase.rpc as unknown as (
           name: string,
           args: Record<string, unknown>,
         ) => Promise<{ data: string | null; error: Error | null }>
-      )("owner_revise_counter_bill_discount", { p_bill: receipt!.id, p_discount_bps: bps });
+      )("owner_revise_counter_bill_discount_value", {
+        p_bill: receipt!.id,
+        p_discount_mode: ownerDiscountMode,
+        p_discount_value: value,
+      });
       if (error) throw error;
       const result = await supabase.rpc("counter_bill", { p_code: data ?? receipt!.id });
       if (result.error) throw result.error;
@@ -343,8 +398,14 @@ function CounterContent({
       const selected = rows.filter((r) => r.selected && !r.group && r.scan.kind === "fabric");
       if (!selected.length) throw new Error("Select one or more fabric rows");
       if (!form.delivery) throw new Error("Select a delivery date before adding the tailoring job");
-      if (!form.garment.trim() || !form.assignment || !form.stitching.trim())
-        throw new Error("Enter garment, factory, tailor and stitching charge");
+      if (
+        !form.garment.trim() ||
+        !form.size.trim() ||
+        !form.assignment ||
+        !form.sp.trim() ||
+        fabricMoneyInput(form.sp) <= 0
+      )
+        throw new Error("Enter garment, size, factory, master tailor and selling price");
       const group = { ...form, id: crypto.randomUUID(), keys: selected.map((r) => r.key) };
       counterPayload(
         selected.map((r) => ({ ...r, group: group.id })),
@@ -375,10 +436,15 @@ function CounterContent({
       if (businessInvoice && !/^\d{2}[A-Z0-9]{13}$/.test(customerGstin.trim().toUpperCase()))
         throw new Error("Enter the customer's valid GSTIN for a GST business invoice");
       const payload = counterPayload(rows, groups);
-      const discountBps = Math.round(Number(discountPercent || "0") * 100);
-      if (!Number.isFinite(discountBps) || discountBps < 0 || discountBps > 10000)
-        throw new Error("Enter a discount from 0 to 100%");
-      const tax = gstPreview(rows, groups, gst.data, derivedSupplyType, discountBps);
+      const selectedDiscount = discountInput(discountMode, discountValue);
+      const tax = gstPreview(
+        rows,
+        groups,
+        gst.data,
+        derivedSupplyType,
+        discountMode,
+        BigInt(selectedDiscount),
+      );
       if (gst.data?.configuration?.enabled && !tax)
         throw new Error("Check the configured GST rules and bill prices");
       const billTotal = tax?.final ?? previewTotal(rows, groups);
@@ -389,9 +455,11 @@ function CounterContent({
         p_tailoring: payload.tailoring,
         p_paid: payment.paid,
         p_salesperson: salesperson,
-        p_discount_bps: discountBps,
+        p_discount_mode: discountMode,
+        p_discount_value: selectedDiscount,
         p_name: name,
         p_contact: contact,
+        p_birth_date: parsedBirthDate(birthDay, birthMonth, birthYear),
         p_tax_context: {
           configuration_id: gst.data?.configuration?.enabled ? gst.data.configuration.id : null,
           customer_gstin: businessInvoice ? customerGstin.trim().toUpperCase() : "",
@@ -410,17 +478,22 @@ function CounterContent({
     businessInvoice && /^\d{2}$/.test(customerStateCode) && customerStateCode !== businessStateCode
       ? "inter_state"
       : "intra_state";
-  const discountBps = Math.round(Number(discountPercent || "0") * 100);
-  const validDiscount = Number.isFinite(discountBps) && discountBps >= 0 && discountBps <= 10000;
+  let previewDiscount: bigint | null = null;
+  try {
+    previewDiscount = BigInt(discountInput(discountMode, discountValue));
+  } catch {
+    previewDiscount = null;
+  }
   const taxPreview = gstPreview(
     rows,
     groups,
     gst.data,
     derivedSupplyType,
-    validDiscount ? discountBps : -1,
+    discountMode,
+    previewDiscount ?? -1n,
   );
   const total = pendingTailoring
-    ? previewTotal(rows, groups, form.stitching)
+    ? previewTotal(rows, groups, form.sp)
     : (taxPreview?.final ?? previewTotal(rows, groups));
   const updateRow = (key: string, change: Partial<CounterRow>) =>
     setRows(rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
@@ -486,7 +559,7 @@ function CounterContent({
         <>
           <Panel
             title="Current bill"
-            description="Fabric prices are per metre. Finished pieces use their saved fixed SP. A tailored item combines its fabric price and one stitching charge."
+            description="Fabric-only sales use a per-metre price. Finished and customer-tailored garments use one final SP."
           >
             <fieldset disabled={frozen || scan.isPending} className="space-y-4">
               <div className="space-y-2">
@@ -569,7 +642,7 @@ function CounterContent({
                     ) : (
                       <p className="self-center text-sm">1 piece</p>
                     )}
-                    {r.scan.kind === "fabric" ? (
+                    {r.scan.kind === "fabric" && !r.group && !r.selected ? (
                       <label className="text-xs">
                         Fabric price ₹ / metre
                         <Input
@@ -579,9 +652,13 @@ function CounterContent({
                           onChange={(e) => updateRow(r.key, { price: e.target.value })}
                         />
                       </label>
-                    ) : (
+                    ) : r.scan.kind === "product" ? (
                       <p className="self-center text-sm">
                         {reportMoney(String(r.scan.sp_paise))} · fixed SP
+                      </p>
+                    ) : (
+                      <p className="self-center text-xs text-muted-foreground">
+                        Included in tailored garment SP
                       </p>
                     )}
                     <Button
@@ -625,12 +702,23 @@ function CounterContent({
                       />
                     </label>
                     <label className="text-sm">
-                      Stitching charge ₹ (entire job)
+                      Selling price (SP) ₹
                       <Input
-                        aria-label="Stitching charge"
+                        aria-label="Tailored garment selling price"
                         inputMode="decimal"
-                        value={form.stitching}
-                        onChange={(e) => setForm({ ...form, stitching: e.target.value })}
+                        value={form.sp}
+                        onChange={(e) => setForm({ ...form, sp: e.target.value })}
+                        placeholder="Final customer price"
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Size
+                      <Input
+                        aria-label="Tailored garment size"
+                        maxLength={60}
+                        value={form.size}
+                        onChange={(e) => setForm({ ...form, size: e.target.value })}
+                        placeholder="For example: 38 or 40"
                       />
                     </label>
                     <label className="text-sm">
@@ -701,9 +789,7 @@ function CounterContent({
                         {g.keys.length} fabrics · Delivery {g.delivery}
                       </p>
                       <p>
-                        {amounts
-                          ? `Fabric ${reportMoney(String(amounts.fabric))} + Stitching ${reportMoney(String(amounts.stitching))} · Bill line ${reportMoney(String(amounts.total))}`
-                          : "Enter valid fabric quantities and prices"}
+                        Size {g.size} · SP {amounts ? reportMoney(String(amounts.total)) : "—"}
                       </p>
                     </div>
                     <Button
@@ -727,7 +813,7 @@ function CounterContent({
               })}
               {!!rows.length && (
                 <div className="space-y-3 rounded-xl border p-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 lg:grid-cols-3">
                     <Input
                       aria-label="Customer name optional"
                       placeholder="Customer name (optional)"
@@ -743,6 +829,49 @@ function CounterContent({
                       value={contact}
                       onChange={(e) => setContact(e.target.value.replace(/[^0-9]/g, ""))}
                     />
+                    <fieldset className="grid grid-cols-[72px_96px_minmax(100px,1fr)] gap-2">
+                      <legend className="sr-only">Customer birth date optional</legend>
+                      <Input
+                        aria-label="Customer birth day optional"
+                        inputMode="numeric"
+                        maxLength={2}
+                        placeholder="DD"
+                        value={birthDay}
+                        onChange={(event) =>
+                          setBirthDay(event.target.value.replace(/[^0-9]/g, "").slice(0, 2))
+                        }
+                      />
+                      <Input
+                        aria-label="Customer birth month optional"
+                        list="birth-months"
+                        maxLength={3}
+                        placeholder="MON"
+                        value={birthMonth}
+                        onChange={(event) =>
+                          setBirthMonth(
+                            event.target.value
+                              .replace(/[^a-z]/gi, "")
+                              .toUpperCase()
+                              .slice(0, 3),
+                          )
+                        }
+                      />
+                      <datalist id="birth-months">
+                        {birthMonths.map((month) => (
+                          <option key={month} value={month} />
+                        ))}
+                      </datalist>
+                      <Input
+                        aria-label="Customer birth year optional"
+                        inputMode="numeric"
+                        maxLength={4}
+                        placeholder="YYYY"
+                        value={birthYear}
+                        onChange={(event) =>
+                          setBirthYear(event.target.value.replace(/[^0-9]/g, "").slice(0, 4))
+                        }
+                      />
+                    </fieldset>
                   </div>
                   {gst.data?.configuration?.enabled && (
                     <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
@@ -798,16 +927,35 @@ function CounterContent({
                     </div>
                   )}
                   <label className="block text-sm">
-                    Discount %
-                    <Input
-                      aria-label="Bill discount percentage"
-                      inputMode="decimal"
-                      value={discountPercent}
-                      onChange={(event) => setDiscountPercent(event.target.value)}
-                      placeholder="0"
-                    />
+                    Discount
+                    <div className="mt-1 grid grid-cols-[140px_minmax(0,1fr)] gap-2">
+                      <select
+                        aria-label="Bill discount type"
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={discountMode}
+                        onChange={(event) => {
+                          setDiscountMode(event.target.value as "percent" | "amount");
+                          setDiscountValue("0");
+                        }}
+                      >
+                        <option value="percent">Percentage %</option>
+                        <option value="amount">Amount ₹</option>
+                      </select>
+                      <Input
+                        aria-label={
+                          discountMode === "percent"
+                            ? "Bill discount percentage"
+                            : "Bill discount amount"
+                        }
+                        inputMode="decimal"
+                        value={discountValue}
+                        onChange={(event) => setDiscountValue(event.target.value)}
+                        placeholder="0"
+                      />
+                    </div>
                     <span className="mt-1 block text-xs text-muted-foreground">
-                      Applied to this new bill before GST is calculated.
+                      Enter either an exact rupee discount or a percentage. Applied before GST is
+                      extracted from the inclusive selling price.
                     </span>
                   </label>
                   <SalespersonPicker
@@ -919,13 +1067,36 @@ function CounterContent({
             title="Owner discount correction"
             description="This updates the same bill and barcode. Available for one hour after billing."
           >
-            <div className="flex max-w-md flex-wrap items-end gap-2">
-              <label className="flex-1 text-sm">
-                Discount %
+            <div className="flex max-w-xl flex-wrap items-end gap-2">
+              <label className="min-w-36 text-sm">
+                Discount type
+                <select
+                  aria-label="Owner bill discount type"
+                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={ownerDiscountMode}
+                  onChange={(event) => {
+                    setOwnerDiscountMode(event.target.value as "percent" | "amount");
+                    setOwnerDiscount("");
+                  }}
+                >
+                  <option value="percent">Percentage %</option>
+                  <option value="amount">Amount ₹</option>
+                </select>
+              </label>
+              <label className="min-w-48 flex-1 text-sm">
+                Discount {ownerDiscountMode === "percent" ? "%" : "₹"}
                 <Input
-                  aria-label="Owner bill discount percentage"
+                  aria-label={
+                    ownerDiscountMode === "percent"
+                      ? "Owner bill discount percentage"
+                      : "Owner bill discount amount"
+                  }
                   inputMode="decimal"
-                  placeholder={String((receipt.discount_bps ?? 0) / 100)}
+                  placeholder={
+                    ownerDiscountMode === "amount"
+                      ? String(Number(receipt.discount_paise ?? 0) / 100)
+                      : String((receipt.discount_bps ?? 0) / 100)
+                  }
                   value={ownerDiscount}
                   onChange={(event) => setOwnerDiscount(event.target.value)}
                 />

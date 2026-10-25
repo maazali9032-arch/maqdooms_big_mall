@@ -2,7 +2,7 @@ import { deliveryDate, receiptBarcodeGeometry } from "./receipt-format";
 import { Fragment } from "react";
 import { BarcodeGraphic } from "@/features/tailoring/ProductionDocument";
 import { reportMoney, reportQuantity } from "@/features/reports/report-value";
-import { GstInvoiceSummary, GstTailoringComponents } from "@/features/gst/GstInvoicePresentation";
+import { GstInvoiceSummary } from "@/features/gst/GstInvoicePresentation";
 import type { CounterReceipt } from "./CounterBillReceipt";
 
 function CustomerBillBarcode({ code }: { code: string }) {
@@ -30,12 +30,6 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   const tradingName = receipt.tax?.business.trading_name ?? "MAQDOOM’S Big Mall";
   const mallBrand = / big mall$/i.test(tradingName);
   const fabricOnly = receipt.lines.every((line) => line.kind === "fabric");
-  const tailoring = receipt.lines.some((line) => line.kind === "tailoring");
-  const hasTailoringBreakdown = receipt.lines.some(
-    (line) =>
-      line.kind === "tailoring" &&
-      (line.fabric_amount_paise != null || line.stitching_paise != null),
-  );
   const recordedReceived = BigInt(
     receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0"),
   );
@@ -48,26 +42,6 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
   const priceMode = receipt.tax?.price_mode ?? "inclusive";
   const payment = receipt.tax?.payment_method?.replaceAll("_", " ");
   const paymentStatus = balance === 0n ? "Paid" : received > 0n ? "Partially paid" : "Unpaid";
-  const fabricSubtotal = receipt.lines.reduce(
-    (sum, line) =>
-      sum +
-      BigInt(
-        line.kind === "fabric"
-          ? line.amount_paise
-          : line.kind === "tailoring"
-            ? (line.fabric_amount_paise ?? "0")
-            : "0",
-      ),
-    0n,
-  );
-  const stitchingSubtotal = receipt.lines.reduce(
-    (sum, line) => sum + BigInt(line.stitching_paise ?? "0"),
-    0n,
-  );
-  const finishedSubtotal = receipt.lines.reduce(
-    (sum, line) => sum + BigInt(line.kind === "product" ? line.amount_paise : "0"),
-    0n,
-  );
   return (
     <>
       <header className="invoice-brand text-center">
@@ -264,17 +238,6 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
                               <span className="break-all">Fabric ref: {fabric.barcode}</span>
                             </p>
                           ))}
-                          {receipt.tax ? (
-                            <GstTailoringComponents tax={receipt.tax} sourceItem={line.id} />
-                          ) : (
-                            line.fabric_amount_paise != null &&
-                            line.stitching_paise != null && (
-                              <p>
-                                Fabric {reportMoney(line.fabric_amount_paise)} + Stitching{" "}
-                                {reportMoney(line.stitching_paise)}
-                              </p>
-                            )
-                          )}
                         </>
                       )}
                     </td>
@@ -289,28 +252,6 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <p className="invoice-price-basis">
           Item rates and amounts {priceMode === "inclusive" ? "include GST" : "exclude GST"}.
         </p>
-      )}
-      {tailoring && hasTailoringBreakdown && (
-        <div className="invoice-cost-summary space-y-1 border-t pt-2 text-xs">
-          <p className="font-semibold">
-            Sale summary
-            {priceMode === "inclusive" ? " (including GST)" : receipt.tax ? " (before GST)" : ""}
-          </p>
-          <div className="invoice-row flex justify-between">
-            <span>Fabric</span>
-            <span>{reportMoney(fabricSubtotal.toString())}</span>
-          </div>
-          <div className="invoice-row flex justify-between">
-            <span>Stitching</span>
-            <span>{reportMoney(stitchingSubtotal.toString())}</span>
-          </div>
-          {finishedSubtotal > 0n && (
-            <div className="invoice-row flex justify-between">
-              <span>Finished items</span>
-              <span>{reportMoney(finishedSubtotal.toString())}</span>
-            </div>
-          )}
-        </div>
       )}
       {receipt.tax ? (
         <GstInvoiceSummary tax={receipt.tax} />
@@ -366,6 +307,7 @@ export type TailorOrder = {
   scan_code?: string | null;
   status?: string;
   garment: string;
+  size?: string | null;
   delivery_date: string;
   design: string | null;
   notes: string | null;
@@ -425,6 +367,12 @@ export function TailorWorkOrderContent({
                 <dt>Garment</dt>
                 <dd className="text-right font-semibold">{job.garment}</dd>
               </div>
+              {job.size && (
+                <div className="workorder-row flex justify-between gap-4">
+                  <dt>Size</dt>
+                  <dd className="text-right font-semibold">{job.size}</dd>
+                </div>
+              )}
               {receipt.customer?.name && (
                 <div className="workorder-row flex justify-between gap-4">
                   <dt>Customer</dt>
