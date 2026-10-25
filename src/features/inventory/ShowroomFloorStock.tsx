@@ -14,6 +14,7 @@ type FloorThaan = {
   colour: string | null;
   rack: string | null;
   available_mm: string;
+  created_at?: string;
 };
 
 type Floor = {
@@ -121,17 +122,24 @@ export function ShowroomFloorStock() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {floor.items.map((item) => (
-                            <tr key={`${floor.id}-${item.inventory_item_id}`}>
-                              <td className="px-3 py-2 font-mono text-xs">{item.barcode}</td>
-                              <td className="px-3 py-2 font-medium">{item.fabric}</td>
-                              <td className="px-3 py-2">{item.batch}</td>
-                              <td className="px-3 py-2">{item.colour || "Not recorded"}</td>
-                              <td className="px-3 py-2 text-right font-medium">
-                                {formatMetres(Number(item.available_mm))}
-                              </td>
-                            </tr>
-                          ))}
+                          {[...floor.items]
+                            .sort((a, b) => {
+                              const time =
+                                new Date(b.created_at ?? 0).getTime() -
+                                new Date(a.created_at ?? 0).getTime();
+                              return time || b.barcode.localeCompare(a.barcode);
+                            })
+                            .map((item) => (
+                              <tr key={`${floor.id}-${item.inventory_item_id}`}>
+                                <td className="px-3 py-2 font-mono text-xs">{item.barcode}</td>
+                                <td className="px-3 py-2 font-medium">{item.fabric}</td>
+                                <td className="px-3 py-2">{item.batch}</td>
+                                <td className="px-3 py-2">{item.colour || "Not recorded"}</td>
+                                <td className="px-3 py-2 text-right font-medium">
+                                  {formatMetres(Number(item.available_mm))}
+                                </td>
+                              </tr>
+                            ))}
                         </tbody>
                       </table>
                     </div>

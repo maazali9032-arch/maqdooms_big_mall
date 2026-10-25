@@ -6,6 +6,9 @@ import { QueryState } from "@/shared/components/query-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { reportQuantity } from "@/features/reports/report-value";
+import { Camera } from "lucide-react";
+import { BarcodeCamera } from "@/shared/components/barcode-camera";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 type Activity = {
   id: string;
   occurred_at: string;
@@ -23,7 +26,8 @@ type Activity = {
 };
 export function StockActivity() {
   const [search, setSearch] = useState(""),
-    [applied, setApplied] = useState("");
+    [applied, setApplied] = useState(""),
+    [cameraOpen, setCameraOpen] = useState(false);
   const query = useInfiniteQuery({
     queryKey: ["stock-activity", applied],
     initialPageParam: null as Activity | null,
@@ -57,8 +61,33 @@ export function StockActivity() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label="Scan a stock barcode with camera"
+          title="Scan barcode with camera"
+          onClick={() => setCameraOpen(true)}
+        >
+          <Camera className="size-4" />
+        </Button>
         <Button>Search</Button>
       </form>
+      <Dialog open={cameraOpen} onOpenChange={setCameraOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Scan stock barcode</DialogTitle>
+          </DialogHeader>
+          <BarcodeCamera
+            onScan={(code) => {
+              const value = code.trim();
+              setSearch(value);
+              setApplied(value);
+              setCameraOpen(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <QueryState
         loading={query.isPending}
         error={query.error}

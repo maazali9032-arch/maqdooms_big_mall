@@ -11,6 +11,7 @@ import { StockActivity } from "@/features/inventory/StockActivity";
 import { FabricArchive } from "@/features/inventory/FabricArchive";
 import { ShowroomFloorStock } from "@/features/inventory/ShowroomFloorStock";
 import { VendorReadymadeStock } from "@/features/inventory/VendorReadymadeStock";
+import { FactoryTransitStock } from "@/features/inventory/FactoryTransitStock";
 import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -53,6 +54,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
     "readymade-stock",
     "material-stock",
     "showroom-stock",
+    "transit",
     "movements",
     "archived",
   ].includes(normalizedActive)
@@ -71,7 +73,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
       {chosen === "fabric-stock" && <FabricStockSummary />}
       <Tabs value={chosen} onValueChange={onChange}>
         <TabsList
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-3 xl:grid-cols-6"
+          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-4 xl:grid-cols-7"
           aria-label="Fabric inventory views"
         >
           {[
@@ -79,6 +81,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
             ["readymade-stock", "Readymade stock"],
             ["material-stock", "Materials stock"],
             ["showroom-stock", "Showroom floors"],
+            ["transit", "Transit"],
             ["movements", "Stock movements"],
             ["archived", "Depleted / archived"],
           ].map(([id, label]) => (
@@ -106,6 +109,9 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
         </TabsContent>
         <TabsContent value="showroom-stock">
           <ShowroomFloorStock />
+        </TabsContent>
+        <TabsContent value="transit">
+          <FactoryTransitStock />
         </TabsContent>
         <TabsContent value="archived">
           <FabricArchive />
