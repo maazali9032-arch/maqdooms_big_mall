@@ -46,11 +46,7 @@ import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
 import { CreateStaff } from "@/features/access/CreateStaff";
 import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
-import {
-  PosTerminalManagement,
-  PosUserAssignment,
-  usePosTerminals,
-} from "@/features/access/PosTerminalManagement";
+import { PosTerminalManagement, PosUserAssignment } from "@/features/access/PosTerminalManagement";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -79,7 +75,6 @@ function AccessPage() {
   const setActive = useSetActive();
   const saveSalespersonCode = useSetSalespersonCode();
   const stockAuditAccess = useStockAuditAccess();
-  const posTerminals = usePosTerminals();
   const setStockAuditAccess = useSetStockAuditAccess();
   const [search, setSearch] = useState("");
   const [creatingStaff, setCreatingStaff] = useState(false);
@@ -88,7 +83,6 @@ function AccessPage() {
   const [salespersonCode, setSalespersonCode] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [posFilter, setPosFilter] = useState("all");
 
   const roleList = roles.data?.roles ?? [];
   const permissions = (roles.data?.permissions ?? []).filter(
@@ -117,10 +111,7 @@ function AccessPage() {
       (user.email?.toLowerCase().includes(term) ?? false) ||
       user.roles.some((role) => (ROLE_LABELS[role] ?? role).toLowerCase().includes(term));
     const roleMatches = roleFilter === "all" || user.roles.includes(roleFilter);
-    const terminal = posTerminals.data?.find((item) => item.user_id === user.id);
-    const posMatches =
-      posFilter === "all" || (posFilter === "unassigned" ? !terminal : terminal?.id === posFilter);
-    return statusMatches && searchMatches && roleMatches && posMatches;
+    return statusMatches && searchMatches && roleMatches;
   });
 
   async function updateActive(user: (typeof staffList)[number]) {
@@ -186,7 +177,7 @@ function AccessPage() {
               and choose Manage permissions.
             </p>
           </div>
-          <div className="grid w-full gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-[280px_150px_140px_150px]">
+          <div className="grid w-full gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-[280px_150px_140px]">
             <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -221,20 +212,6 @@ function AccessPage() {
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="disabled">Disabled</option>
-            </select>
-            <select
-              aria-label="Filter by POS ID"
-              className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
-              value={posFilter}
-              onChange={(event) => setPosFilter(event.target.value)}
-            >
-              <option value="all">All POS IDs</option>
-              <option value="unassigned">Unassigned</option>
-              {posTerminals.data?.map((terminal) => (
-                <option key={terminal.id} value={terminal.id}>
-                  {terminal.code}
-                </option>
-              ))}
             </select>
           </div>
         </header>
