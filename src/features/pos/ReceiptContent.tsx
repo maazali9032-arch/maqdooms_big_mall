@@ -36,24 +36,18 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
       line.kind === "tailoring" &&
       (line.fabric_amount_paise != null || line.stitching_paise != null),
   );
-  const received = receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0");
-  const calculatedBalance = BigInt(receipt.total_paise) - BigInt(received);
+  const recordedReceived = BigInt(
+    receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0"),
+  );
+  const invoiceTotal = BigInt(receipt.total_paise);
+  const received = recordedReceived > invoiceTotal ? invoiceTotal : recordedReceived;
+  const calculatedBalance = invoiceTotal - received;
   const balance = BigInt(
     receipt.balance_paise ?? (calculatedBalance > 0n ? calculatedBalance : 0n).toString(),
   );
-  const refundDue = BigInt(
-    receipt.refund_due_paise ?? (calculatedBalance < 0n ? -calculatedBalance : 0n).toString(),
-  );
   const priceMode = receipt.tax?.price_mode ?? "inclusive";
   const payment = receipt.tax?.payment_method?.replaceAll("_", " ");
-  const paymentStatus =
-    refundDue > 0n
-      ? "Refund due"
-      : balance === 0n
-        ? "Paid"
-        : BigInt(received) > 0n
-          ? "Partially paid"
-          : "Unpaid";
+  const paymentStatus = balance === 0n ? "Paid" : received > 0n ? "Partially paid" : "Unpaid";
   const fabricSubtotal = receipt.lines.reduce(
     (sum, line) =>
       sum +
@@ -329,21 +323,14 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
       <div className="invoice-payment space-y-1 border-t pt-2 text-xs">
         <div className="invoice-row flex justify-between">
           <span>Amount paid</span>
-          <strong>{reportMoney(received)}</strong>
+          <strong>{reportMoney(received.toString())}</strong>
         </div>
-        {refundDue > 0n ? (
-          <div className="invoice-row flex justify-between">
-            <strong>Refund due to customer</strong>
-            <strong>{reportMoney(refundDue.toString())}</strong>
-          </div>
-        ) : (
-          <div className="invoice-row flex justify-between">
-            <strong>Balance due</strong>
-            <strong>{reportMoney(balance.toString())}</strong>
-          </div>
-        )}
+        <div className="invoice-row flex justify-between">
+          <strong>Balance due</strong>
+          <strong>{reportMoney(balance.toString())}</strong>
+        </div>
         {payment && <p className="capitalize">Payment Mode: {payment}</p>}
-        {BigInt(received) > 0n && receipt.paid_at && (
+        {received > 0n && receipt.paid_at && (
           <p>
             Paid On:{" "}
             {new Date(receipt.paid_at).toLocaleString("en-IN", {
@@ -359,7 +346,7 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <div className="invoice-row flex justify-between font-semibold">
           <span>Payment status</span>
           <span
-            className={`invoice-status ${paymentStatus === "Paid" ? "is-paid" : paymentStatus === "Refund due" ? "is-refund" : "is-outstanding"}`}
+            className={`invoice-status ${paymentStatus === "Paid" ? "is-paid" : "is-outstanding"}`}
           >
             {paymentStatus}
           </span>

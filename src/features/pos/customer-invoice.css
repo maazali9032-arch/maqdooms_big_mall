@@ -179,11 +179,6 @@
   border-color: #ddc397;
   color: #613c00;
 }
-.invoice-status.is-refund {
-  background: #e5efff;
-  border-color: #a9bfdf;
-  color: #173c69;
-}
 .invoice-footer {
   text-align: center;
   font:
