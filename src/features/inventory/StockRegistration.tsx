@@ -179,6 +179,9 @@ export function StockRegistration() {
     }).format(new Date()),
   );
   const [supplierGstin, setSupplierGstin] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
   const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
   const [itcStatus, setItcStatus] = useState<"eligible" | "ineligible" | "reversed" | "pending">(
@@ -196,6 +199,16 @@ export function StockRegistration() {
   const [printed, setPrinted] = useState<string[]>([]);
   const labels = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState<Pending | null>(null);
+  const selectProvider = (value: string) => {
+    setProvider(value);
+    const matched = (suppliers.data ?? []).find(
+      (supplier) => supplier.name.trim().toLowerCase() === value.trim().toLowerCase(),
+    );
+    setSupplierGstin(matched?.gstin ?? "");
+    setSupplierPhone(matched?.phone ?? "");
+    setSupplierEmail(matched?.email ?? "");
+    setSupplierAddress(matched?.address ?? "");
+  };
   const catalog = useQuery({
     queryKey: ["stock-registration", userId],
     enabled: allowed,
@@ -308,6 +321,9 @@ export function StockRegistration() {
         setPrinted([]);
         setStage("labels");
         setRows([emptyRow()]);
+        setSupplierPhone("");
+        setSupplierEmail("");
+        setSupplierAddress("");
       } else if (args.work.kind === "append" || args.work.kind === "fabric") {
         setExtraCount("");
         setExtraName("");
@@ -519,7 +535,7 @@ export function StockRegistration() {
                     <PickOrTypeInput
                       id="provider-name"
                       value={provider}
-                      onChange={setProvider}
+                      onChange={selectProvider}
                       options={names}
                     />
                   </div>
@@ -545,6 +561,24 @@ export function StockRegistration() {
                       placeholder="Supplier GSTIN"
                       value={supplierGstin}
                       onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                    />
+                    <Input
+                      aria-label="Supplier phone"
+                      placeholder="Supplier phone (saved for next time)"
+                      value={supplierPhone}
+                      onChange={(e) => setSupplierPhone(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Supplier email"
+                      placeholder="Supplier email (saved for next time)"
+                      value={supplierEmail}
+                      onChange={(e) => setSupplierEmail(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Supplier address"
+                      placeholder="Supplier address (saved for next time)"
+                      value={supplierAddress}
+                      onChange={(e) => setSupplierAddress(e.target.value)}
                     />
                     <Input
                       aria-label="Supplier invoice number"
@@ -1039,6 +1073,9 @@ export function StockRegistration() {
                           },
                           purchase: {
                             supplier_gstin: supplierGstin.trim(),
+                            supplier_phone: supplierPhone.trim(),
+                            supplier_email: supplierEmail.trim(),
+                            supplier_address: supplierAddress.trim(),
                             invoice_number: supplierInvoice.trim(),
                             invoice_date: supplierInvoiceDate,
                             itc_status: itcStatus,

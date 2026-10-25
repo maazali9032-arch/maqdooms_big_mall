@@ -701,19 +701,28 @@ export type Database = {
       };
       suppliers: {
         Row: {
+          address: string | null;
           city: string | null;
+          email: string | null;
+          gstin: string | null;
           id: string;
           name: string;
           phone: string | null;
         };
         Insert: {
+          address?: string | null;
           city?: string | null;
+          email?: string | null;
+          gstin?: string | null;
           id?: string;
           name: string;
           phone?: string | null;
         };
         Update: {
+          address?: string | null;
           city?: string | null;
+          email?: string | null;
+          gstin?: string | null;
           id?: string;
           name?: string;
           phone?: string | null;

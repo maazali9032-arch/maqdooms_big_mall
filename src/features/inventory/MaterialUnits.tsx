@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Panel } from "@/shared/components/page";
 import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { BarcodeSticker } from "./BarcodeSticker";
+import { PickOrTypeInput } from "@/shared/components/pick-or-type";
+import { useSuppliers } from "@/features/inventory";
 import { printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 
@@ -68,10 +70,14 @@ export function MaterialUnits({
   const { isOwner, can, roles } = useSession();
   const mayReceive = isOwner || (roles.includes("stock_entry") && can("materials.receive_units"));
   const qc = useQueryClient();
+  const suppliers = useSuppliers();
   const labels = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [supplier, setSupplier] = useState("");
   const [supplierGstin, setSupplierGstin] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierAddress, setSupplierAddress] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [taxableAmount, setTaxableAmount] = useState("");
@@ -145,6 +151,9 @@ export function MaterialUnits({
       setPending(null);
       setSupplier("");
       setSupplierGstin("");
+      setSupplierPhone("");
+      setSupplierEmail("");
+      setSupplierAddress("");
       setInvoiceNumber("");
       setInvoiceDate("");
       setTaxableAmount("");
@@ -200,6 +209,9 @@ export function MaterialUnits({
         p_lines,
         p_purchase: {
           supplier_gstin: supplierGstin.trim(),
+          supplier_phone: supplierPhone.trim(),
+          supplier_email: supplierEmail.trim(),
+          supplier_address: supplierAddress.trim(),
           invoice_number: invoiceNumber.trim(),
           invoice_date: invoiceDate,
           itc_status: itcStatus,
@@ -212,6 +224,16 @@ export function MaterialUnits({
     } catch (error) {
       toast.error((error as Error).message);
     }
+  };
+  const selectSupplier = (value: string) => {
+    setSupplier(value);
+    const matched = (suppliers.data ?? []).find(
+      (item) => item.name.trim().toLowerCase() === value.trim().toLowerCase(),
+    );
+    setSupplierGstin(matched?.gstin ?? "");
+    setSupplierPhone(matched?.phone ?? "");
+    setSupplierEmail(matched?.email ?? "");
+    setSupplierAddress(matched?.address ?? "");
   };
   return (
     <div className="space-y-4">
@@ -231,7 +253,11 @@ export function MaterialUnits({
             <div className="grid gap-3 md:grid-cols-3">
               <label className="text-sm">
                 Supplier
-                <Input value={supplier} onChange={(e) => setSupplier(e.target.value)} />
+                <PickOrTypeInput
+                  value={supplier}
+                  onChange={selectSupplier}
+                  options={(suppliers.data ?? []).map((item) => item.name)}
+                />
               </label>
               <label className="text-sm">
                 Transport / other charges ₹
@@ -254,6 +280,21 @@ export function MaterialUnits({
                   placeholder="Supplier GSTIN"
                   value={supplierGstin}
                   onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                />
+                <Input
+                  placeholder="Supplier phone (saved for next time)"
+                  value={supplierPhone}
+                  onChange={(e) => setSupplierPhone(e.target.value)}
+                />
+                <Input
+                  placeholder="Supplier email (saved for next time)"
+                  value={supplierEmail}
+                  onChange={(e) => setSupplierEmail(e.target.value)}
+                />
+                <Input
+                  placeholder="Supplier address (saved for next time)"
+                  value={supplierAddress}
+                  onChange={(e) => setSupplierAddress(e.target.value)}
                 />
                 <Input
                   aria-label="Supplier invoice number"

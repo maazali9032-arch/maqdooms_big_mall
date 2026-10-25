@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Panel } from "@/shared/components/page";
 import { PickOrTypeInput } from "@/shared/components/pick-or-type";
+import { useSuppliers } from "@/features/inventory";
 import { reportMoney } from "@/features/reports/report-value";
 import { BarcodeSticker } from "./BarcodeSticker";
 import { printFabricLabel } from "./fabric-label";
@@ -64,6 +65,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   const allowed = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const labels = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
+  const suppliers = useSuppliers();
   const [supplier, setSupplier] = useState("");
   const [arrivalDate, setArrivalDate] = useState(() =>
     new Intl.DateTimeFormat("en-CA", {
@@ -74,6 +76,9 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
     }).format(new Date()),
   );
   const [supplierGstin, setSupplierGstin] = useState("");
+  const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierAddress, setSupplierAddress] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [taxableAmount, setTaxableAmount] = useState("");
@@ -131,6 +136,9 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
         p_items: items,
         p_purchase: {
           supplier_gstin: supplierGstin.trim(),
+          supplier_phone: supplierPhone.trim(),
+          supplier_email: supplierEmail.trim(),
+          supplier_address: supplierAddress.trim(),
           invoice_number: invoiceNumber.trim(),
           invoice_date: invoiceDate,
           itc_status: itcStatus,
@@ -165,6 +173,9 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       setRows([emptyEntry()]);
       setSupplier("");
       setSupplierGstin("");
+      setSupplierPhone("");
+      setSupplierEmail("");
+      setSupplierAddress("");
       setInvoiceNumber("");
       setInvoiceDate("");
       setTaxableAmount("");
@@ -178,6 +189,16 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   });
   if (!allowed) return null;
   const total = rows.reduce((sum, row) => sum + validCount(row.quantity), 0);
+  const selectSupplier = (value: string) => {
+    setSupplier(value);
+    const matched = (suppliers.data ?? []).find(
+      (item) => item.name.trim().toLowerCase() === value.trim().toLowerCase(),
+    );
+    setSupplierGstin(matched?.gstin ?? "");
+    setSupplierPhone(matched?.phone ?? "");
+    setSupplierEmail(matched?.email ?? "");
+    setSupplierAddress(matched?.address ?? "");
+  };
   const productNames = catalog.data?.products.map((product) => product.name) ?? [];
   const updateRow = (id: string, update: Partial<Entry>) =>
     setRows((current) => current.map((row) => (row.id === id ? { ...row, ...update } : row)));
@@ -224,11 +245,11 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
           </div>
           <div>
             <Label htmlFor="vendor-supplier">Supplier / provider</Label>
-            <Input
+            <PickOrTypeInput
               id="vendor-supplier"
               value={supplier}
-              onChange={(event) => setSupplier(event.target.value)}
-              placeholder="Vendor name"
+              onChange={selectSupplier}
+              options={(suppliers.data ?? []).map((item) => item.name)}
             />
           </div>
           <div>
@@ -252,6 +273,21 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
             placeholder="Supplier GSTIN"
             value={supplierGstin}
             onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+          />
+          <Input
+            placeholder="Supplier phone (saved for next time)"
+            value={supplierPhone}
+            onChange={(e) => setSupplierPhone(e.target.value)}
+          />
+          <Input
+            placeholder="Supplier email (saved for next time)"
+            value={supplierEmail}
+            onChange={(e) => setSupplierEmail(e.target.value)}
+          />
+          <Input
+            placeholder="Supplier address (saved for next time)"
+            value={supplierAddress}
+            onChange={(e) => setSupplierAddress(e.target.value)}
           />
           <Input
             aria-label="Supplier invoice number"
