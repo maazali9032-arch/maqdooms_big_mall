@@ -317,7 +317,7 @@ function AccessPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="grid grid-cols-5 gap-1.5">
+                        <div className="grid grid-cols-3 gap-1.5">
                           {roleList.map((role) => {
                             const checked = user.roles.includes(role.key);
                             const disabled =
