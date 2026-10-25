@@ -63,6 +63,7 @@ export type CounterReceipt = {
   discount_edit_until?: string | null;
   paid_amount_paise?: string;
   balance_paise?: string;
+  refund_due_paise?: string;
   pos_code?: string | null;
   paid: boolean;
   paid_at: string | null;

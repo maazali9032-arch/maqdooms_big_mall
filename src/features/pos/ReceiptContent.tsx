@@ -37,12 +37,23 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
       (line.fabric_amount_paise != null || line.stitching_paise != null),
   );
   const received = receipt.paid_amount_paise ?? (receipt.paid ? receipt.total_paise : "0");
-  const balance =
-    receipt.balance_paise ?? (BigInt(receipt.total_paise) - BigInt(received)).toString();
+  const calculatedBalance = BigInt(receipt.total_paise) - BigInt(received);
+  const balance = BigInt(
+    receipt.balance_paise ?? (calculatedBalance > 0n ? calculatedBalance : 0n).toString(),
+  );
+  const refundDue = BigInt(
+    receipt.refund_due_paise ?? (calculatedBalance < 0n ? -calculatedBalance : 0n).toString(),
+  );
   const priceMode = receipt.tax?.price_mode ?? "inclusive";
   const payment = receipt.tax?.payment_method?.replaceAll("_", " ");
   const paymentStatus =
-    BigInt(balance) === 0n ? "Paid" : BigInt(received) > 0n ? "Partially paid" : "Unpaid";
+    refundDue > 0n
+      ? "Refund due"
+      : balance === 0n
+        ? "Paid"
+        : BigInt(received) > 0n
+          ? "Partially paid"
+          : "Unpaid";
   const fabricSubtotal = receipt.lines.reduce(
     (sum, line) =>
       sum +
@@ -320,10 +331,17 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
           <span>Amount paid</span>
           <strong>{reportMoney(received)}</strong>
         </div>
-        <div className="invoice-row flex justify-between">
-          <strong>Balance due</strong>
-          <strong>{reportMoney(balance)}</strong>
-        </div>
+        {refundDue > 0n ? (
+          <div className="invoice-row flex justify-between">
+            <strong>Refund due to customer</strong>
+            <strong>{reportMoney(refundDue.toString())}</strong>
+          </div>
+        ) : (
+          <div className="invoice-row flex justify-between">
+            <strong>Balance due</strong>
+            <strong>{reportMoney(balance.toString())}</strong>
+          </div>
+        )}
         {payment && <p className="capitalize">Payment Mode: {payment}</p>}
         {BigInt(received) > 0n && receipt.paid_at && (
           <p>
@@ -341,7 +359,7 @@ export function CustomerReceiptContent({ receipt }: { receipt: CounterReceipt })
         <div className="invoice-row flex justify-between font-semibold">
           <span>Payment status</span>
           <span
-            className={`invoice-status ${paymentStatus === "Paid" ? "is-paid" : "is-outstanding"}`}
+            className={`invoice-status ${paymentStatus === "Paid" ? "is-paid" : paymentStatus === "Refund due" ? "is-refund" : "is-outstanding"}`}
           >
             {paymentStatus}
           </span>
