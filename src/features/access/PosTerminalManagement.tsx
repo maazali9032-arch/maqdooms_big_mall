@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Terminal = {
+export type Terminal = {
   id: string;
   code: string;
   active: boolean;
@@ -21,7 +21,9 @@ const rpc = supabase.rpc.bind(supabase) as unknown as (
   args: Record<string, unknown>,
 ) => Promise<{ data: unknown; error: Error | null }>;
 
-function usePosTerminals() {
+// Shared by the access-table filters and the per-user POS selector.
+// eslint-disable-next-line react-refresh/only-export-components
+export function usePosTerminals() {
   return useQuery({
     queryKey: ["pos-terminals"],
     queryFn: async () => {
@@ -53,12 +55,12 @@ export function PosUserAssignment({ user }: { user: PosStaff }) {
 
   if (!user.roles.includes("counter") || user.roles.includes("owner")) return null;
   return (
-    <div className="mt-2">
-      <label className="flex max-w-sm items-center gap-2 text-[11px] font-medium">
-        POS ID
+    <div className="min-w-0">
+      <label className="block text-[11px] font-medium">
+        <span className="sr-only">POS ID</span>
         <select
           aria-label={`POS ID for ${user.full_name}`}
-          className="h-8 min-w-44 rounded-md border border-input bg-background px-2 text-xs"
+          className="h-9 w-full min-w-28 rounded-md border border-input bg-background px-2 text-xs"
           value={current?.id ?? ""}
           disabled={terminals.isLoading || assign.isPending}
           onChange={(event) => assign.mutate(event.target.value || null)}
@@ -76,7 +78,7 @@ export function PosUserAssignment({ user }: { user: PosStaff }) {
         {!terminals.isLoading &&
         !current &&
         !terminals.data?.some((terminal) => !terminal.user_id) ? (
-          <span className="text-muted-foreground">Create a POS ID below first.</span>
+          <span className="mt-1 block text-muted-foreground">Create a POS ID below first.</span>
         ) : null}
       </label>
       {!user.active ? (

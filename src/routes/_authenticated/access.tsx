@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Filter,
   KeyRound,
   MoreVertical,
   Search,
@@ -37,7 +36,11 @@ import { cn } from "@/lib/utils";
 import { UserPermissions } from "@/features/access/UserPermissions";
 import { CreateStaff } from "@/features/access/CreateStaff";
 import { RETIRED_CREATOR_PERMISSIONS } from "@/features/access/permissionLabels";
-import { PosTerminalManagement, PosUserAssignment } from "@/features/access/PosTerminalManagement";
+import {
+  PosTerminalManagement,
+  PosUserAssignment,
+  usePosTerminals,
+} from "@/features/access/PosTerminalManagement";
 
 export const Route = createFileRoute("/_authenticated/access")({
   head: () => ({
@@ -65,11 +68,14 @@ function AccessPage() {
   const setRole = useSetUserRole();
   const setActive = useSetActive();
   const stockAuditAccess = useStockAuditAccess();
+  const posTerminals = usePosTerminals();
   const setStockAuditAccess = useSetStockAuditAccess();
   const [search, setSearch] = useState("");
   const [creatingStaff, setCreatingStaff] = useState(false);
   const [permissionUserId, setPermissionUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "disabled">("all");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [posFilter, setPosFilter] = useState("all");
 
   const roleList = roles.data?.roles ?? [];
   const permissions = (roles.data?.permissions ?? []).filter(
@@ -97,7 +103,11 @@ function AccessPage() {
       user.full_name.toLowerCase().includes(term) ||
       (user.email?.toLowerCase().includes(term) ?? false) ||
       user.roles.some((role) => (ROLE_LABELS[role] ?? role).toLowerCase().includes(term));
-    return statusMatches && searchMatches;
+    const roleMatches = roleFilter === "all" || user.roles.includes(roleFilter);
+    const terminal = posTerminals.data?.find((item) => item.user_id === user.id);
+    const posMatches =
+      posFilter === "all" || (posFilter === "unassigned" ? !terminal : terminal?.id === posFilter);
+    return statusMatches && searchMatches && roleMatches && posMatches;
   });
 
   async function updateActive(user: (typeof staffList)[number]) {
@@ -163,8 +173,8 @@ function AccessPage() {
               and choose Manage permissions.
             </p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row xl:w-auto">
-            <div className="relative min-w-0 sm:w-72">
+          <div className="grid w-full gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-[280px_150px_140px_150px]">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
@@ -174,31 +184,45 @@ function AccessPage() {
                 aria-label="Search staff"
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="justify-start sm:justify-center">
-                  <Filter />
-                  {statusFilter === "all"
-                    ? "All staff"
-                    : statusFilter === "active"
-                      ? "Active"
-                      : "Disabled"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Account status</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => setStatusFilter("all")}>
-                  All staff
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setStatusFilter("active")}>
-                  Active
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setStatusFilter("disabled")}>
-                  Disabled
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <select
+              aria-label="Filter by role"
+              className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value)}
+            >
+              <option value="all">All Roles</option>
+              {roleList.map((role) => (
+                <option key={role.key} value={role.key}>
+                  {ROLE_LABELS[role.key] ?? role.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by status"
+              className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as "all" | "active" | "disabled")
+              }
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="disabled">Disabled</option>
+            </select>
+            <select
+              aria-label="Filter by POS ID"
+              className="h-11 rounded-lg border border-input bg-background px-3 text-sm"
+              value={posFilter}
+              onChange={(event) => setPosFilter(event.target.value)}
+            >
+              <option value="all">All POS IDs</option>
+              <option value="unassigned">Unassigned</option>
+              {posTerminals.data?.map((terminal) => (
+                <option key={terminal.id} value={terminal.id}>
+                  {terminal.code}
+                </option>
+              ))}
+            </select>
           </div>
         </header>
 
@@ -211,12 +235,21 @@ function AccessPage() {
           />
         ) : (
           <div className="scrollbar-subtle overflow-x-auto">
-            <table className="w-full min-w-[1040px] text-left">
+            <table className="w-full min-w-[1380px] table-fixed text-left">
+              <colgroup>
+                <col className="w-[245px]" />
+                <col className="w-[180px]" />
+                <col className="w-[680px]" />
+                <col className="w-[135px]" />
+                <col className="w-[100px]" />
+                <col className="w-[70px]" />
+              </colgroup>
               <thead className="border-b border-border bg-surface">
                 <tr className="label-eyebrow">
                   <th className="px-5 py-3 font-semibold">User</th>
                   <th className="px-4 py-3 font-semibold">Last login</th>
                   <th className="px-4 py-3 font-semibold">Assigned roles</th>
+                  <th className="px-4 py-3 font-semibold">POS ID</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 text-right font-semibold">Actions</th>
                 </tr>
@@ -266,7 +299,7 @@ function AccessPage() {
                         </p>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex max-w-[590px] flex-wrap gap-1.5">
+                        <div className="grid grid-cols-5 gap-1.5">
                           {roleList.map((role) => {
                             const checked = user.roles.includes(role.key);
                             const disabled =
@@ -278,7 +311,7 @@ function AccessPage() {
                               <label
                                 key={role.key}
                                 className={cn(
-                                  "flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors",
+                                  "flex min-w-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1.5 text-[11px] transition-colors",
                                   checked
                                     ? "border-primary/20 bg-accent text-accent-foreground"
                                     : "border-border bg-card text-foreground hover:border-primary/30",
@@ -310,50 +343,52 @@ function AccessPage() {
                               </label>
                             );
                           })}
-                        </div>
-                        <label
-                          className={cn(
-                            "mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1.5 text-[11px] transition-colors",
-                            user.roles.includes("owner") || stockAuditAccess.data?.get(user.id)
-                              ? "border-primary/20 bg-accent text-accent-foreground"
-                              : "border-border bg-card text-foreground hover:border-primary/30",
-                            (!user.active || user.roles.includes("owner")) &&
-                              "cursor-not-allowed opacity-65",
-                          )}
-                          title={
-                            user.roles.includes("owner")
-                              ? "Owners always have Stock Audit access"
-                              : "Allows this staff member to see Stock Audit and receive audit assignments"
-                          }
-                        >
-                          <Checkbox
-                            checked={
-                              user.roles.includes("owner") ||
-                              stockAuditAccess.data?.get(user.id) === true
+                          <label
+                            className={cn(
+                              "flex min-w-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1.5 text-[11px] transition-colors",
+                              user.roles.includes("owner") || stockAuditAccess.data?.get(user.id)
+                                ? "border-primary/20 bg-accent text-accent-foreground"
+                                : "border-border bg-card text-foreground hover:border-primary/30",
+                              (!user.active || user.roles.includes("owner")) &&
+                                "cursor-not-allowed opacity-65",
+                            )}
+                            title={
+                              user.roles.includes("owner")
+                                ? "Owners always have Stock Audit access"
+                                : "Allows this staff member to see Stock Audit and receive audit assignments"
                             }
-                            disabled={
-                              !user.active ||
-                              user.roles.includes("owner") ||
-                              setStockAuditAccess.isPending
-                            }
-                            onCheckedChange={async (value) => {
-                              try {
-                                await setStockAuditAccess.mutateAsync({
-                                  userId: user.id,
-                                  granted: Boolean(value),
-                                });
-                                toast.success(
-                                  value
-                                    ? "Stock Audit access granted"
-                                    : "Stock Audit access revoked",
-                                );
-                              } catch (err) {
-                                toast.error(err instanceof Error ? err.message : "Update failed");
+                          >
+                            <Checkbox
+                              checked={
+                                user.roles.includes("owner") ||
+                                stockAuditAccess.data?.get(user.id) === true
                               }
-                            }}
-                          />
-                          Stock Audit
-                        </label>
+                              disabled={
+                                !user.active ||
+                                user.roles.includes("owner") ||
+                                setStockAuditAccess.isPending
+                              }
+                              onCheckedChange={async (value) => {
+                                try {
+                                  await setStockAuditAccess.mutateAsync({
+                                    userId: user.id,
+                                    granted: Boolean(value),
+                                  });
+                                  toast.success(
+                                    value
+                                      ? "Stock Audit access granted"
+                                      : "Stock Audit access revoked",
+                                  );
+                                } catch (err) {
+                                  toast.error(err instanceof Error ? err.message : "Update failed");
+                                }
+                              }}
+                            />
+                            Stock Audit
+                          </label>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
                         <PosUserAssignment user={user} />
                       </td>
                       <td className="px-4 py-3">
