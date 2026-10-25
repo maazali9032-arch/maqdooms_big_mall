@@ -181,64 +181,64 @@ export function gstPreview(
   discountMode: "percent" | "amount" = "percent",
   discountValue = 0n,
 ) {
-  const config = configuration?.configuration;
-  if (
-    discountValue < 0n ||
-    (discountMode === "percent" && discountValue > 10000n) ||
-    !["percent", "amount"].includes(discountMode)
-  )
-    return null;
-  const entries = [
-    ...rows
-      .filter((item) => !item.group)
-      .map((row) => ({
-        amount: rowAmount(row),
-        category: (row.scan.kind === "product" ? "finished_sale" : "fabric_sale") as
-          "fabric_sale" | "finished_sale",
-        itemRef: `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
+  try {
+    const config = configuration?.configuration;
+    if (
+      discountValue < 0n ||
+      (discountMode === "percent" && discountValue > 10000n) ||
+      !["percent", "amount"].includes(discountMode)
+    )
+      return null;
+    const entries = [
+      ...rows
+        .filter((item) => !item.group)
+        .map((row) => ({
+          amount: rowAmount(row),
+          category: (row.scan.kind === "product" ? "finished_sale" : "fabric_sale") as
+            "fabric_sale" | "finished_sale",
+          itemRef: `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
+        })),
+      ...groups.map((group) => ({
+        amount: tailoringAmounts(rows, group).total,
+        category: "finished_sale" as const,
+        itemRef: `PRODUCT:${group.garment.trim().toUpperCase()}`,
       })),
-    ...groups.map((group) => ({
-      amount: tailoringAmounts(rows, group).total,
-      category: "finished_sale" as const,
-      itemRef: `PRODUCT:${group.garment.trim().toUpperCase()}`,
-    })),
-  ];
-  const gross = entries.reduce((sum, entry) => sum + entry.amount, 0n);
-  const target = discountMode === "amount" ? gross - discountValue : gross;
-  if (target < 0n) return null;
-  let allocated = 0n;
-  const discountedEntries = entries.map((entry, index) => {
-    if (discountMode === "percent") {
+    ];
+    const gross = entries.reduce((sum, entry) => sum + entry.amount, 0n);
+    const target = discountMode === "amount" ? gross - discountValue : gross;
+    if (target < 0n) return null;
+    let allocated = 0n;
+    const discountedEntries = entries.map((entry, index) => {
+      if (discountMode === "percent") {
+        return {
+          ...entry,
+          discountedAmount: (entry.amount * (10000n - discountValue) + 5000n) / 10000n,
+        };
+      }
+      const amount =
+        index === entries.length - 1
+          ? target - allocated
+          : gross === 0n
+            ? 0n
+            : (entry.amount * target + gross / 2n) / gross;
+      const safeAmount = amount > target - allocated ? target - allocated : amount;
+      allocated += safeAmount;
+      return { ...entry, discountedAmount: safeAmount };
+    });
+    const discountedTotal = discountedEntries.reduce(
+      (sum, entry) => sum + entry.discountedAmount,
+      0n,
+    );
+    if (!config?.enabled) {
       return {
-        ...entry,
-        discountedAmount: (entry.amount * (10000n - discountValue) + 5000n) / 10000n,
+        taxable: discountedTotal,
+        gst: 0n,
+        cgst: 0n,
+        sgst: 0n,
+        igst: 0n,
+        final: discountedTotal,
       };
     }
-    const amount =
-      index === entries.length - 1
-        ? target - allocated
-        : gross === 0n
-          ? 0n
-          : (entry.amount * target + gross / 2n) / gross;
-    const safeAmount = amount > target - allocated ? target - allocated : amount;
-    allocated += safeAmount;
-    return { ...entry, discountedAmount: safeAmount };
-  });
-  const discountedTotal = discountedEntries.reduce(
-    (sum, entry) => sum + entry.discountedAmount,
-    0n,
-  );
-  if (!config?.enabled) {
-    return {
-      taxable: discountedTotal,
-      gst: 0n,
-      cgst: 0n,
-      sgst: 0n,
-      igst: 0n,
-      final: discountedTotal,
-    };
-  }
-  try {
     let taxable = 0n,
       gst = 0n,
       cgst = 0n,
