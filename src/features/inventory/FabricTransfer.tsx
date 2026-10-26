@@ -1,6 +1,6 @@
 import { locationLabel } from "@/shared/utils/location-label";
 import { useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
@@ -12,7 +12,17 @@ import { quantityInput, quantityText } from "./ledger-quantity";
 import { fabricBarcodeBars, printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
 import { BarcodeCameraButton } from "@/shared/components/barcode-camera";
-import { MaterialUnitTransfer } from "./MaterialUnitTransfer";
+
+type MaterialDestination = {
+  tailor_id: string;
+  tailor_name: string;
+  factory_id: string;
+  factory_name: string;
+};
+const materialRpc = supabase.rpc.bind(supabase) as unknown as (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<{ data: unknown; error: Error | null }>;
 
 type Stock = {
   id: string;
@@ -81,6 +91,9 @@ export function FabricTransfer() {
   const [reason, setReason] = useState("");
   const [finishedPieces, setFinishedPieces] = useState<FinishedPiece[]>([]);
   const [finishedDestination, setFinishedDestination] = useState("");
+  const [transferKind, setTransferKind] = useState<"stock" | "material">("stock");
+  const [materialTailor, setMaterialTailor] = useState("");
+  const [materialQueue, setMaterialQueue] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<Plan[]>([]);
   const stocks = useQuery({
@@ -134,6 +147,35 @@ export function FabricTransfer() {
       }[];
     },
   });
+  const materialDestinations = useQuery({
+    queryKey: ["material-transfer-destinations"],
+    enabled: canMaterialTransfer,
+    queryFn: async () => {
+      const { data, error } = await materialRpc("material_transfer_destinations", {});
+      if (error) throw error;
+      return data as MaterialDestination[];
+    },
+  });
+  const transferMaterials = useMutation({
+    mutationFn: async (barcodes: string[]) => {
+      if (!materialTailor) throw new Error("Choose the destination Master Tailor first");
+      for (const materialBarcode of barcodes) {
+        const { error } = await materialRpc("transfer_material_unit", {
+          p_request: crypto.randomUUID(),
+          p_barcode: materialBarcode,
+          p_tailor: materialTailor,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      setMaterialQueue([]);
+      setMaterialTailor("");
+      toast.success("Complete material units assigned to the Master Tailor");
+      void qc.invalidateQueries();
+    },
+    onError: (error) => toast.error(error.message),
+  });
   const sourceId =
     source || locations.data?.find((l) => l.active && l.kind === "workshop")?.id || "";
   const loadError = stocks.error || catalog.error || locations.error || balances.error;
@@ -157,9 +199,35 @@ export function FabricTransfer() {
   function update(thaan: string, changes: Partial<Row>) {
     setRows((old) => old.map((r) => (r.thaan === thaan ? { ...r, ...changes } : r)));
   }
-  function scan() {
+  function scan(scanned = barcode) {
     if (frozen || loading || loadError) return;
-    const stock = stocks.data?.find((s) => s.barcode === barcode.trim());
+    const scannedBarcode = scanned.trim().toUpperCase();
+    if (!scannedBarcode) return;
+    if (/^M[0-9A-Z]{5}$/.test(scannedBarcode)) {
+      if (!canMaterialTransfer) {
+        toast.error("Material-unit transfer access is required for this barcode.");
+        return;
+      }
+      if (rows.length || finishedPieces.length) {
+        toast.error("Complete or remove the current stock transfer before transferring material units.");
+        return;
+      }
+      if (materialQueue.includes(scannedBarcode)) {
+        toast.error("This material unit is already in the transfer list.");
+        return;
+      }
+      setTransferKind("material");
+      setMaterialQueue((current) => [...current, scannedBarcode]);
+      setBarcode("");
+      input.current?.focus();
+      return;
+    }
+    if (materialQueue.length) {
+      toast.error("Complete or remove the material-unit transfer before scanning other stock.");
+      return;
+    }
+    setTransferKind("stock");
+    const stock = stocks.data?.find((s) => s.barcode === scannedBarcode);
     if (!stock) {
       if (!canFinishedTransfer) {
         toast.error(
@@ -169,7 +237,7 @@ export function FabricTransfer() {
       }
       void (async () => {
         const { data, error } = await supabase.rpc("finished_product_transfer_scan", {
-          p_barcode: barcode.trim(),
+          p_barcode: scannedBarcode,
         });
         if (error) throw error;
         const piece = (data as unknown as FinishedPiece[])[0];
@@ -309,10 +377,9 @@ export function FabricTransfer() {
   if (!allowed) return <p>Stock transfer permission required. Contact the Owner.</p>;
   return (
     <div className="space-y-4">
-      {canMaterialTransfer && <MaterialUnitTransfer />}
       <Panel
         title="Stock Transfer"
-        description="Scan fabric Thaans or one ready-made piece. Fabric transfers use metres; ready-made products transfer as a complete piece with the same barcode."
+        description="Scan a barcode to choose the transfer: fabric and ready-made items go to stock locations; M material-unit barcodes go only to a Factory Master Tailor."
       >
         {loadError && <p role="alert">Transfer data could not load. Refresh before posting.</p>}
         <form
@@ -345,30 +412,96 @@ export function FabricTransfer() {
             disabled={frozen || loading || Boolean(loadError)}
             onScan={(code) => {
               setBarcode(code);
-              window.setTimeout(() => scan(), 0);
+              scan(code);
             }}
           />
         </form>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-          <span>From: {locations.data?.find((l) => l.id === sourceId)?.name ?? "Workshop"}</span>
-          {isOwner && (
-            <select
-              aria-label="Transfer source"
-              className="rounded border bg-background p-2"
-              value={sourceId}
-              disabled={frozen}
-              onChange={(e) => setSource(e.target.value)}
-            >
-              {locations.data
-                ?.filter((l) => l.active)
-                .map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {locationLabel(l)}
-                  </option>
-                ))}
-            </select>
-          )}
-        </div>
+        {transferKind === "material" ? (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-muted/30 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold">Material units</p>
+                <p className="text-sm text-muted-foreground">
+                  M barcodes transfer whole physical units only. Their destination is a Factory and Master Tailor, never a showroom floor.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                disabled={transferMaterials.isPending}
+                onClick={() => {
+                  setMaterialQueue([]);
+                  setMaterialTailor("");
+                  setTransferKind("stock");
+                }}
+              >
+                Cancel material transfer
+              </Button>
+            </div>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="min-w-64 flex-1 text-sm">
+                Send to Factory / Master Tailor
+                <select
+                  aria-label="Material unit transfer destination"
+                  className="mt-1 h-11 w-full rounded border bg-background p-2"
+                  value={materialTailor}
+                  disabled={transferMaterials.isPending}
+                  onChange={(event) => setMaterialTailor(event.target.value)}
+                >
+                  <option value="">Choose factory and Master Tailor</option>
+                  {materialDestinations.data?.map((destination) => (
+                    <option key={destination.tailor_id} value={destination.tailor_id}>
+                      {destination.factory_name} · {destination.tailor_name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Button
+                disabled={transferMaterials.isPending || !materialTailor || !materialQueue.length}
+                onClick={() => transferMaterials.mutate(materialQueue)}
+              >
+                {transferMaterials.isPending
+                  ? "Transferring…"
+                  : `Transfer ${materialQueue.length} complete unit${materialQueue.length === 1 ? "" : "s"}`}
+              </Button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {materialQueue.map((materialBarcode) => (
+                <div key={materialBarcode} className="flex items-center justify-between rounded border bg-background p-2">
+                  <span className="font-mono">{materialBarcode}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={transferMaterials.isPending}
+                    onClick={() => setMaterialQueue((current) => current.filter((item) => item !== materialBarcode))}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <span>From: {locations.data?.find((l) => l.id === sourceId)?.name ?? "Workshop"}</span>
+              {isOwner && (
+                <select
+                  aria-label="Transfer source"
+                  className="rounded border bg-background p-2"
+                  value={sourceId}
+                  disabled={frozen}
+                  onChange={(e) => setSource(e.target.value)}
+                >
+                  {locations.data
+                    ?.filter((l) => l.active)
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {locationLabel(l)}
+                      </option>
+                    ))}
+                </select>
+              )}
+            </div>
         {!!finishedPieces.length && (
           <div className="mt-4 rounded-xl border border-primary/30 bg-muted/30 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -611,6 +744,8 @@ export function FabricTransfer() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </Panel>
       <details className="panel p-4">
