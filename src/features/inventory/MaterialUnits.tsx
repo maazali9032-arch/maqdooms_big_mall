@@ -47,6 +47,12 @@ type MaterialCategory = {
   name: string;
   measurement_unit: string;
 };
+const defaultMaterialCategories: MaterialCategory[] = [
+  { id: "buttons", code: "buttons", name: "Buttons", measurement_unit: "pc" },
+  { id: "thread", code: "thread", name: "Thread", measurement_unit: "spool" },
+  { id: "padding", code: "padding", name: "Shoulder pads / padding", measurement_unit: "pc" },
+  { id: "other", code: "other", name: "Fusing / other", measurement_unit: "m" },
+];
 const rpc = supabase.rpc.bind(supabase) as unknown as (
   name: string,
   args: Record<string, unknown>,
@@ -108,6 +114,7 @@ export function MaterialUnits({
       return data as MaterialCategory[];
     },
   });
+  const categoryOptions = categories.data?.length ? categories.data : defaultMaterialCategories;
   const units = useQuery({
     queryKey: ["material-units", search],
     enabled: showInventory,
@@ -446,7 +453,7 @@ export function MaterialUnits({
                       className="block min-h-10 w-full rounded-md border bg-background px-3"
                       value={line.category}
                       onChange={(e) => {
-                        const selected = categories.data?.find(
+                        const selected = categoryOptions.find(
                           (item) => item.code === e.target.value,
                         );
                         setLine(line.key, (row) => ({
@@ -456,7 +463,7 @@ export function MaterialUnits({
                         }));
                       }}
                     >
-                      {(categories.data ?? []).map((category) => (
+                      {categoryOptions.map((category) => (
                         <option key={category.id} value={category.code}>
                           {category.name}
                         </option>
