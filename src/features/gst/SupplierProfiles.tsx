@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Pencil, Plus } from "lucide-react";
+import { Building2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "@/shared/components/page";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type SupplierProfile = {
   id: string;
@@ -41,6 +51,7 @@ function errorMessage(error: unknown) {
 export function SupplierProfiles() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<SupplierDraft | null>(null);
+  const [deleting, setDeleting] = useState<SupplierProfile | null>(null);
   const profiles = useQuery({
     queryKey: ["owner-supplier-profiles"],
     queryFn: async () => {
@@ -73,6 +84,21 @@ export function SupplierProfiles() {
         queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
       ]);
       toast.success("Supplier profile saved");
+    },
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+  const remove = useMutation({
+    mutationFn: async (supplier: SupplierProfile) => {
+      const { error } = await rpc("owner_delete_supplier_profile", { p_id: supplier.id });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setDeleting(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["owner-supplier-profiles"] }),
+        queryClient.invalidateQueries({ queryKey: ["suppliers"] }),
+      ]);
+      toast.success("Supplier profile deleted");
     },
     onError: (error) => toast.error(errorMessage(error)),
   });
@@ -174,14 +200,25 @@ export function SupplierProfiles() {
                     {supplier.gstin || "GSTIN not added"}
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditing({ ...supplier })}
-                  aria-label={`Edit ${supplier.name}`}
-                >
-                  <Pencil className="size-3.5" /> Edit
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditing({ ...supplier })}
+                    aria-label={`Edit ${supplier.name}`}
+                  >
+                    <Pencil className="size-3.5" /> Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setDeleting(supplier)}
+                    aria-label={`Delete ${supplier.name}`}
+                  >
+                    <Trash2 className="size-3.5" /> Delete
+                  </Button>
+                </div>
               </div>
               <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
                 <span>{supplier.phone || "No phone"}</span>
@@ -192,6 +229,35 @@ export function SupplierProfiles() {
           </article>
         ))}
       </div>
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(open) => {
+          if (!open && !remove.isPending) setDeleting(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleting?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the supplier from future stock-entry choices. It cannot be deleted if it
+              is already linked to an existing fabric batch, so historic stock remains traceable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={remove.isPending || !deleting}
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleting) remove.mutate(deleting);
+              }}
+            >
+              {remove.isPending ? "Deleting…" : "Delete supplier"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Panel>
   );
 }
