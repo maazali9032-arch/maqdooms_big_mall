@@ -38,6 +38,14 @@ type DraftLine = {
   unitCount: string;
   quantityEach: string;
   purchaseCostEach: string;
+  units: DraftUnit[];
+};
+type DraftUnit = { key: string; quantity: string; purchaseCost: string };
+type MaterialCategory = {
+  id: string;
+  code: string;
+  name: string;
+  measurement_unit: string;
 };
 const rpc = supabase.rpc.bind(supabase) as unknown as (
   name: string,
@@ -51,7 +59,9 @@ const blankLine = (): DraftLine => ({
   unitCount: "1",
   quantityEach: "",
   purchaseCostEach: "",
+  units: [{ key: crypto.randomUUID(), quantity: "", purchaseCost: "" }],
 });
+const today = () => new Date().toLocaleDateString("en-CA");
 const paise = (value: string) => {
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) throw new Error("Enter valid non-negative costs");
@@ -83,11 +93,21 @@ export function MaterialUnits({
   const [taxableAmount, setTaxableAmount] = useState("");
   const [gstAmount, setGstAmount] = useState("");
   const [invoiceTotal, setInvoiceTotal] = useState("");
+  const [arrivalDate, setArrivalDate] = useState(today);
   const [transportCharges, setTransportCharges] = useState("0");
   const [itcStatus, setItcStatus] = useState("pending");
   const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   const [correctionReason, setCorrectionReason] = useState<Record<string, string>>({});
+  const categories = useQuery({
+    queryKey: ["material-categories"],
+    enabled: showReceiving && mayReceive,
+    queryFn: async () => {
+      const { data, error } = await rpc("material_category_catalog", {});
+      if (error) throw error;
+      return data as MaterialCategory[];
+    },
+  });
   const units = useQuery({
     queryKey: ["material-units", search],
     enabled: showInventory,
@@ -159,6 +179,7 @@ export function MaterialUnits({
       setTaxableAmount("");
       setGstAmount("");
       setInvoiceTotal("");
+      setArrivalDate(today());
       setTransportCharges("0");
       setLines([blankLine()]);
       void qc.invalidateQueries({ queryKey: ["material-units"] });
@@ -184,21 +205,25 @@ export function MaterialUnits({
         throw new Error("Each material type needs a unique name");
       const p_lines = lines.map((line) => {
         const count = Number(line.unitCount);
-        const quantity = Number(line.quantityEach);
-        if (!Number.isInteger(count) || count < 1 || count > 500 || quantity <= 0)
-          throw new Error("Enter a valid unit count and quantity for every material");
-        const unit = {
-          quantity,
-          net_purchase_paise: paise(line.purchaseCostEach),
-          recoverable_gst_paise: 0,
-          nonrecoverable_gst_paise: 0,
-          direct_cost_paise: 0,
-        };
+        if (!Number.isInteger(count) || count < 1 || count > 500 || line.units.length !== count)
+          throw new Error("Enter one to 500 physical units for every material type");
+        const units = line.units.map((unit, index) => {
+          const quantity = Number(unit.quantity);
+          if (!Number.isFinite(quantity) || quantity <= 0)
+            throw new Error(`Enter a positive quantity for unit ${index + 1} of ${line.name}`);
+          return {
+            quantity,
+            net_purchase_paise: paise(unit.purchaseCost),
+            recoverable_gst_paise: 0,
+            nonrecoverable_gst_paise: 0,
+            direct_cost_paise: 0,
+          };
+        });
         return {
           name: line.name.trim(),
           category: line.category,
           unit: line.unit.trim(),
-          units: Array.from({ length: count }, () => unit),
+          units,
         };
       });
       receive.mutate({
@@ -219,6 +244,7 @@ export function MaterialUnits({
           actual_gst_paise: paise(gstAmount),
           actual_supplier_paise: paise(invoiceTotal),
           transport_paise: paise(transportCharges),
+          arrival_date: arrivalDate,
         },
       });
     } catch (error) {
@@ -235,6 +261,36 @@ export function MaterialUnits({
     setSupplierEmail(matched?.email ?? "");
     setSupplierAddress(matched?.address ?? "");
   };
+  const setLine = (key: string, update: (line: DraftLine) => DraftLine) =>
+    setLines((rows) => rows.map((row) => (row.key === key ? update(row) : row)));
+  const resizeUnits = (line: DraftLine, value: string) => {
+    const count = Math.max(0, Math.min(500, Number.parseInt(value, 10) || 0));
+    const units = Array.from(
+      { length: count },
+      (_, index) =>
+        line.units[index] ?? {
+          key: crypto.randomUUID(),
+          quantity: line.quantityEach,
+          purchaseCost: line.purchaseCostEach,
+        },
+    );
+    return { ...line, unitCount: value, units };
+  };
+  const setDefault = (
+    line: DraftLine,
+    field: "quantityEach" | "purchaseCostEach",
+    value: string,
+  ) => {
+    const childField = field === "quantityEach" ? "quantity" : "purchaseCost";
+    const previous = line[field];
+    return {
+      ...line,
+      [field]: value,
+      units: line.units.map((unit) =>
+        unit[childField] === previous ? { ...unit, [childField]: value } : unit,
+      ),
+    };
+  };
   return (
     <div className="space-y-4">
       {showReceiving && mayReceive && (
@@ -250,23 +306,38 @@ export function MaterialUnits({
           }
         >
           <fieldset disabled={receive.isPending || !!pending} className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <label className="text-sm">
-                Supplier
-                <PickOrTypeInput
-                  value={supplier}
-                  onChange={selectSupplier}
-                  options={(suppliers.data ?? []).map((item) => item.name)}
-                />
-              </label>
-              <label className="text-sm">
-                Transport / other charges ₹
-                <Input
-                  inputMode="decimal"
-                  value={transportCharges}
-                  onChange={(e) => setTransportCharges(e.target.value)}
-                />
-              </label>
+            <div className="rounded-xl border p-3">
+              <h3 className="mb-3 font-semibold">Batch information</h3>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <label className="text-sm">
+                  Batch ID
+                  <Input value="Auto-generated on save" readOnly className="bg-muted" />
+                </label>
+                <label className="text-sm">
+                  Arrival date
+                  <Input
+                    type="date"
+                    value={arrivalDate}
+                    onChange={(e) => setArrivalDate(e.target.value)}
+                  />
+                </label>
+                <label className="text-sm">
+                  Supplier / provider
+                  <PickOrTypeInput
+                    value={supplier}
+                    onChange={selectSupplier}
+                    options={(suppliers.data ?? []).map((item) => item.name)}
+                  />
+                </label>
+                <label className="text-sm">
+                  Transport / other charges ₹
+                  <Input
+                    inputMode="decimal"
+                    value={transportCharges}
+                    onChange={(e) => setTransportCharges(e.target.value)}
+                  />
+                </label>
+              </div>
             </div>
             <div className="rounded-xl border p-3">
               <h3 className="mb-3 font-semibold">Supplier GST & purchase invoice</h3>
@@ -355,7 +426,7 @@ export function MaterialUnits({
                     </Button>
                   )}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_8rem]">
                   <label className="text-sm">
                     Material name
                     <Input
@@ -374,78 +445,119 @@ export function MaterialUnits({
                     <select
                       className="block min-h-10 w-full rounded-md border bg-background px-3"
                       value={line.category}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, category: e.target.value } : row,
-                          ),
-                        )
-                      }
+                      onChange={(e) => {
+                        const selected = categories.data?.find(
+                          (item) => item.code === e.target.value,
+                        );
+                        setLine(line.key, (row) => ({
+                          ...row,
+                          category: e.target.value,
+                          unit: selected?.measurement_unit ?? row.unit,
+                        }));
+                      }}
                     >
-                      <option value="buttons">Buttons</option>
-                      <option value="thread">Thread</option>
-                      <option value="padding">Shoulder pads / padding</option>
-                      <option value="other">Fusing / other</option>
+                      {(categories.data ?? []).map((category) => (
+                        <option key={category.id} value={category.code}>
+                          {category.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className="text-sm">
                     Measurement unit
-                    <Input
-                      value={line.unit}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, unit: e.target.value } : row,
-                          ),
-                        )
-                      }
-                    />
+                    <Input value={line.unit} readOnly className="w-24 bg-muted" />
                   </label>
                   <label className="text-sm">
                     Physical units
                     <Input
                       inputMode="numeric"
                       value={line.unitCount}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, unitCount: e.target.value } : row,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Quantity in each unit
-                    <Input
-                      inputMode="decimal"
-                      value={line.quantityEach}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, quantityEach: e.target.value } : row,
-                          ),
-                        )
-                      }
-                    />
-                  </label>
-                  <label className="text-sm">
-                    Purchase CP per unit, including GST ₹
-                    <Input
-                      inputMode="decimal"
-                      value={line.purchaseCostEach}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key
-                              ? { ...row, purchaseCostEach: e.target.value }
-                              : row,
-                          ),
-                        )
-                      }
+                      onChange={(e) => setLine(line.key, (row) => resizeUnits(row, e.target.value))}
                     />
                   </label>
                 </div>
+                <details
+                  className="mt-4 rounded-lg border bg-muted/20"
+                  open={line.units.length <= 10}
+                >
+                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+                    Units ({line.units.length}) — expand to set individual quantity and CP
+                  </summary>
+                  <div className="border-t p-3">
+                    <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                      <label className="text-sm">
+                        Default quantity in each unit ({line.unit})
+                        <Input
+                          inputMode="decimal"
+                          value={line.quantityEach}
+                          onChange={(e) =>
+                            setLine(line.key, (row) =>
+                              setDefault(row, "quantityEach", e.target.value),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="text-sm">
+                        Default purchase CP per unit, including GST ₹
+                        <Input
+                          inputMode="decimal"
+                          value={line.purchaseCostEach}
+                          onChange={(e) =>
+                            setLine(line.key, (row) =>
+                              setDefault(row, "purchaseCostEach", e.target.value),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className="space-y-2 border-l-2 border-primary/30 pl-3">
+                      {line.units.map((unit, unitIndex) => (
+                        <div
+                          key={unit.key}
+                          className="grid items-end gap-3 rounded-lg border bg-background p-2 sm:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]"
+                        >
+                          <p className="pb-2 text-sm font-medium">
+                            └ Unit {String(unitIndex + 1).padStart(2, "0")}
+                          </p>
+                          <label className="text-xs text-muted-foreground">
+                            Quantity ({line.unit})
+                            <Input
+                              inputMode="decimal"
+                              value={unit.quantity}
+                              onChange={(e) =>
+                                setLine(line.key, (row) => ({
+                                  ...row,
+                                  units: row.units.map((child) =>
+                                    child.key === unit.key
+                                      ? { ...child, quantity: e.target.value }
+                                      : child,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                          <label className="text-xs text-muted-foreground">
+                            Purchase CP incl. GST ₹
+                            <Input
+                              inputMode="decimal"
+                              value={unit.purchaseCost}
+                              onChange={(e) =>
+                                setLine(line.key, (row) => ({
+                                  ...row,
+                                  units: row.units.map((child) =>
+                                    child.key === unit.key
+                                      ? { ...child, purchaseCost: e.target.value }
+                                      : child,
+                                  ),
+                                }))
+                              }
+                            />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </details>
               </div>
             ))}
             <div className="flex flex-wrap gap-2">
