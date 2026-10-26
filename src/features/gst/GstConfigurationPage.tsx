@@ -11,6 +11,7 @@ import { gstReadWithDeadline, readOwnerGstConfiguration } from "./configuration-
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useGstConfiguration, type GstConfiguration } from "./tax";
 import { GarmentGstSlabs } from "./GarmentGstSlabs";
+import { SupplierProfiles } from "./SupplierProfiles";
 
 type Draft = Omit<GstConfiguration, "id">;
 
@@ -193,6 +194,8 @@ export function GstConfigurationPage() {
           </label>
         </div>
       </Panel>
+
+      <SupplierProfiles />
 
       <Panel title="Fixed GST workflow">
         <p className="text-sm text-muted-foreground">
