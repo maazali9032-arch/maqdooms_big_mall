@@ -24,6 +24,7 @@ import { reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "./CounterBillReceipt";
 import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
 import { FinishedProductExchange } from "./FinishedProductExchange";
+import { DefectiveReturnWorkflow } from "./DefectiveReturnWorkflow";
 import { counterPayment } from "./counter-payment";
 import { resolveCounterBarcode, type CounterWork } from "./counter-barcode";
 import {
@@ -1111,14 +1112,20 @@ function CounterContent({
           </Panel>
         )}
       {receipt && !work && receipt.paid && !receipt.exchange && (
-        <FinishedProductExchange
-          receipt={receipt}
-          disabled={frozen || scan.isPending || !canSell}
-          onComplete={(newReceipt) => {
-            setReceipt(newReceipt);
-            void qc.invalidateQueries();
-          }}
-        />
+        <>
+          <DefectiveReturnWorkflow
+            receipt={receipt}
+            disabled={frozen || scan.isPending || !canSell}
+          />
+          <FinishedProductExchange
+            receipt={receipt}
+            disabled={frozen || scan.isPending || !canSell}
+            onComplete={(newReceipt) => {
+              setReceipt(newReceipt);
+              void qc.invalidateQueries();
+            }}
+          />
+        </>
       )}
       {receipt &&
         (work ? (

@@ -30,7 +30,7 @@ type TransitItem = {
   purpose: "production" | "customer_order" | "custody";
   reference: string;
   issued_at: string;
-  stage: "issued_to_factory" | "work_recorded" | "master_tailor_stock";
+  stage: "issued" | "work_recorded" | "finished_ready" | "master_tailor_stock";
   tailor: string;
 };
 type TransitFactory = {
@@ -238,7 +238,17 @@ export function FactoryTransitStock() {
                           {new Date(item.issued_at).toLocaleDateString("en-IN")}
                         </td>
                         <td className="px-3 py-2">
-                          <StatusBadge status={item.stage.replaceAll("_", " ")} />
+                          <StatusBadge
+                            status={
+                              item.stage === "issued"
+                                ? "Issued"
+                                : item.stage === "work_recorded"
+                                  ? "Work Recorded"
+                                  : item.stage === "finished_ready"
+                                    ? "Finished & Ready"
+                                    : "Master Tailor Stock"
+                            }
+                          />
                         </td>
                       </tr>
                     ))}
