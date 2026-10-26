@@ -5,11 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Panel } from "@/shared/components/page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { quantityInput } from "@/features/inventory/ledger-quantity";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import { reportQuantity } from "@/features/reports/report-value";
 import { ProductionDocument } from "@/features/tailoring/ProductionDocument";
-import type { ScanRecord } from "./counter-workspace-model";
+import {
+  fabricCutQuantityMm,
+  type FabricCutUnit,
+  type ScanRecord,
+} from "./counter-workspace-model";
 import type { CounterJob, CounterWork } from "./counter-barcode";
 
 type Issue = {
@@ -41,7 +44,8 @@ export function AdditionalCounterFabric({
 }) {
   const qc = useQueryClient();
   const [job, setJob] = useState(work.jobs.length === 1 ? work.jobs[0]!.id : "");
-  const [metres, setMetres] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [cutUnit, setCutUnit] = useState<FabricCutUnit>("m");
   const [pending, setPending] = useState<Issue | null>(null);
   const issue = useMutation({
     mutationFn: async (args: Issue) => {
@@ -69,7 +73,8 @@ export function AdditionalCounterFabric({
     onSuccess: () => {
       setPending(null);
       onScannedChange(null);
-      setMetres("");
+      setQuantity("");
+      setCutUnit("m");
       void qc.invalidateQueries();
       onIssued();
       toast.success(
@@ -85,7 +90,10 @@ export function AdditionalCounterFabric({
   });
   const frozen = issue.isPending || !!pending;
   useEffect(() => onLocked(frozen), [frozen, onLocked]);
-  useEffect(() => setMetres(""), [scanned]);
+  useEffect(() => {
+    setQuantity("");
+    setCutUnit("m");
+  }, [scanned]);
   const selected = work.jobs.find((j) => j.id === job);
   const open = !!selected && ["open", "in_progress"].includes(selected.status);
   const available = Number(
@@ -101,14 +109,14 @@ export function AdditionalCounterFabric({
       if (!canIssue) throw new Error("Fabric issue permission required");
       if (!open || !selected || !scanned || !source)
         throw new Error("Select an open job and scan its fabric");
-      const quantity = quantityInput(metres, "mm");
-      if (quantity > available) throw new Error("Requested metres exceed this floor’s stock");
+      const quantityMm = fabricCutQuantityMm(quantity, cutUnit);
+      if (quantityMm > available) throw new Error("Requested fabric exceeds this floor’s stock");
       issue.mutate({
         id: crypto.randomUUID(),
         job: selected,
         kind: work.kind,
         barcode: scanned.barcode,
-        quantity,
+        quantity: quantityMm,
         source: source.id,
       });
     } catch (e) {
@@ -122,7 +130,7 @@ export function AdditionalCounterFabric({
       }
       description={
         source
-          ? `Enter the extra metres to issue from ${source.name}.`
+          ? `Choose a unit and enter the extra fabric quantity to issue from ${source.name}.`
           : "Review the order below, then scan a Thaan above. Its showroom floor will be detected automatically."
       }
     >
@@ -189,12 +197,12 @@ export function AdditionalCounterFabric({
             role="status"
             className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm font-medium"
           >
-            Next: scan the fabric barcode above, enter the extra metres, then confirm the issue. No
-            stock is issued by opening this order.
+            Next: scan the fabric barcode above, select its unit, enter the extra quantity, then
+            confirm the issue. No stock is issued by opening this order.
           </p>
         )}
         {scanned && source && (
-          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_140px_minmax(180px,1fr)]">
             <div className="text-sm">
               <strong>{scanned.name}</strong>
               <p className="break-all font-mono text-xs">{scanned.barcode}</p>
@@ -203,11 +211,25 @@ export function AdditionalCounterFabric({
               </p>
             </div>
             <label className="text-sm">
-              Extra metres
+              Issue unit
+              <select
+                aria-label="Extra fabric unit"
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={cutUnit}
+                onChange={(event) => setCutUnit(event.target.value as FabricCutUnit)}
+              >
+                <option value="m">Metre</option>
+                <option value="cm">Centimetre</option>
+                <option value="mm">Millimetre</option>
+                <option value="in">Inch</option>
+              </select>
+            </label>
+            <label className="text-sm">
+              Extra quantity
               <Input
-                aria-label="Extra metres"
-                value={metres}
-                onChange={(e) => setMetres(e.target.value)}
+                aria-label="Extra fabric quantity"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
                 inputMode="decimal"
               />
             </label>
