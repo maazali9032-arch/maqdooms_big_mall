@@ -68,6 +68,19 @@ const AVATAR_TONES = [
   "bg-[#f7e8e5] text-[#8a4037]",
 ];
 
+function mutationErrorMessage(error: unknown, fallback = "Update failed") {
+  if (error instanceof Error) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
 function AccessPage() {
   const staff = useStaff();
   const roles = useRoles();
@@ -119,7 +132,7 @@ function AccessPage() {
       await setActive.mutateAsync({ userId: user.id, active: !user.active });
       toast.success(user.active ? "User deactivated" : "User reactivated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
+      toast.error(mutationErrorMessage(err));
     }
   }
 
@@ -328,9 +341,7 @@ function AccessPage() {
                                       });
                                       toast.success("Access updated");
                                     } catch (err) {
-                                      toast.error(
-                                        err instanceof Error ? err.message : "Update failed",
-                                      );
+                                      toast.error(mutationErrorMessage(err));
                                     }
                                   }}
                                 />
@@ -375,7 +386,7 @@ function AccessPage() {
                                       : "Stock Audit access revoked",
                                   );
                                 } catch (err) {
-                                  toast.error(err instanceof Error ? err.message : "Update failed");
+                                  toast.error(mutationErrorMessage(err));
                                 }
                               }}
                             />
@@ -501,7 +512,7 @@ function AccessPage() {
                   toast.success("Salesperson number updated");
                   setSalespersonCodeUserId(null);
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Update failed");
+                  toast.error(mutationErrorMessage(error));
                 }
               }}
             >
