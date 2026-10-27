@@ -1,6 +1,21 @@
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -68,6 +83,15 @@ type SalespersonGroup = {
   pending: bigint;
   bills: Work[];
 };
+
+const chartColors = ["#9a6b2f", "#d4a557", "#5ea579", "#5f91c9", "#ef8c84", "#8c75bd"];
+
+function compactRupees(value: number | string) {
+  const amount = Number(value);
+  if (amount >= 100_000) return `₹${(amount / 100_000).toFixed(amount >= 1_000_000 ? 1 : 2)}L`;
+  if (amount >= 1_000) return `₹${Math.round(amount / 1_000)}K`;
+  return `₹${Math.round(amount)}`;
+}
 
 function dayStart(value: string): number | null {
   return value ? new Date(`${value}T00:00:00`).getTime() : null;
@@ -193,19 +217,34 @@ export function SalespersonWork() {
       return b.total > a.total ? 1 : b.total < a.total ? -1 : 0;
     });
   }, [people.data, search, sort, visible]);
-  const maxSales = groups.reduce((max, group) => (group.total > max ? group.total : max), 0n);
   const daily = useMemo(() => {
     const map = new Map<string, bigint>();
     visible.forEach((row) => {
-      const key = new Date(row.created_at).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-      });
+      const key = row.created_at.slice(0, 10);
       map.set(key, (map.get(key) ?? 0n) + reportInteger(row.final_customer_price_paise));
     });
-    return [...map.entries()].reverse().slice(-10);
+    return [...map.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .slice(-10)
+      .map(([date, value]) => ({
+        date,
+        label: new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+        }),
+        sales: Number(value) / 100,
+      }));
   }, [visible]);
-  const maxDaily = daily.reduce((max, [, value]) => (value > max ? value : max), 0n);
+  const salesChart = groups.slice(0, 6).map((group) => ({
+    id: group.code || group.name,
+    name: group.name,
+    sales: Number(group.total) / 100,
+  }));
+  const billChart = groups.slice(0, 6).map((group, index) => ({
+    name: group.name,
+    value: group.bills.length,
+    color: chartColors[index % chartColors.length],
+  }));
 
   async function copyBill(code: string) {
     await navigator.clipboard.writeText(code);
@@ -311,63 +350,126 @@ export function SalespersonWork() {
       {!!groups.length && (
         <div className="grid gap-4 xl:grid-cols-[1.15fr_1.35fr_.9fr]">
           <MiniPanel title="Sales by salesperson">
-            <div className="space-y-3">
-              {groups.slice(0, 6).map((group, index) => (
-                <div key={group.id}>
-                  <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                    <span className="truncate font-medium">
-                      {group.code ? `${group.code} · ` : ""}
-                      {group.name}
-                    </span>
-                    <strong>{reportMoney(group.total.toString())}</strong>
-                  </div>
-                  <div className="h-6 overflow-hidden rounded bg-muted">
-                    <div
-                      className="h-full rounded bg-primary/80"
-                      style={{
-                        width: `${maxSales ? Math.max(8, Number((group.total * 100n) / maxSales)) : 0}%`,
-                        opacity: 1 - index * 0.08,
-                      }}
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={salesChart} margin={{ top: 24, right: 8, left: -12, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.35} />
+                  <XAxis
+                    dataKey="id"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                    interval={0}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={compactRupees}
+                    width={54}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(154, 107, 47, 0.08)" }}
+                    formatter={(value) => [reportMoney(String(Number(value) * 100)), "Sales"]}
+                    labelFormatter={(_, payload) => payload[0]?.payload?.name ?? "Salesperson"}
+                  />
+                  <Bar dataKey="sales" radius={[5, 5, 0, 0]} maxBarSize={48}>
+                    {salesChart.map((entry, index) => (
+                      <Cell key={entry.id} fill={chartColors[index % chartColors.length]} />
+                    ))}
+                    <LabelList
+                      dataKey="sales"
+                      position="top"
+                      formatter={compactRupees}
+                      className="fill-foreground text-[10px] font-semibold"
                     />
-                  </div>
-                </div>
-              ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </MiniPanel>
           <MiniPanel title="Daily sales trend">
-            <div className="flex h-48 items-end gap-2 border-b border-l px-3 pt-5">
-              {daily.map(([day, value]) => (
-                <div
-                  key={day}
-                  className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"
-                >
-                  <span className="text-[10px] font-medium">{reportMoney(value.toString())}</span>
-                  <div
-                    className="w-full max-w-10 rounded-t bg-primary/75"
-                    style={{
-                      height: `${maxDaily ? Math.max(10, Number((value * 125n) / maxDaily)) : 0}px`,
-                    }}
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={daily} margin={{ top: 12, right: 12, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesTrendFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#a97b3e" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="#a97b3e" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.35} />
+                  <XAxis
+                    dataKey="label"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
                   />
-                  <span className="truncate text-[9px] text-muted-foreground">{day}</span>
-                </div>
-              ))}
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={compactRupees}
+                    width={54}
+                  />
+                  <Tooltip
+                    formatter={(value) => [reportMoney(String(Number(value) * 100)), "Sales"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sales"
+                    stroke="#9a6b2f"
+                    strokeWidth={2.5}
+                    fill="url(#salesTrendFill)"
+                    dot={{ r: 3, fill: "#9a6b2f", stroke: "#fff", strokeWidth: 1.5 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </MiniPanel>
           <MiniPanel title="Bill count by salesperson">
-            <div className="space-y-3">
-              {groups.slice(0, 6).map((group, index) => (
-                <div key={group.id} className="flex items-center gap-3 text-sm">
-                  <span
-                    className="size-3 rounded-full bg-primary"
-                    style={{ opacity: 1 - index * 0.1 }}
-                  />
-                  <span className="min-w-0 flex-1 truncate">{group.name}</span>
-                  <strong>{group.bills.length}</strong>
-                  <span className="w-10 text-right text-xs text-muted-foreground">
-                    {visible.length ? Math.round((group.bills.length * 100) / visible.length) : 0}%
-                  </span>
+            <div className="grid min-h-56 items-center gap-2 sm:grid-cols-[minmax(130px,1fr)_minmax(120px,.9fr)] xl:grid-cols-1 2xl:grid-cols-[minmax(130px,1fr)_minmax(120px,.9fr)]">
+              <div className="relative h-40 min-w-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Tooltip formatter={(value) => [`${value} bills`, "Bill count"]} />
+                    <Pie
+                      data={billChart}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={42}
+                      outerRadius={68}
+                      paddingAngle={1}
+                      stroke="var(--card)"
+                      strokeWidth={2}
+                    >
+                      {billChart.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <strong className="text-xl">{visible.length}</strong>
+                  <span className="text-[10px] text-muted-foreground">Bills</span>
                 </div>
-              ))}
+              </div>
+              <div className="space-y-2.5">
+                {billChart.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2 text-xs">
+                    <span
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ background: entry.color }}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                    <strong>{entry.value}</strong>
+                    <span className="w-9 text-right text-muted-foreground">
+                      {visible.length ? Math.round((entry.value * 100) / visible.length) : 0}%
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </MiniPanel>
         </div>
