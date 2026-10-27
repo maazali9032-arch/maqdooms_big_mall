@@ -13,6 +13,7 @@ import { PickOrTypeInput } from "@/shared/components/pick-or-type";
 import { useSuppliers } from "@/features/inventory";
 import { printFabricLabel } from "./fabric-label";
 import { definiteDatabaseRejection } from "./consumable-input";
+import { inclusivePurchaseAmounts } from "./purchase-invoice";
 
 type MaterialUnit = {
   id: string;
@@ -95,13 +96,9 @@ export function MaterialUnits({
   const [supplierEmail, setSupplierEmail] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceDate, setInvoiceDate] = useState("");
-  const [taxableAmount, setTaxableAmount] = useState("");
-  const [gstAmount, setGstAmount] = useState("");
-  const [invoiceTotal, setInvoiceTotal] = useState("");
+  const [hasSupplierInvoice, setHasSupplierInvoice] = useState(false);
   const [arrivalDate, setArrivalDate] = useState(today);
   const [transportCharges, setTransportCharges] = useState("0");
-  const [itcStatus, setItcStatus] = useState("pending");
   const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   const [correctionReason, setCorrectionReason] = useState<Record<string, string>>({});
@@ -171,7 +168,12 @@ export function MaterialUnits({
   const receive = useMutation({
     mutationFn: async (args: Record<string, unknown>) => {
       setPending(args);
-      const { error } = await rpc("receive_material_unit_batch_with_purchase", args);
+      const { error } = await rpc(
+        Object.prototype.hasOwnProperty.call(args, "p_purchase")
+          ? "receive_material_unit_batch_with_purchase"
+          : "receive_material_unit_batch",
+        args,
+      );
       if (error) throw error;
     },
     onSuccess: () => {
@@ -182,10 +184,7 @@ export function MaterialUnits({
       setSupplierEmail("");
       setSupplierAddress("");
       setInvoiceNumber("");
-      setInvoiceDate("");
-      setTaxableAmount("");
-      setGstAmount("");
-      setInvoiceTotal("");
+      setHasSupplierInvoice(false);
       setArrivalDate(today());
       setTransportCharges("0");
       setLines([blankLine()]);
@@ -201,12 +200,10 @@ export function MaterialUnits({
     try {
       if (pending) return receive.mutate(pending);
       if (!supplier.trim()) throw new Error("Enter the supplier");
-      if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
+      if (hasSupplierInvoice && !/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
         throw new Error("Enter the supplier's valid 15-character GSTIN");
-      if (!invoiceNumber.trim() || !invoiceDate)
-        throw new Error("Supplier invoice number and date are required");
-      if (paise(invoiceTotal) !== paise(taxableAmount) + paise(gstAmount))
-        throw new Error("Invoice total must equal taxable amount plus GST");
+      if (hasSupplierInvoice && !invoiceNumber.trim())
+        throw new Error("Supplier invoice number is required");
       const names = lines.map((line) => line.name.trim().toLowerCase());
       if (names.some((name) => !name) || new Set(names).size !== names.length)
         throw new Error("Each material type needs a unique name");
@@ -233,40 +230,60 @@ export function MaterialUnits({
           units,
         };
       });
-      receive.mutate({
+      const purchaseTotalPaise = lines.reduce(
+        (sum, line) =>
+          sum + line.units.reduce((unitSum, unit) => unitSum + paise(unit.purchaseCost), 0),
+        0,
+      );
+      const baseRequest = {
         p_request: crypto.randomUUID(),
         p_supplier: supplier.trim(),
-        p_reference: invoiceNumber.trim(),
+        p_reference: hasSupplierInvoice ? invoiceNumber.trim() : null,
         p_shared_expense_paise: paise(transportCharges),
         p_lines,
-        p_purchase: {
-          supplier_gstin: supplierGstin.trim(),
-          supplier_phone: supplierPhone.trim(),
-          supplier_email: supplierEmail.trim(),
-          supplier_address: supplierAddress.trim(),
-          invoice_number: invoiceNumber.trim(),
-          invoice_date: invoiceDate,
-          itc_status: itcStatus,
-          actual_taxable_paise: paise(taxableAmount),
-          actual_gst_paise: paise(gstAmount),
-          actual_supplier_paise: paise(invoiceTotal),
-          transport_paise: paise(transportCharges),
-          arrival_date: arrivalDate,
-        },
-      });
+      };
+      receive.mutate(
+        hasSupplierInvoice
+          ? {
+              ...baseRequest,
+              p_purchase: {
+                supplier_gstin: supplierGstin.trim(),
+                supplier_phone: supplierPhone.trim(),
+                supplier_email: supplierEmail.trim(),
+                supplier_address: supplierAddress.trim(),
+                invoice_number: invoiceNumber.trim(),
+                invoice_date: arrivalDate,
+                itc_status: "eligible",
+                ...inclusivePurchaseAmounts(purchaseTotalPaise),
+                transport_paise: paise(transportCharges),
+                arrival_date: arrivalDate,
+              },
+            }
+          : baseRequest,
+      );
     } catch (error) {
       toast.error((error as Error).message);
     }
   };
   const selectSupplier = (value: string) => {
     setSupplier(value);
+    setHasSupplierInvoice(false);
+    setSupplierGstin("");
+    setSupplierPhone("");
+    setSupplierEmail("");
+    setSupplierAddress("");
+    setInvoiceNumber("");
+  };
+  const chooseSupplierInvoice = (enabled: boolean) => {
+    setHasSupplierInvoice(enabled);
     const matched = (suppliers.data ?? []).find(
-      (item) => item.name.trim().toLowerCase() === value.trim().toLowerCase(),
+      (item) => item.name.trim().toLowerCase() === supplier.trim().toLowerCase(),
     );
-    setSupplierGstin(matched?.gstin ?? "");
-    setSupplierPhone(matched?.phone ?? "");
-    setSupplierEmail(matched?.email ?? "");
-    setSupplierAddress(matched?.address ?? "");
+    setSupplierGstin(enabled ? (matched?.gstin ?? "") : "");
+    setSupplierPhone(enabled ? (matched?.phone ?? "") : "");
+    setSupplierEmail(enabled ? (matched?.email ?? "") : "");
+    setSupplierAddress(enabled ? (matched?.address ?? "") : "");
+    if (!enabled) setInvoiceNumber("");
   };
   const setLine = (key: string, update: (line: DraftLine) => DraftLine) =>
     setLines((rows) => rows.map((row) => (row.key === key ? update(row) : row)));
@@ -349,76 +366,62 @@ export function MaterialUnits({
             <div className="rounded-xl border p-3">
               <h3 className="mb-3 font-semibold">Supplier GST & purchase invoice</h3>
               <p className="mb-3 text-sm text-muted-foreground">
-                Enter the invoice exactly as received. Unit purchase CP below is GST-inclusive; GST
-                is not added again.
+                Choose Yes only when the supplier provided a GST purchase invoice. Unit purchase CP
+                remains GST-inclusive.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <Input
-                  aria-label="Supplier GSTIN"
-                  placeholder="Supplier GSTIN"
-                  value={supplierGstin}
-                  onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                />
-                <Input
-                  placeholder="Supplier phone (saved for next time)"
-                  value={supplierPhone}
-                  onChange={(e) => setSupplierPhone(e.target.value)}
-                />
-                <Input
-                  placeholder="Supplier email (saved for next time)"
-                  value={supplierEmail}
-                  onChange={(e) => setSupplierEmail(e.target.value)}
-                />
-                <Input
-                  placeholder="Supplier address (saved for next time)"
-                  value={supplierAddress}
-                  onChange={(e) => setSupplierAddress(e.target.value)}
-                />
-                <Input
-                  aria-label="Supplier invoice number"
-                  placeholder="Invoice number"
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                />
-                <Input
-                  aria-label="Supplier invoice date"
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                />
-                <select
-                  aria-label="Input tax credit status"
-                  className="h-11 rounded border bg-background p-2"
-                  value={itcStatus}
-                  onChange={(e) => setItcStatus(e.target.value)}
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">Supplier invoice available?</span>
+                <Button
+                  type="button"
+                  variant={hasSupplierInvoice ? "default" : "outline"}
+                  disabled={!supplier.trim()}
+                  onClick={() => chooseSupplierInvoice(true)}
                 >
-                  <option value="pending">ITC pending review</option>
-                  <option value="eligible">ITC eligible</option>
-                  <option value="ineligible">ITC ineligible</option>
-                  <option value="reversed">ITC reversed</option>
-                </select>
-                <Input
-                  aria-label="Invoice taxable amount"
-                  inputMode="decimal"
-                  placeholder="Taxable amount ₹"
-                  value={taxableAmount}
-                  onChange={(e) => setTaxableAmount(e.target.value)}
-                />
-                <Input
-                  aria-label="Invoice GST amount"
-                  inputMode="decimal"
-                  placeholder="GST amount ₹"
-                  value={gstAmount}
-                  onChange={(e) => setGstAmount(e.target.value)}
-                />
-                <Input
-                  aria-label="Invoice total"
-                  inputMode="decimal"
-                  placeholder="Invoice total incl. GST ₹"
-                  value={invoiceTotal}
-                  onChange={(e) => setInvoiceTotal(e.target.value)}
-                />
+                  Yes
+                </Button>
+                <Button
+                  type="button"
+                  variant={!hasSupplierInvoice ? "default" : "outline"}
+                  disabled={!supplier.trim()}
+                  onClick={() => chooseSupplierInvoice(false)}
+                >
+                  No
+                </Button>
               </div>
+              {hasSupplierInvoice && (
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <Input
+                    aria-label="Supplier GSTIN"
+                    placeholder="Supplier GSTIN"
+                    value={supplierGstin}
+                    onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                  />
+                  <Input
+                    placeholder="Supplier phone (saved for next time)"
+                    value={supplierPhone}
+                    onChange={(e) => setSupplierPhone(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Supplier email (saved for next time)"
+                    value={supplierEmail}
+                    onChange={(e) => setSupplierEmail(e.target.value)}
+                  />
+                  <Input
+                    placeholder="Supplier address (saved for next time)"
+                    value={supplierAddress}
+                    onChange={(e) => setSupplierAddress(e.target.value)}
+                  />
+                  <Input
+                    aria-label="Supplier invoice number"
+                    placeholder="Invoice number"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                  />
+                  <div className="flex h-11 items-center rounded border bg-muted/30 px-3 text-sm font-medium text-emerald-700">
+                    ITC eligible
+                  </div>
+                </div>
+              )}
             </div>
             {lines.map((line, index) => (
               <div key={line.key} className="rounded-xl border p-3">

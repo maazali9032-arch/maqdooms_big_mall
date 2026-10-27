@@ -16,6 +16,7 @@ import { printFabricLabel } from "./fabric-label";
 import { fabricMoneyInput } from "./fabric-entry-input";
 import { StockImageInput } from "./StockImageInput";
 import { saveStockImages } from "./stock-images";
+import { inclusivePurchaseAmounts } from "./purchase-invoice";
 
 type Piece = { style: string; size: string; cp: string; sp: string; image?: File | null };
 type Entry = {
@@ -80,12 +81,8 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   const [supplierEmail, setSupplierEmail] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [invoiceDate, setInvoiceDate] = useState("");
-  const [taxableAmount, setTaxableAmount] = useState("");
-  const [gstAmount, setGstAmount] = useState("");
-  const [invoiceTotal, setInvoiceTotal] = useState("");
+  const [hasSupplierInvoice, setHasSupplierInvoice] = useState(false);
   const [transportCharges, setTransportCharges] = useState("0");
-  const [itcStatus, setItcStatus] = useState("pending");
   const [rows, setRows] = useState<Entry[]>([emptyEntry()]);
   const [printed, setPrinted] = useState<ResultPiece[]>([]);
   const [batchCode, setBatchCode] = useState<string | null>(null);
@@ -108,6 +105,14 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       );
       const transportPaise = fabricMoneyInput(transportCharges);
       const pieceCount = rows.reduce((sum, row) => sum + validCount(row.quantity), 0);
+      const purchaseTotalPaise = rows.reduce(
+        (sum, row) =>
+          sum +
+          Array.from({ length: validCount(row.quantity) }, (_, index) =>
+            fabricMoneyInput(pieceFor(row, index).cp),
+          ).reduce((pieceSum, value) => pieceSum + value, 0),
+        0,
+      );
       const items = rows.flatMap((row) =>
         Array.from({ length: validCount(row.quantity) }, (_, index) => {
           const piece = pieceFor(row, index);
@@ -128,26 +133,34 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
           };
         }),
       );
-      const { data, error } = await customRpc("receive_vendor_finished_products_with_purchase", {
+      const baseRequest = {
         p_request: crypto.randomUUID(),
         p_supplier: supplier.trim(),
         p_arrival_date: arrivalDate,
         p_remarks: null,
         p_items: items,
-        p_purchase: {
-          supplier_gstin: supplierGstin.trim(),
-          supplier_phone: supplierPhone.trim(),
-          supplier_email: supplierEmail.trim(),
-          supplier_address: supplierAddress.trim(),
-          invoice_number: invoiceNumber.trim(),
-          invoice_date: invoiceDate,
-          itc_status: itcStatus,
-          actual_taxable_paise: fabricMoneyInput(taxableAmount),
-          actual_gst_paise: fabricMoneyInput(gstAmount),
-          actual_supplier_paise: fabricMoneyInput(invoiceTotal),
-          transport_paise: transportPaise,
-        },
-      });
+      };
+      const { data, error } = await customRpc(
+        hasSupplierInvoice
+          ? "receive_vendor_finished_products_with_purchase"
+          : "receive_vendor_finished_products",
+        hasSupplierInvoice
+          ? {
+              ...baseRequest,
+              p_purchase: {
+                supplier_gstin: supplierGstin.trim(),
+                supplier_phone: supplierPhone.trim(),
+                supplier_email: supplierEmail.trim(),
+                supplier_address: supplierAddress.trim(),
+                invoice_number: invoiceNumber.trim(),
+                invoice_date: arrivalDate,
+                itc_status: "eligible",
+                ...inclusivePurchaseAmounts(purchaseTotalPaise),
+                transport_paise: transportPaise,
+              },
+            }
+          : baseRequest,
+      );
       if (error) throw error;
       const result = data as ReceiveResult;
       if (!userId) throw new Error("Sign in again before saving stock images");
@@ -177,10 +190,7 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       setSupplierEmail("");
       setSupplierAddress("");
       setInvoiceNumber("");
-      setInvoiceDate("");
-      setTaxableAmount("");
-      setGstAmount("");
-      setInvoiceTotal("");
+      setHasSupplierInvoice(false);
       setTransportCharges("0");
       await qc.invalidateQueries();
       toast.success(`${result.pieces.length} finished garments added to the vendor batch`);
@@ -191,13 +201,23 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
   const total = rows.reduce((sum, row) => sum + validCount(row.quantity), 0);
   const selectSupplier = (value: string) => {
     setSupplier(value);
+    setHasSupplierInvoice(false);
+    setSupplierGstin("");
+    setSupplierPhone("");
+    setSupplierEmail("");
+    setSupplierAddress("");
+    setInvoiceNumber("");
+  };
+  const chooseSupplierInvoice = (enabled: boolean) => {
+    setHasSupplierInvoice(enabled);
     const matched = (suppliers.data ?? []).find(
-      (item) => item.name.trim().toLowerCase() === value.trim().toLowerCase(),
+      (item) => item.name.trim().toLowerCase() === supplier.trim().toLowerCase(),
     );
-    setSupplierGstin(matched?.gstin ?? "");
-    setSupplierPhone(matched?.phone ?? "");
-    setSupplierEmail(matched?.email ?? "");
-    setSupplierAddress(matched?.address ?? "");
+    setSupplierGstin(enabled ? (matched?.gstin ?? "") : "");
+    setSupplierPhone(enabled ? (matched?.phone ?? "") : "");
+    setSupplierEmail(enabled ? (matched?.email ?? "") : "");
+    setSupplierAddress(enabled ? (matched?.address ?? "") : "");
+    if (!enabled) setInvoiceNumber("");
   };
   const productNames = catalog.data?.products.map((product) => product.name) ?? [];
   const updateRow = (id: string, update: Partial<Entry>) =>
@@ -265,74 +285,62 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
       </Panel>
       <Panel
         title="3. Supplier GST & purchase invoice"
-        description="Enter the supplier invoice exactly as received. Garment CP is GST-inclusive; the system does not add GST again."
+        description="Choose Yes only when the supplier provided a GST purchase invoice. Garment CP remains GST-inclusive."
       >
-        <fieldset disabled={receive.isPending} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Input
-            aria-label="Supplier GSTIN"
-            placeholder="Supplier GSTIN"
-            value={supplierGstin}
-            onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-          />
-          <Input
-            placeholder="Supplier phone (saved for next time)"
-            value={supplierPhone}
-            onChange={(e) => setSupplierPhone(e.target.value)}
-          />
-          <Input
-            placeholder="Supplier email (saved for next time)"
-            value={supplierEmail}
-            onChange={(e) => setSupplierEmail(e.target.value)}
-          />
-          <Input
-            placeholder="Supplier address (saved for next time)"
-            value={supplierAddress}
-            onChange={(e) => setSupplierAddress(e.target.value)}
-          />
-          <Input
-            aria-label="Supplier invoice number"
-            placeholder="Invoice number"
-            value={invoiceNumber}
-            onChange={(e) => setInvoiceNumber(e.target.value)}
-          />
-          <Input
-            aria-label="Supplier invoice date"
-            type="date"
-            value={invoiceDate}
-            onChange={(e) => setInvoiceDate(e.target.value)}
-          />
-          <select
-            aria-label="Input tax credit status"
-            className="h-11 rounded border bg-background p-2"
-            value={itcStatus}
-            onChange={(e) => setItcStatus(e.target.value)}
-          >
-            <option value="pending">ITC pending review</option>
-            <option value="eligible">ITC eligible</option>
-            <option value="ineligible">ITC ineligible</option>
-            <option value="reversed">ITC reversed</option>
-          </select>
-          <Input
-            aria-label="Invoice taxable amount"
-            inputMode="decimal"
-            placeholder="Taxable amount ₹"
-            value={taxableAmount}
-            onChange={(e) => setTaxableAmount(e.target.value)}
-          />
-          <Input
-            aria-label="Invoice GST amount"
-            inputMode="decimal"
-            placeholder="GST amount ₹"
-            value={gstAmount}
-            onChange={(e) => setGstAmount(e.target.value)}
-          />
-          <Input
-            aria-label="Invoice total"
-            inputMode="decimal"
-            placeholder="Invoice total incl. GST ₹"
-            value={invoiceTotal}
-            onChange={(e) => setInvoiceTotal(e.target.value)}
-          />
+        <fieldset disabled={receive.isPending} className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-medium">Supplier invoice available?</span>
+            <Button
+              type="button"
+              variant={hasSupplierInvoice ? "default" : "outline"}
+              disabled={!supplier.trim()}
+              onClick={() => chooseSupplierInvoice(true)}
+            >
+              Yes
+            </Button>
+            <Button
+              type="button"
+              variant={!hasSupplierInvoice ? "default" : "outline"}
+              disabled={!supplier.trim()}
+              onClick={() => chooseSupplierInvoice(false)}
+            >
+              No
+            </Button>
+          </div>
+          {hasSupplierInvoice && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Input
+                aria-label="Supplier GSTIN"
+                placeholder="Supplier GSTIN"
+                value={supplierGstin}
+                onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+              />
+              <Input
+                placeholder="Supplier phone (saved for next time)"
+                value={supplierPhone}
+                onChange={(e) => setSupplierPhone(e.target.value)}
+              />
+              <Input
+                placeholder="Supplier email (saved for next time)"
+                value={supplierEmail}
+                onChange={(e) => setSupplierEmail(e.target.value)}
+              />
+              <Input
+                placeholder="Supplier address (saved for next time)"
+                value={supplierAddress}
+                onChange={(e) => setSupplierAddress(e.target.value)}
+              />
+              <Input
+                aria-label="Supplier invoice number"
+                placeholder="Invoice number"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+              />
+              <div className="flex h-11 items-center rounded border bg-muted/30 px-3 text-sm font-medium text-emerald-700">
+                ITC eligible
+              </div>
+            </div>
+          )}
         </fieldset>
       </Panel>
       <Panel
@@ -552,15 +560,10 @@ export function VendorReadymadeRegistration({ onCancel }: { onCancel: () => void
                   if (fabricMoneyInput(piece.cp) < 0 || fabricMoneyInput(piece.sp) <= 0)
                     throw new Error("CP must be zero or more and SP must be positive");
                 }
-              if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
+              if (hasSupplierInvoice && !/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
                 throw new Error("Enter the supplier's valid 15-character GSTIN");
-              if (!invoiceNumber.trim() || !invoiceDate)
-                throw new Error("Supplier invoice number and date are required");
-              if (
-                fabricMoneyInput(invoiceTotal) !==
-                fabricMoneyInput(taxableAmount) + fabricMoneyInput(gstAmount)
-              )
-                throw new Error("Invoice total must equal taxable amount plus GST");
+              if (hasSupplierInvoice && !invoiceNumber.trim())
+                throw new Error("Supplier invoice number is required");
               fabricMoneyInput(transportCharges);
               receive.mutate();
             } catch (error) {

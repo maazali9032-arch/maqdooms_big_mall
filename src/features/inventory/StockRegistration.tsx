@@ -31,6 +31,7 @@ import { createStockBatch } from "./stock-batch-request";
 import { StockImageInput } from "./StockImageInput";
 import { saveStockImages } from "./stock-images";
 import { MaterialUnits } from "./MaterialUnits";
+import { inclusivePurchaseAmounts } from "./purchase-invoice";
 import type { SupabaseClient } from "@supabase/supabase-js";
 type Variant = {
   id: string;
@@ -63,6 +64,9 @@ type Work =
       }[];
       purchase?: {
         supplier_gstin: string;
+        supplier_phone?: string;
+        supplier_email?: string;
+        supplier_address?: string;
         invoice_number: string;
         invoice_date: string;
         itc_status: "eligible" | "ineligible" | "reversed" | "pending";
@@ -183,13 +187,7 @@ export function StockRegistration() {
   const [supplierEmail, setSupplierEmail] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
   const [supplierInvoice, setSupplierInvoice] = useState("");
-  const [supplierInvoiceDate, setSupplierInvoiceDate] = useState("");
-  const [itcStatus, setItcStatus] = useState<"eligible" | "ineligible" | "reversed" | "pending">(
-    "pending",
-  );
-  const [actualTaxable, setActualTaxable] = useState("");
-  const [actualGst, setActualGst] = useState("");
-  const [actualSupplier, setActualSupplier] = useState("");
+  const [hasSupplierInvoice, setHasSupplierInvoice] = useState(false);
   const [transportCharges, setTransportCharges] = useState("0");
   const [rows, setRows] = useState<EntryRow[]>([emptyRow()]);
   const [batchId, setBatchId] = useState("");
@@ -201,13 +199,23 @@ export function StockRegistration() {
   const [pending, setPending] = useState<Pending | null>(null);
   const selectProvider = (value: string) => {
     setProvider(value);
+    setHasSupplierInvoice(false);
+    setSupplierGstin("");
+    setSupplierPhone("");
+    setSupplierEmail("");
+    setSupplierAddress("");
+    setSupplierInvoice("");
+  };
+  const chooseSupplierInvoice = (enabled: boolean) => {
+    setHasSupplierInvoice(enabled);
     const matched = (suppliers.data ?? []).find(
-      (supplier) => supplier.name.trim().toLowerCase() === value.trim().toLowerCase(),
+      (supplier) => supplier.name.trim().toLowerCase() === provider.trim().toLowerCase(),
     );
-    setSupplierGstin(matched?.gstin ?? "");
-    setSupplierPhone(matched?.phone ?? "");
-    setSupplierEmail(matched?.email ?? "");
-    setSupplierAddress(matched?.address ?? "");
+    setSupplierGstin(enabled ? (matched?.gstin ?? "") : "");
+    setSupplierPhone(enabled ? (matched?.phone ?? "") : "");
+    setSupplierEmail(enabled ? (matched?.email ?? "") : "");
+    setSupplierAddress(enabled ? (matched?.address ?? "") : "");
+    if (!enabled) setSupplierInvoice("");
   };
   const catalog = useQuery({
     queryKey: ["stock-registration", userId],
@@ -321,6 +329,8 @@ export function StockRegistration() {
         setPrinted([]);
         setStage("labels");
         setRows([emptyRow()]);
+        setHasSupplierInvoice(false);
+        setSupplierGstin("");
         setSupplierPhone("");
         setSupplierEmail("");
         setSupplierAddress("");
@@ -552,79 +562,65 @@ export function StockRegistration() {
               </Panel>
               <Panel
                 title="3. Supplier GST & purchase invoice"
-                description="Enter the supplier invoice exactly as received. Purchase CP below is GST-inclusive; the system does not add GST again."
+                description="Choose Yes only when the supplier provided a GST purchase invoice. Purchase CP below remains GST-inclusive."
               >
                 <fieldset disabled={frozen} className="space-y-3">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Input
-                      aria-label="Supplier GSTIN"
-                      placeholder="Supplier GSTIN"
-                      value={supplierGstin}
-                      onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                    />
-                    <Input
-                      aria-label="Supplier phone"
-                      placeholder="Supplier phone (saved for next time)"
-                      value={supplierPhone}
-                      onChange={(e) => setSupplierPhone(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Supplier email"
-                      placeholder="Supplier email (saved for next time)"
-                      value={supplierEmail}
-                      onChange={(e) => setSupplierEmail(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Supplier address"
-                      placeholder="Supplier address (saved for next time)"
-                      value={supplierAddress}
-                      onChange={(e) => setSupplierAddress(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Supplier invoice number"
-                      placeholder="Supplier invoice number"
-                      value={supplierInvoice}
-                      onChange={(e) => setSupplierInvoice(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Supplier invoice date"
-                      type="date"
-                      value={supplierInvoiceDate}
-                      onChange={(e) => setSupplierInvoiceDate(e.target.value)}
-                    />
-                    <select
-                      aria-label="Input tax credit status"
-                      className="h-11 rounded border bg-background p-2"
-                      value={itcStatus}
-                      onChange={(e) => setItcStatus(e.target.value as typeof itcStatus)}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">Supplier invoice available?</span>
+                    <Button
+                      type="button"
+                      variant={hasSupplierInvoice ? "default" : "outline"}
+                      disabled={!provider.trim()}
+                      onClick={() => chooseSupplierInvoice(true)}
                     >
-                      <option value="pending">ITC pending review</option>
-                      <option value="eligible">ITC eligible</option>
-                      <option value="ineligible">ITC ineligible</option>
-                      <option value="reversed">ITC reversed</option>
-                    </select>
-                    <Input
-                      aria-label="Actual taxable amount"
-                      inputMode="decimal"
-                      placeholder="Invoice taxable ₹"
-                      value={actualTaxable}
-                      onChange={(e) => setActualTaxable(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Actual GST amount"
-                      inputMode="decimal"
-                      placeholder="Invoice GST ₹"
-                      value={actualGst}
-                      onChange={(e) => setActualGst(e.target.value)}
-                    />
-                    <Input
-                      aria-label="Actual supplier total"
-                      inputMode="decimal"
-                      placeholder="Invoice total incl. GST ₹"
-                      value={actualSupplier}
-                      onChange={(e) => setActualSupplier(e.target.value)}
-                    />
+                      Yes
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!hasSupplierInvoice ? "default" : "outline"}
+                      disabled={!provider.trim()}
+                      onClick={() => chooseSupplierInvoice(false)}
+                    >
+                      No
+                    </Button>
                   </div>
+                  {hasSupplierInvoice && (
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Input
+                        aria-label="Supplier GSTIN"
+                        placeholder="Supplier GSTIN"
+                        value={supplierGstin}
+                        onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                      />
+                      <Input
+                        aria-label="Supplier phone"
+                        placeholder="Supplier phone (saved for next time)"
+                        value={supplierPhone}
+                        onChange={(e) => setSupplierPhone(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Supplier email"
+                        placeholder="Supplier email (saved for next time)"
+                        value={supplierEmail}
+                        onChange={(e) => setSupplierEmail(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Supplier address"
+                        placeholder="Supplier address (saved for next time)"
+                        value={supplierAddress}
+                        onChange={(e) => setSupplierAddress(e.target.value)}
+                      />
+                      <Input
+                        aria-label="Supplier invoice number"
+                        placeholder="Supplier invoice number"
+                        value={supplierInvoice}
+                        onChange={(e) => setSupplierInvoice(e.target.value)}
+                      />
+                      <div className="flex h-11 items-center rounded border bg-muted/30 px-3 text-sm font-medium text-emerald-700">
+                        ITC eligible
+                      </div>
+                    </div>
+                  )}
                 </fieldset>
               </Panel>
               <Panel
@@ -999,18 +995,13 @@ export function StockRegistration() {
                           );
                           return;
                         }
-                        if (!/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
-                          throw new Error("Enter the supplier's valid 15-character GSTIN");
-                        if (!supplierInvoice.trim() || !supplierInvoiceDate)
-                          throw new Error("Supplier invoice number and date are required");
-                        fabricMoneyInput(actualTaxable);
-                        fabricMoneyInput(actualGst);
-                        const invoiceTotal = fabricMoneyInput(actualSupplier);
                         if (
-                          invoiceTotal !==
-                          fabricMoneyInput(actualTaxable) + fabricMoneyInput(actualGst)
+                          hasSupplierInvoice &&
+                          !/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim())
                         )
-                          throw new Error("Invoice total must equal taxable amount plus GST");
+                          throw new Error("Enter the supplier's valid 15-character GSTIN");
+                        if (hasSupplierInvoice && !supplierInvoice.trim())
+                          throw new Error("Supplier invoice number is required");
                         fabricMoneyInput(transportCharges);
                         for (const row of rows)
                           for (let index = 0; index < Number(row.quantity); index++) {
@@ -1034,6 +1025,18 @@ export function StockRegistration() {
                           throw new Error(
                             "Thaan count would discard entered details; restore the count or clear those rows first",
                           );
+                        const purchaseTotalPaise = rows.reduce(
+                          (sum, row) =>
+                            sum +
+                            Array.from({ length: Number(row.quantity) }, (_, index) => {
+                              const detail = thaanDetail(row, index);
+                              return Math.round(
+                                (fabricMoneyInput(detail.cp) * quantityInput(detail.length, "mm")) /
+                                  1000,
+                              );
+                            }).reduce((a, b) => a + b, 0),
+                          0,
+                        );
                         run({
                           kind: "batch",
                           provider: provider.trim(),
@@ -1071,19 +1074,19 @@ export function StockRegistration() {
                               ),
                             })),
                           },
-                          purchase: {
-                            supplier_gstin: supplierGstin.trim(),
-                            supplier_phone: supplierPhone.trim(),
-                            supplier_email: supplierEmail.trim(),
-                            supplier_address: supplierAddress.trim(),
-                            invoice_number: supplierInvoice.trim(),
-                            invoice_date: supplierInvoiceDate,
-                            itc_status: itcStatus,
-                            actual_taxable_paise: fabricMoneyInput(actualTaxable),
-                            actual_gst_paise: fabricMoneyInput(actualGst),
-                            actual_supplier_paise: fabricMoneyInput(actualSupplier),
-                            transport_paise: fabricMoneyInput(transportCharges),
-                          },
+                          purchase: hasSupplierInvoice
+                            ? {
+                                supplier_gstin: supplierGstin.trim(),
+                                supplier_phone: supplierPhone.trim(),
+                                supplier_email: supplierEmail.trim(),
+                                supplier_address: supplierAddress.trim(),
+                                invoice_number: supplierInvoice.trim(),
+                                invoice_date: date,
+                                itc_status: "eligible",
+                                ...inclusivePurchaseAmounts(purchaseTotalPaise),
+                                transport_paise: fabricMoneyInput(transportCharges),
+                              }
+                            : undefined,
                         });
                       } catch (error) {
                         toast.error(
