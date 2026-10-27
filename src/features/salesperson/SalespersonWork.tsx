@@ -25,10 +25,8 @@ import {
   IndianRupee,
   ReceiptText,
   RefreshCw,
-  Ruler,
   Search,
   ShoppingBag,
-  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/app/providers/session";
@@ -308,7 +306,7 @@ export function SalespersonWork() {
         </div>
       </Panel>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-3">
         <StatCard
           label="Total sales"
           value={reportMoney(summary.total.toString())}
@@ -321,22 +319,6 @@ export function SalespersonWork() {
           value={visible.length}
           hint="In the selected period"
           icon={ReceiptText}
-        />
-        <StatCard
-          label="Fabric sold"
-          value={reportQuantity(summary.fabric.toString(), "mm")}
-          hint="Across credited bills"
-          icon={Ruler}
-        />
-        <StatCard
-          label="Average bill"
-          value={
-            visible.length
-              ? reportMoney((summary.total / BigInt(visible.length)).toString())
-              : reportMoney("0")
-          }
-          hint="Average credited value"
-          icon={TrendingUp}
         />
         <StatCard
           label="Pending bill value"
