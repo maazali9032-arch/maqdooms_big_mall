@@ -12,6 +12,7 @@ export function BarcodeEntry({
   placeholder,
   disabled = false,
   action = "Search / Scan",
+  showCameraOnDesktop = false,
   children,
 }: {
   value: string;
@@ -21,6 +22,7 @@ export function BarcodeEntry({
   placeholder?: string;
   disabled?: boolean;
   action?: string;
+  showCameraOnDesktop?: boolean;
   children?: ReactNode;
 }) {
   return (
@@ -46,6 +48,7 @@ export function BarcodeEntry({
       </Button>
       <BarcodeCameraButton
         disabled={disabled}
+        mobileOnly={!showCameraOnDesktop}
         onScan={(code) => {
           onChange(code);
           onScan(code);

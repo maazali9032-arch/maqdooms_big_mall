@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronDown, ChevronRight, Store } from "lucide-react";
+import { Building2, ChevronDown, ChevronRight, ListFilter, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { EmptyState, Panel } from "@/shared/components/page";
 import { formatMetres } from "@/shared/utils/units";
+import { BarcodeEntry } from "@/shared/components/barcode-entry";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type FloorThaan = {
   inventory_item_id: string;
@@ -29,6 +32,15 @@ type Floor = {
 /** A Showroom-only tree: each visible branch is an actual sales floor. */
 export function ShowroomFloorStock() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    barcode: "",
+    fabric: "",
+    batch: "",
+    colour: "",
+    available: "",
+  });
   const floors = useQuery({
     queryKey: ["showroom-floor-distribution"],
     queryFn: async () => {
@@ -52,11 +64,54 @@ export function ShowroomFloorStock() {
     });
   }
 
+  function matchingItems(items: FloorThaan[]) {
+    const term = search.trim().toLowerCase();
+    return [...items]
+      .filter((item) => {
+        const available = formatMetres(Number(item.available_mm)).toLowerCase();
+        return (
+          (!term ||
+            [item.barcode, item.fabric, item.batch, item.colour, available]
+              .join(" ")
+              .toLowerCase()
+              .includes(term)) &&
+          item.barcode.toLowerCase().includes(filters.barcode.trim().toLowerCase()) &&
+          item.fabric.toLowerCase().includes(filters.fabric.trim().toLowerCase()) &&
+          item.batch.toLowerCase().includes(filters.batch.trim().toLowerCase()) &&
+          (item.colour ?? "Not recorded")
+            .toLowerCase()
+            .includes(filters.colour.trim().toLowerCase()) &&
+          available.includes(filters.available.trim().toLowerCase())
+        );
+      })
+      .sort((a, b) => {
+        const time = new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
+        return time || b.barcode.localeCompare(a.barcode);
+      });
+  }
+
   return (
     <Panel
       title="Showroom stock by floor"
       description="Only stock currently on showroom floors. Workshop and godown stock are excluded."
     >
+      <div className="mb-4 grid gap-2 lg:grid-cols-[1fr_auto]">
+        <BarcodeEntry
+          value={search}
+          onChange={setSearch}
+          onScan={setSearch}
+          label="Search or scan Showroom stock"
+          placeholder="Search Thaan, barcode, fabric, batch or colour"
+          showCameraOnDesktop
+        />
+        <Button
+          type="button"
+          variant={showFilters ? "default" : "outline"}
+          onClick={() => setShowFilters((value) => !value)}
+        >
+          <ListFilter className="size-4" /> Filters
+        </Button>
+      </div>
       {floors.isPending ? <p>Loading Showroom floors…</p> : null}
       {floors.error ? (
         <p role="alert" className="text-destructive">
@@ -72,6 +127,7 @@ export function ShowroomFloorStock() {
       <div className="space-y-3" aria-label="Showroom floor stock tree">
         {floors.data?.map((floor) => {
           const open = expanded.has(floor.id);
+          const items = matchingItems(floor.items ?? []);
           return (
             <section key={floor.id} className="overflow-hidden rounded-xl border bg-card">
               <button
@@ -107,39 +163,66 @@ export function ShowroomFloorStock() {
               </button>
               {open && (
                 <div id={`floor-${floor.id}`} className="border-t bg-background p-3 sm:p-4">
-                  {!floor.items?.length ? (
-                    <p className="text-sm text-muted-foreground">No active Thaans on this floor.</p>
+                  {!items.length ? (
+                    <p className="text-sm text-muted-foreground">
+                      {floor.items?.length
+                        ? "No stock on this floor matches the current search or filters."
+                        : "No active Thaans on this floor."}
+                    </p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[660px] text-left text-sm">
                         <thead className="bg-muted/60 text-xs text-muted-foreground">
                           <tr>
-                            <th className="px-3 py-2 font-medium">Thaan / barcode</th>
-                            <th className="px-3 py-2 font-medium">Fabric</th>
-                            <th className="px-3 py-2 font-medium">Batch</th>
-                            <th className="px-3 py-2 font-medium">Colour</th>
-                            <th className="px-3 py-2 text-right font-medium">Available</th>
+                            {["Thaan / barcode", "Fabric", "Batch", "Colour", "Available"].map(
+                              (label, index) => (
+                                <th
+                                  key={label}
+                                  className={`px-3 py-2 font-medium ${index === 4 ? "text-right" : ""}`}
+                                >
+                                  <span className="inline-flex items-center gap-1">
+                                    {label}
+                                    <ListFilter className="size-3" aria-hidden="true" />
+                                  </span>
+                                </th>
+                              ),
+                            )}
                           </tr>
+                          {showFilters && (
+                            <tr className="border-t bg-background">
+                              {(["barcode", "fabric", "batch", "colour", "available"] as const).map(
+                                (key) => (
+                                  <th key={key} className="p-1.5">
+                                    <Input
+                                      aria-label={`Filter by ${key}`}
+                                      value={filters[key]}
+                                      onChange={(event) =>
+                                        setFilters((current) => ({
+                                          ...current,
+                                          [key]: event.target.value,
+                                        }))
+                                      }
+                                      placeholder="Filter…"
+                                      className="h-8 min-w-24 text-xs"
+                                    />
+                                  </th>
+                                ),
+                              )}
+                            </tr>
+                          )}
                         </thead>
                         <tbody className="divide-y">
-                          {[...floor.items]
-                            .sort((a, b) => {
-                              const time =
-                                new Date(b.created_at ?? 0).getTime() -
-                                new Date(a.created_at ?? 0).getTime();
-                              return time || b.barcode.localeCompare(a.barcode);
-                            })
-                            .map((item) => (
-                              <tr key={`${floor.id}-${item.inventory_item_id}`}>
-                                <td className="px-3 py-2 font-mono text-xs">{item.barcode}</td>
-                                <td className="px-3 py-2 font-medium">{item.fabric}</td>
-                                <td className="px-3 py-2">{item.batch}</td>
-                                <td className="px-3 py-2">{item.colour || "Not recorded"}</td>
-                                <td className="px-3 py-2 text-right font-medium">
-                                  {formatMetres(Number(item.available_mm))}
-                                </td>
-                              </tr>
-                            ))}
+                          {items.map((item) => (
+                            <tr key={`${floor.id}-${item.inventory_item_id}`}>
+                              <td className="px-3 py-2 font-mono text-xs">{item.barcode}</td>
+                              <td className="px-3 py-2 font-medium">{item.fabric}</td>
+                              <td className="px-3 py-2">{item.batch}</td>
+                              <td className="px-3 py-2">{item.colour || "Not recorded"}</td>
+                              <td className="px-3 py-2 text-right font-medium">
+                                {formatMetres(Number(item.available_mm))}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>

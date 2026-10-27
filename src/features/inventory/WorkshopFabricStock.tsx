@@ -1,7 +1,7 @@
 import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Barcode, FolderOpen, Layers, Printer } from "lucide-react";
+import { Barcode, FolderOpen, LayoutGrid, Layers, List, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/app/providers/session";
@@ -83,11 +83,16 @@ export function WorkshopFabricStock({
   const imageUrls = useQuery({
     queryKey: ["stock-item-images", "thaan", (catalog.data ?? []).map((row) => row.thaan_id)],
     enabled: !!catalog.data?.length,
-    queryFn: () => loadStockImageUrls("thaan", (catalog.data ?? []).map((row) => row.thaan_id)),
+    queryFn: () =>
+      loadStockImageUrls(
+        "thaan",
+        (catalog.data ?? []).map((row) => row.thaan_id),
+      ),
   });
   const { can, isOwner } = useSession();
   const qc = useQueryClient();
   const [localSearch, setLocalSearch] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
   const text = onSearchChange ? search : localSearch;
   const setSearch = onSearchChange ?? setLocalSearch;
   const incompleteFilter = onIncompleteChange ? (
@@ -224,6 +229,7 @@ export function WorkshopFabricStock({
           onScan={setSearch}
           label="Search or scan Workshop stock"
           placeholder="Search batch, supplier, fabric or scan a barcode"
+          showCameraOnDesktop
         >
           {text && (
             <Button type="button" variant="outline" onClick={() => setSearch("")}>
@@ -231,6 +237,24 @@ export function WorkshopFabricStock({
             </Button>
           )}
         </BarcodeEntry>
+        <div className="mt-3 flex justify-end gap-2" aria-label="Stock display style">
+          <Button
+            type="button"
+            variant={view === "grid" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("grid")}
+          >
+            <LayoutGrid className="size-4" /> Grid view
+          </Button>
+          <Button
+            type="button"
+            variant={view === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView("list")}
+          >
+            <List className="size-4" /> List view
+          </Button>
+        </div>
       </Panel>
       {catalog.isPending ? (
         <p>Loading Workshop stock...</p>
@@ -270,133 +294,244 @@ export function WorkshopFabricStock({
                       {rows[0]!.type_name}
                       <span className="font-normal text-muted-foreground">({rows.length})</span>
                     </h3>
-                    <div className="hidden overflow-x-auto sm:block">
-                      <table className="w-full min-w-[650px] text-left text-sm">
-                        <thead className="bg-muted/50 text-xs text-muted-foreground">
-                          <tr>
-                            <th className="p-2">Thaan</th>
-                            <th>Image</th>
-                            <th>Colour</th>
-                            <th>Recorded length</th>
-                            <th>Workshop available</th>
-                            <th>CP / metre</th>
-                            <th>State</th>
-                            <th className="text-right">Barcode</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rows.map((r) => (
-                            <tr key={r.thaan_id} className="border-b last:border-0">
-                              <td className="p-2">
-                                <Button
-                                  variant="link"
-                                  className="h-auto justify-start whitespace-normal p-0 text-left"
-                                  onClick={() => open(r)}
-                                >
-                                  {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
-                                </Button>
-                                <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                                  {r.barcode}
-                                </p>
-                              </td>
-                              <td>
-                                <StockImage
-                                  src={imageUrls.data?.get(r.thaan_id)}
+                    {view === "grid" ? (
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                        {rows.map((r) => {
+                          const image = imageUrls.data?.get(r.thaan_id);
+                          return (
+                            <article
+                              key={r.thaan_id}
+                              className="group overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md"
+                            >
+                              {image ? (
+                                <img
+                                  src={image}
                                   alt={`${r.name} ${r.barcode}`}
+                                  loading="lazy"
+                                  className="aspect-[16/9] w-full bg-muted object-cover"
                                 />
-                                <div className="mt-1">
+                              ) : (
+                                <div className="grid aspect-[16/9] w-full place-items-center bg-muted/40 text-xs text-muted-foreground">
+                                  No image
+                                </div>
+                              )}
+                              <div className="space-y-3 p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <button
+                                      type="button"
+                                      className="font-mono text-sm font-semibold hover:text-primary"
+                                      onClick={() => open(r)}
+                                    >
+                                      {r.barcode}
+                                    </button>
+                                    <p className="truncate text-xs text-muted-foreground">
+                                      {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
+                                    </p>
+                                  </div>
+                                  <span className="rounded-full border bg-background px-2 py-0.5 text-[10px]">
+                                    {r.incomplete ? "Incomplete" : r.status}
+                                  </span>
+                                </div>
+                                <dl className="grid grid-cols-2 gap-2 text-xs">
+                                  <div>
+                                    <dt className="text-muted-foreground">Available</dt>
+                                    <dd className="font-medium">
+                                      {r.unlocated ? "Reconcile" : metres(r.workshop_mm)}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-muted-foreground">CP / metre</dt>
+                                    <dd className="font-medium">
+                                      {r.cp_visible
+                                        ? r.cp_paise_per_m === null
+                                          ? "Not recorded"
+                                          : `Rs. ${(r.cp_paise_per_m / 100).toFixed(2)}`
+                                        : "Restricted"}
+                                    </dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-muted-foreground">Fabric</dt>
+                                    <dd>{r.type_name}</dd>
+                                  </div>
+                                  <div>
+                                    <dt className="text-muted-foreground">Colour</dt>
+                                    <dd>{r.colour || "Not recorded"}</dd>
+                                  </div>
+                                </dl>
+                                <div className="grid grid-cols-2 gap-2">
                                   <ExistingStockImageEditor
                                     itemId={r.thaan_id}
                                     kind="thaan"
                                     name={r.name}
                                     barcode={r.barcode}
-                                    imageUrl={imageUrls.data?.get(r.thaan_id)}
+                                    imageUrl={image}
                                     canManage={isOwner || can("inventory.receive")}
                                   />
+                                  <Button variant="outline" size="sm" onClick={() => setLabel(r)}>
+                                    <Barcode className="size-4" /> Barcode
+                                  </Button>
                                 </div>
-                              </td>
-                              <td>{r.colour || "Not recorded"}</td>
-                              <td>{metres(r.saved_length_mm)}</td>
-                              <td>
-                                {r.unlocated ? "Needs reconciliation" : metres(r.workshop_mm)}
-                              </td>
-                              <td>
-                                {r.cp_visible
-                                  ? r.cp_paise_per_m === null
-                                    ? "Not recorded"
-                                    : `Rs. ${(r.cp_paise_per_m / 100).toFixed(2)}`
-                                  : "Restricted"}
-                              </td>
-                              <td>
-                                <span
-                                  className={
-                                    r.incomplete ? "text-amber-700" : "text-muted-foreground"
-                                  }
-                                >
-                                  {r.incomplete
-                                    ? "Incomplete"
-                                    : r.original_mm === null
-                                      ? "Awaiting stock activation"
-                                      : r.status}
-                                </span>
-                              </td>
-                              <td className="text-right">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  aria-label={`Barcode for ${r.barcode}`}
-                                  onClick={() => setLabel(r)}
-                                >
-                                  <Barcode className="size-4" />
-                                  Barcode
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="hidden overflow-x-auto sm:block">
+                          <table className="w-full min-w-[650px] text-left text-sm">
+                            <thead className="bg-muted/50 text-xs text-muted-foreground">
+                              <tr>
+                                <th className="p-2">Thaan</th>
+                                <th>Image</th>
+                                <th>Colour</th>
+                                <th>Recorded length</th>
+                                <th>Workshop available</th>
+                                <th>CP / metre</th>
+                                <th>State</th>
+                                <th className="text-right">Barcode</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.map((r) => (
+                                <tr key={r.thaan_id} className="border-b last:border-0">
+                                  <td className="p-2">
+                                    <Button
+                                      variant="link"
+                                      className="h-auto justify-start whitespace-normal p-0 text-left"
+                                      onClick={() => open(r)}
+                                    >
+                                      {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
+                                    </Button>
+                                    <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                                      {r.barcode}
+                                    </p>
+                                  </td>
+                                  <td>
+                                    <StockImage
+                                      src={imageUrls.data?.get(r.thaan_id)}
+                                      alt={`${r.name} ${r.barcode}`}
+                                    />
+                                    <div className="mt-1">
+                                      <ExistingStockImageEditor
+                                        itemId={r.thaan_id}
+                                        kind="thaan"
+                                        name={r.name}
+                                        barcode={r.barcode}
+                                        imageUrl={imageUrls.data?.get(r.thaan_id)}
+                                        canManage={isOwner || can("inventory.receive")}
+                                      />
+                                    </div>
+                                  </td>
+                                  <td>{r.colour || "Not recorded"}</td>
+                                  <td>{metres(r.saved_length_mm)}</td>
+                                  <td>
+                                    {r.unlocated ? "Needs reconciliation" : metres(r.workshop_mm)}
+                                  </td>
+                                  <td>
+                                    {r.cp_visible
+                                      ? r.cp_paise_per_m === null
+                                        ? "Not recorded"
+                                        : `Rs. ${(r.cp_paise_per_m / 100).toFixed(2)}`
+                                      : "Restricted"}
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={
+                                        r.incomplete ? "text-amber-700" : "text-muted-foreground"
+                                      }
+                                    >
+                                      {r.incomplete
+                                        ? "Incomplete"
+                                        : r.original_mm === null
+                                          ? "Awaiting stock activation"
+                                          : r.status}
+                                    </span>
+                                  </td>
+                                  <td className="text-right">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      aria-label={`Barcode for ${r.barcode}`}
+                                      onClick={() => setLabel(r)}
+                                    >
+                                      <Barcode className="size-4" />
+                                      Barcode
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="space-y-2 sm:hidden">
+                          {rows.map((r) => (
+                            <article key={r.thaan_id} className="rounded-lg border bg-card p-3">
+                              <div className="flex gap-3">
+                                <StockImage
+                                  src={imageUrls.data?.get(r.thaan_id)}
+                                  alt={`${r.name} ${r.barcode}`}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <Button
+                                    variant="link"
+                                    className="h-auto justify-start whitespace-normal p-0 text-left font-semibold"
+                                    onClick={() => open(r)}
+                                  >
+                                    {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
+                                  </Button>
+                                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                                    {r.barcode}
+                                  </p>
+                                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                                    <div>
+                                      <dt className="text-muted-foreground">Colour</dt>
+                                      <dd>{r.colour || "Not recorded"}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-muted-foreground">Recorded</dt>
+                                      <dd>{metres(r.saved_length_mm)}</dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-muted-foreground">Available</dt>
+                                      <dd>
+                                        {r.unlocated
+                                          ? "Needs reconciliation"
+                                          : metres(r.workshop_mm)}
+                                      </dd>
+                                    </div>
+                                    <div>
+                                      <dt className="text-muted-foreground">State</dt>
+                                      <dd className={r.incomplete ? "text-amber-700" : ""}>
+                                        {r.incomplete
+                                          ? "Incomplete"
+                                          : r.original_mm === null
+                                            ? "Awaiting activation"
+                                            : r.status}
+                                      </dd>
+                                    </div>
+                                  </dl>
+                                </div>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <ExistingStockImageEditor
+                                  itemId={r.thaan_id}
+                                  kind="thaan"
+                                  name={r.name}
+                                  barcode={r.barcode}
+                                  imageUrl={imageUrls.data?.get(r.thaan_id)}
+                                  canManage={isOwner || can("inventory.receive")}
+                                />
+                                <Button variant="outline" size="sm" onClick={() => setLabel(r)}>
+                                  <Barcode className="size-4" /> Barcode
                                 </Button>
-                              </td>
-                            </tr>
+                              </div>
+                            </article>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="space-y-2 sm:hidden">
-                      {rows.map((r) => (
-                        <article key={r.thaan_id} className="rounded-lg border bg-card p-3">
-                          <div className="flex gap-3">
-                            <StockImage
-                              src={imageUrls.data?.get(r.thaan_id)}
-                              alt={`${r.name} ${r.barcode}`}
-                            />
-                            <div className="min-w-0 flex-1">
-                              <Button
-                                variant="link"
-                                className="h-auto justify-start whitespace-normal p-0 text-left font-semibold"
-                                onClick={() => open(r)}
-                              >
-                                {r.name} {r.ordinal === null ? "" : `- Thaan ${r.ordinal}`}
-                              </Button>
-                              <p className="mt-1 font-mono text-xs text-muted-foreground">{r.barcode}</p>
-                              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                                <div><dt className="text-muted-foreground">Colour</dt><dd>{r.colour || "Not recorded"}</dd></div>
-                                <div><dt className="text-muted-foreground">Recorded</dt><dd>{metres(r.saved_length_mm)}</dd></div>
-                                <div><dt className="text-muted-foreground">Available</dt><dd>{r.unlocated ? "Needs reconciliation" : metres(r.workshop_mm)}</dd></div>
-                                <div><dt className="text-muted-foreground">State</dt><dd className={r.incomplete ? "text-amber-700" : ""}>{r.incomplete ? "Incomplete" : r.original_mm === null ? "Awaiting activation" : r.status}</dd></div>
-                              </dl>
-                            </div>
-                          </div>
-                          <div className="mt-3 grid grid-cols-2 gap-2">
-                            <ExistingStockImageEditor
-                              itemId={r.thaan_id}
-                              kind="thaan"
-                              name={r.name}
-                              barcode={r.barcode}
-                              imageUrl={imageUrls.data?.get(r.thaan_id)}
-                              canManage={isOwner || can("inventory.receive")}
-                            />
-                            <Button variant="outline" size="sm" onClick={() => setLabel(r)}>
-                              <Barcode className="size-4" /> Barcode
-                            </Button>
-                          </div>
-                        </article>
-                      ))}
-                    </div>
+                        </div>
+                      </>
+                    )}
                   </section>
                 ))}
               </div>
