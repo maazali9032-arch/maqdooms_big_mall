@@ -416,6 +416,8 @@ export function OwnerFactoryDefinitions() {
 
                       {masters.map((row) => {
                         const tailor = tailorFor(row.tailor_id);
+                        const tailorName =
+                          tailor?.real_name ?? profileName(tailor?.profile_id ?? null);
                         const tailorStaff = currentStaff.filter(
                           (staffRow) => staffRow.tailor_id === row.tailor_id,
                         );
@@ -429,7 +431,7 @@ export function OwnerFactoryDefinitions() {
                               <button
                                 type="button"
                                 className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-background hover:bg-accent"
-                                aria-label={`${tailorOpen ? "Collapse" : "Expand"} ${tailor?.real_name ?? "Master Tailor"}`}
+                                aria-label={`${tailorOpen ? "Collapse" : "Expand"} ${tailorName}`}
                                 onClick={() =>
                                   setExpandedTailors(
                                     tailorOpen
@@ -449,18 +451,13 @@ export function OwnerFactoryDefinitions() {
                               </span>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <strong>{tailor?.code ?? "Master Tailor"}</strong>
+                                  <strong className="text-base">{tailorName}</strong>
                                   <StatusBadge
                                     status={tailor?.active ? "active" : "archived"}
                                     label={tailor?.active ? "Active" : "Inactive"}
                                   />
                                 </div>
-                                <p className="font-semibold">
-                                  {tailor?.real_name ?? profileName(tailor?.profile_id ?? null)}
-                                  <span className="ml-1 font-normal text-muted-foreground">
-                                    (Master Tailor)
-                                  </span>
-                                </p>
+                                <p className="text-xs text-muted-foreground">Master Tailor</p>
                               </div>
                               <div className="min-w-28 border-l px-4">
                                 <strong className="numeric block">{tailorStaff.length}</strong>
@@ -483,7 +480,7 @@ export function OwnerFactoryDefinitions() {
                               <Button
                                 size="icon"
                                 variant="outline"
-                                aria-label={`Reassign ${tailor?.real_name ?? "Master Tailor"}`}
+                                aria-label={`Reassign ${tailorName}`}
                                 onClick={() => {
                                   setUser(tailor?.profile_id ?? "");
                                   setFactory(row.factory_id);
