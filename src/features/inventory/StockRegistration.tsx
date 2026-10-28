@@ -1,6 +1,6 @@
 import { ScannedThaanRows } from "./ScannedThaanRows";
 import { VendorReadymadeRegistration } from "./VendorReadymadeRegistration";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -31,6 +31,7 @@ import { createStockBatch } from "./stock-batch-request";
 import { StockImageInput } from "./StockImageInput";
 import { saveStockImages } from "./stock-images";
 import { MaterialUnits } from "./MaterialUnits";
+import { BarcodeSticker } from "./BarcodeSticker";
 import { inclusivePurchaseAmounts } from "./purchase-invoice";
 import type { SupabaseClient } from "@supabase/supabase-js";
 type Variant = {
@@ -49,6 +50,50 @@ type Batch = {
   remarks: string | null;
   fabric_types: FabricType[];
 };
+type MaterialUnit = {
+  id: string;
+  batch_id: string;
+  barcode: string;
+  ordinal: number;
+  initial_quantity: number;
+  unit: string;
+  batch_code: string;
+  supplier_name: string;
+  material_name: string;
+  category: string;
+  received_at?: string | null;
+};
+type VendorPiece = {
+  id: string;
+  barcode: string;
+  product: string;
+  style: string | null;
+  size: string | null;
+  batch_code: string;
+  supplier: string;
+  arrival_date: string;
+};
+type ResumeLabel = {
+  id: string;
+  barcode: string;
+  name: string;
+  description: string;
+  detail: string;
+};
+type ResumeBatch = {
+  key: string;
+  kind: "fabric" | "materials" | "vendor_finished";
+  id: string;
+  code: string;
+  provider: string;
+  arrivalDate: string;
+  labels: ResumeLabel[];
+};
+type Rpc = (
+  name: string,
+  args: Record<string, unknown>,
+) => Promise<{ data: unknown; error: Error | null }>;
+const inventoryRpc = supabase.rpc.bind(supabase) as unknown as Rpc;
 type Work =
   | { kind: "append"; group: string; quantity: number }
   | { kind: "fabric"; batch: string; name: string; quantity: number }
@@ -171,7 +216,7 @@ export function StockRegistration() {
   const allowed = isOwner || (roles.includes("stock_entry") && can("inventory.receive"));
   const qc = useQueryClient();
   const suppliers = useSuppliers();
-  const [stage, setStage] = useState<"home" | "create" | "labels">("home");
+  const [stage, setStage] = useState<"home" | "create" | "labels" | "resume">("home");
   const [batchType, setBatchType] = useState<"fabric" | "vendor_finished" | "materials">("fabric");
   const [provider, setProvider] = useState("");
   const [date, setDate] = useState(() =>
@@ -191,6 +236,8 @@ export function StockRegistration() {
   const [transportCharges, setTransportCharges] = useState("0");
   const [rows, setRows] = useState<EntryRow[]>([emptyRow()]);
   const [batchId, setBatchId] = useState("");
+  const [previousBatchKey, setPreviousBatchKey] = useState("");
+  const [resumeBatch, setResumeBatch] = useState<ResumeBatch | null>(null);
   const [groupIndex, setGroupIndex] = useState(0);
   const [extraCount, setExtraCount] = useState("");
   const [extraName, setExtraName] = useState("");
@@ -226,6 +273,90 @@ export function StockRegistration() {
       return data as unknown as Batch[];
     },
   });
+  const materialCatalog = useQuery({
+    queryKey: ["stock-registration-material-batches", userId],
+    enabled: allowed,
+    queryFn: async () => {
+      const { data, error } = await inventoryRpc("material_unit_catalog", { p_search: null });
+      if (error) throw error;
+      return data as MaterialUnit[];
+    },
+  });
+  const vendorCatalog = useQuery({
+    queryKey: ["stock-registration-vendor-batches", userId],
+    enabled: allowed,
+    queryFn: async () => {
+      const { data, error } = await inventoryRpc("vendor_readymade_stock", {
+        p_search: "",
+        p_limit: 500,
+      });
+      if (error) throw error;
+      return data as VendorPiece[];
+    },
+  });
+  const previousBatches = useMemo<ResumeBatch[]>(() => {
+    const result: ResumeBatch[] = (catalog.data ?? []).map((item) => ({
+      key: `fabric:${item.id}`,
+      kind: "fabric",
+      id: item.id,
+      code: item.code,
+      provider: item.provider_name,
+      arrivalDate: item.arrival_date,
+      labels: [],
+    }));
+    const materialBatches = new Map<string, MaterialUnit[]>();
+    for (const unit of materialCatalog.data ?? []) {
+      materialBatches.set(unit.batch_id, [...(materialBatches.get(unit.batch_id) ?? []), unit]);
+    }
+    for (const [id, units] of materialBatches) {
+      const first = units[0];
+      result.push({
+        key: `materials:${id}`,
+        kind: "materials",
+        id,
+        code: first.batch_code,
+        provider: first.supplier_name,
+        arrivalDate: first.received_at ?? "",
+        labels: units
+          .sort((a, b) => a.ordinal - b.ordinal)
+          .map((unit) => ({
+            id: unit.id,
+            barcode: unit.barcode,
+            name: unit.material_name || unit.category,
+            description: `${unit.batch_code} / ${unit.supplier_name || "No supplier"}`,
+            detail: `Unit ${unit.ordinal} · ${unit.initial_quantity} ${unit.unit}`,
+          })),
+      });
+    }
+    const vendorBatches = new Map<string, VendorPiece[]>();
+    for (const piece of vendorCatalog.data ?? []) {
+      vendorBatches.set(piece.batch_code, [...(vendorBatches.get(piece.batch_code) ?? []), piece]);
+    }
+    for (const [code, pieces] of vendorBatches) {
+      const first = pieces[0];
+      result.push({
+        key: `vendor_finished:${code}`,
+        kind: "vendor_finished",
+        id: code,
+        code,
+        provider: first.supplier,
+        arrivalDate: first.arrival_date,
+        labels: pieces.map((piece) => ({
+          id: piece.id,
+          barcode: piece.barcode,
+          name: piece.product,
+          description: `${piece.batch_code} / ${piece.supplier || "No supplier"}`,
+          detail: [piece.style, piece.size && `Size ${piece.size}`].filter(Boolean).join(" · "),
+        })),
+      });
+    }
+    return result.sort(
+      (a, b) =>
+        b.arrivalDate.localeCompare(a.arrivalDate) ||
+        b.code.localeCompare(a.code, undefined, { numeric: true }),
+    );
+  }, [catalog.data, materialCatalog.data, vendorCatalog.data]);
+  const selectedPreviousBatch = previousBatches.find((item) => item.key === previousBatchKey);
   const names = [
     ...new Set([
       ...(suppliers.data ?? []).map((s) => s.name),
@@ -388,31 +519,58 @@ export function StockRegistration() {
           </div>
           <Panel title="Previous batches">
             <QueryState
-              loading={catalog.isPending}
-              error={catalog.error}
-              retry={() => void catalog.refetch()}
+              loading={catalog.isPending || materialCatalog.isPending || vendorCatalog.isPending}
+              error={catalog.error ?? materialCatalog.error ?? vendorCatalog.error}
+              retry={() => {
+                void Promise.all([
+                  catalog.refetch(),
+                  materialCatalog.refetch(),
+                  vendorCatalog.refetch(),
+                ]);
+              }}
             />
             <select
               aria-label="Previous batch"
               className="h-11 w-full rounded border bg-background p-2"
-              value={batchId}
+              value={previousBatchKey}
               disabled={frozen}
-              onChange={(e) => setBatchId(e.target.value)}
+              onChange={(e) => setPreviousBatchKey(e.target.value)}
             >
               <option value="">Select a batch to resume printing</option>
-              {catalog.data?.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.code} / {b.provider_name}
+              {previousBatches.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.code} / {item.provider || "No supplier"} ·{" "}
+                  {item.kind === "fabric"
+                    ? "Fabric"
+                    : item.kind === "materials"
+                      ? "Materials"
+                      : "Ready-made"}
                 </option>
               ))}
             </select>
             <Button
               variant="outline"
               className="mt-2"
-              disabled={frozen || !batch?.fabric_types.length}
+              disabled={
+                frozen ||
+                !selectedPreviousBatch ||
+                (selectedPreviousBatch.kind === "fabric"
+                  ? !(
+                      catalog.data?.find((item) => item.id === selectedPreviousBatch.id)
+                        ?.fabric_types.length ?? 0
+                    )
+                  : !selectedPreviousBatch.labels.length)
+              }
               onClick={() => {
-                setGroupIndex(0);
-                setStage("labels");
+                if (!selectedPreviousBatch) return;
+                if (selectedPreviousBatch.kind === "fabric") {
+                  setBatchId(selectedPreviousBatch.id);
+                  setGroupIndex(0);
+                  setStage("labels");
+                } else {
+                  setResumeBatch(selectedPreviousBatch);
+                  setStage("resume");
+                }
               }}
             >
               Open batch labels
@@ -1234,6 +1392,50 @@ export function StockRegistration() {
           >
             Back to Stock Entry
           </Button>
+        </Panel>
+      )}
+      {stage === "resume" && resumeBatch && (
+        <Panel
+          title={`${resumeBatch.code} labels`}
+          description={`${resumeBatch.kind === "materials" ? "Material units" : "Vendor ready-made garments"} · ${resumeBatch.labels.length} labels · ${resumeBatch.provider || "No supplier"}`}
+        >
+          <div ref={labels} className="my-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {resumeBatch.labels.map((label) => (
+              <BarcodeSticker
+                key={label.id}
+                barcode={label.barcode}
+                name={label.name}
+                description={label.description}
+                detail={label.detail}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={frozen}
+              onClick={() => {
+                setResumeBatch(null);
+                setStage("home");
+              }}
+            >
+              Back
+            </Button>
+            <Button
+              disabled={frozen || !can("stock.print_barcode")}
+              onClick={() => {
+                try {
+                  if (labels.current) {
+                    printFabricLabel(labels.current, `${resumeBatch.code} labels`);
+                  }
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Printing failed");
+                }
+              }}
+            >
+              Print all {resumeBatch.labels.length} labels
+            </Button>
+          </div>
         </Panel>
       )}
       <p className="text-sm text-muted-foreground">
