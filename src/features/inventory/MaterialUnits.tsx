@@ -17,6 +17,7 @@ import { inclusivePurchaseAmounts } from "./purchase-invoice";
 
 type MaterialUnit = {
   id: string;
+  batch_id: string;
   barcode: string;
   ordinal: number;
   initial_quantity: number;
@@ -89,6 +90,7 @@ export function MaterialUnits({
   const qc = useQueryClient();
   const suppliers = useSuppliers();
   const labels = useRef<HTMLDivElement>(null);
+  const generatedLabels = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [supplier, setSupplier] = useState("");
   const [supplierGstin, setSupplierGstin] = useState("");
@@ -100,6 +102,7 @@ export function MaterialUnits({
   const [arrivalDate, setArrivalDate] = useState(today);
   const [transportCharges, setTransportCharges] = useState("0");
   const [lines, setLines] = useState<DraftLine[]>([blankLine()]);
+  const [generatedUnits, setGeneratedUnits] = useState<MaterialUnit[]>([]);
   const [pending, setPending] = useState<Record<string, unknown> | null>(null);
   const [correctionReason, setCorrectionReason] = useState<Record<string, string>>({});
   const categories = useQuery({
@@ -168,15 +171,23 @@ export function MaterialUnits({
   const receive = useMutation({
     mutationFn: async (args: Record<string, unknown>) => {
       setPending(args);
-      const { error } = await rpc(
+      const { data, error } = await rpc(
         Object.prototype.hasOwnProperty.call(args, "p_purchase")
           ? "receive_material_unit_batch_with_purchase"
           : "receive_material_unit_batch",
         args,
       );
       if (error) throw error;
+      return data as string;
     },
-    onSuccess: () => {
+    onSuccess: async (batchId) => {
+      const { data: received, error: labelsError } = await rpc("material_unit_catalog", {
+        p_search: null,
+      });
+      const batchUnits = labelsError
+        ? []
+        : (received as MaterialUnit[]).filter((unit) => unit.batch_id === batchId);
+      setGeneratedUnits(batchUnits);
       setPending(null);
       setSupplier("");
       setSupplierGstin("");
@@ -189,7 +200,15 @@ export function MaterialUnits({
       setTransportCharges("0");
       setLines([blankLine()]);
       void qc.invalidateQueries({ queryKey: ["material-units"] });
-      toast.success("Material batch saved and M barcodes generated");
+      if (labelsError || !batchUnits.length) {
+        toast.warning(
+          "Material batch saved, but its barcode labels could not be loaded. Open Materials Stock to print them.",
+        );
+      } else {
+        toast.success(
+          `${batchUnits.length} M barcode label${batchUnits.length === 1 ? "" : "s"} ready to print`,
+        );
+      }
     },
     onError: (error) => {
       if (definiteDatabaseRejection(error)) setPending(null);
@@ -199,6 +218,7 @@ export function MaterialUnits({
   const submit = () => {
     try {
       if (pending) return receive.mutate(pending);
+      setGeneratedUnits([]);
       if (!supplier.trim()) throw new Error("Enter the supplier");
       if (hasSupplierInvoice && !/^[0-9]{2}[A-Z0-9]{13}$/.test(supplierGstin.trim()))
         throw new Error("Enter the supplier's valid 15-character GSTIN");
@@ -318,277 +338,337 @@ export function MaterialUnits({
   return (
     <div className="space-y-4">
       {showReceiving && mayReceive && (
-        <Panel
-          title="Receive material-unit batch"
-          description="Create one purchase batch with multiple material types. Every physical container or roll receives its own permanent M barcode."
-          actions={
-            onCancel ? (
-              <Button variant="outline" onClick={onCancel} disabled={receive.isPending}>
-                Cancel batch
-              </Button>
-            ) : undefined
-          }
-        >
-          <fieldset disabled={receive.isPending || !!pending} className="space-y-4">
-            <div className="rounded-xl border p-3">
-              <h3 className="mb-3 font-semibold">Batch information</h3>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <label className="text-sm">
-                  Batch ID
-                  <Input value="Auto-generated on save" readOnly className="bg-muted" />
-                </label>
-                <label className="text-sm">
-                  Arrival date
-                  <Input
-                    type="date"
-                    value={arrivalDate}
-                    onChange={(e) => setArrivalDate(e.target.value)}
-                  />
-                </label>
-                <label className="text-sm">
-                  Supplier / provider
-                  <PickOrTypeInput
-                    value={supplier}
-                    onChange={selectSupplier}
-                    options={(suppliers.data ?? []).map((item) => item.name)}
-                  />
-                </label>
-                <label className="text-sm">
-                  Transport / other charges ₹
-                  <Input
-                    inputMode="decimal"
-                    value={transportCharges}
-                    onChange={(e) => setTransportCharges(e.target.value)}
-                  />
-                </label>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3">
-              <h3 className="mb-3 font-semibold">Supplier GST & purchase invoice</h3>
-              <p className="mb-3 text-sm text-muted-foreground">
-                Choose Yes only when the supplier provided a GST purchase invoice. Unit purchase CP
-                remains GST-inclusive.
-              </p>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">Supplier invoice available?</span>
+        <>
+          {!!generatedUnits.length && (
+            <Panel
+              title="M barcodes ready to print"
+              description={`${generatedUnits[0]?.batch_code} was saved with ${generatedUnits.length} physical unit label${generatedUnits.length === 1 ? "" : "s"}. Print these labels before starting another batch.`}
+              actions={
                 <Button
-                  type="button"
-                  variant={hasSupplierInvoice ? "default" : "outline"}
-                  disabled={!supplier.trim()}
-                  onClick={() => chooseSupplierInvoice(true)}
+                  onClick={() =>
+                    generatedLabels.current &&
+                    printFabricLabel(
+                      generatedLabels.current,
+                      `${generatedUnits[0]?.batch_code} material labels`,
+                    )
+                  }
                 >
-                  Yes
+                  <Printer className="mr-2 size-4" />
+                  Print all M barcodes
                 </Button>
-                <Button
-                  type="button"
-                  variant={!hasSupplierInvoice ? "default" : "outline"}
-                  disabled={!supplier.trim()}
-                  onClick={() => chooseSupplierInvoice(false)}
-                >
-                  No
-                </Button>
-              </div>
-              {hasSupplierInvoice && (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  <Input
-                    aria-label="Supplier GSTIN"
-                    placeholder="Supplier GSTIN"
-                    value={supplierGstin}
-                    onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
-                  />
-                  <Input
-                    placeholder="Supplier phone (saved for next time)"
-                    value={supplierPhone}
-                    onChange={(e) => setSupplierPhone(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Supplier email (saved for next time)"
-                    value={supplierEmail}
-                    onChange={(e) => setSupplierEmail(e.target.value)}
-                  />
-                  <Input
-                    placeholder="Supplier address (saved for next time)"
-                    value={supplierAddress}
-                    onChange={(e) => setSupplierAddress(e.target.value)}
-                  />
-                  <Input
-                    aria-label="Supplier invoice number"
-                    placeholder="Invoice number"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                  />
-                  <div className="flex h-11 items-center rounded border bg-muted/30 px-3 text-sm font-medium text-emerald-700">
-                    ITC eligible
-                  </div>
-                </div>
-              )}
-            </div>
-            {lines.map((line, index) => (
-              <div key={line.key} className="rounded-xl border p-3">
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="font-semibold">Material type {index + 1}</h3>
-                  {lines.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setLines((rows) => rows.filter((row) => row.key !== line.key))}
-                    >
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_8rem]">
-                  <label className="text-sm">
-                    Material name
-                    <Input
-                      value={line.name}
-                      onChange={(e) =>
-                        setLines((rows) =>
-                          rows.map((row) =>
-                            row.key === line.key ? { ...row, name: e.target.value } : row,
-                          ),
-                        )
-                      }
+              }
+            >
+              <div ref={generatedLabels} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {generatedUnits.map((unit) => (
+                  <div
+                    key={unit.id}
+                    data-material-print-card=""
+                    className="rounded-xl border bg-muted/10 p-3"
+                  >
+                    <BarcodeSticker
+                      barcode={unit.barcode}
+                      name={unit.material_name}
+                      description={`${unit.initial_quantity} ${unit.unit} · ${unit.batch_code}`}
                     />
-                  </label>
-                  <label className="text-sm">
-                    Category
-                    <select
-                      className="block min-h-10 w-full rounded-md border bg-background px-3"
-                      value={line.category}
-                      onChange={(e) => {
-                        const selected = categoryOptions.find(
-                          (item) => item.code === e.target.value,
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={(event) => {
+                        const card = event.currentTarget.closest<HTMLElement>(
+                          "[data-material-print-card]",
                         );
-                        setLine(line.key, (row) => ({
-                          ...row,
-                          category: e.target.value,
-                          unit: selected?.measurement_unit ?? row.unit,
-                        }));
+                        if (card) printFabricLabel(card, `${unit.barcode} material label`);
                       }}
                     >
-                      {categoryOptions.map((category) => (
-                        <option key={category.id} value={category.code}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                      <Printer className="mr-2 size-4" />
+                      Print this label
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+          <Panel
+            title="Receive material-unit batch"
+            description="Create one purchase batch with multiple material types. Every physical container or roll receives its own permanent M barcode."
+            actions={
+              onCancel ? (
+                <Button variant="outline" onClick={onCancel} disabled={receive.isPending}>
+                  Cancel batch
+                </Button>
+              ) : undefined
+            }
+          >
+            <fieldset disabled={receive.isPending || !!pending} className="space-y-4">
+              <div className="rounded-xl border p-3">
+                <h3 className="mb-3 font-semibold">Batch information</h3>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <label className="text-sm">
+                    Batch ID
+                    <Input value="Auto-generated on save" readOnly className="bg-muted" />
                   </label>
                   <label className="text-sm">
-                    Measurement unit
-                    <Input value={line.unit} readOnly className="w-24 bg-muted" />
-                  </label>
-                  <label className="text-sm">
-                    Physical units
+                    Arrival date
                     <Input
-                      inputMode="numeric"
-                      value={line.unitCount}
-                      onChange={(e) => setLine(line.key, (row) => resizeUnits(row, e.target.value))}
+                      type="date"
+                      value={arrivalDate}
+                      onChange={(e) => setArrivalDate(e.target.value)}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Supplier / provider
+                    <PickOrTypeInput
+                      value={supplier}
+                      onChange={selectSupplier}
+                      options={(suppliers.data ?? []).map((item) => item.name)}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Transport / other charges ₹
+                    <Input
+                      inputMode="decimal"
+                      value={transportCharges}
+                      onChange={(e) => setTransportCharges(e.target.value)}
                     />
                   </label>
                 </div>
-                <details
-                  className="mt-4 rounded-lg border bg-muted/20"
-                  open={line.units.length <= 10}
-                >
-                  <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
-                    Units ({line.units.length}) — expand to set individual quantity and CP
-                  </summary>
-                  <div className="border-t p-3">
-                    <div className="mb-3 grid gap-3 sm:grid-cols-2">
-                      <label className="text-sm">
-                        Default quantity in each unit ({line.unit})
-                        <Input
-                          inputMode="decimal"
-                          value={line.quantityEach}
-                          onChange={(e) =>
-                            setLine(line.key, (row) =>
-                              setDefault(row, "quantityEach", e.target.value),
-                            )
-                          }
-                        />
-                      </label>
-                      <label className="text-sm">
-                        Default purchase CP per unit, including GST ₹
-                        <Input
-                          inputMode="decimal"
-                          value={line.purchaseCostEach}
-                          onChange={(e) =>
-                            setLine(line.key, (row) =>
-                              setDefault(row, "purchaseCostEach", e.target.value),
-                            )
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className="space-y-2 border-l-2 border-primary/30 pl-3">
-                      {line.units.map((unit, unitIndex) => (
-                        <div
-                          key={unit.key}
-                          className="grid items-end gap-3 rounded-lg border bg-background p-2 sm:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]"
-                        >
-                          <p className="pb-2 text-sm font-medium">
-                            └ Unit {String(unitIndex + 1).padStart(2, "0")}
-                          </p>
-                          <label className="text-xs text-muted-foreground">
-                            Quantity ({line.unit})
-                            <Input
-                              inputMode="decimal"
-                              value={unit.quantity}
-                              onChange={(e) =>
-                                setLine(line.key, (row) => ({
-                                  ...row,
-                                  units: row.units.map((child) =>
-                                    child.key === unit.key
-                                      ? { ...child, quantity: e.target.value }
-                                      : child,
-                                  ),
-                                }))
-                              }
-                            />
-                          </label>
-                          <label className="text-xs text-muted-foreground">
-                            Purchase CP incl. GST ₹
-                            <Input
-                              inputMode="decimal"
-                              value={unit.purchaseCost}
-                              onChange={(e) =>
-                                setLine(line.key, (row) => ({
-                                  ...row,
-                                  units: row.units.map((child) =>
-                                    child.key === unit.key
-                                      ? { ...child, purchaseCost: e.target.value }
-                                      : child,
-                                  ),
-                                }))
-                              }
-                            />
-                          </label>
-                        </div>
-                      ))}
+              </div>
+              <div className="rounded-xl border p-3">
+                <h3 className="mb-3 font-semibold">Supplier GST & purchase invoice</h3>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Choose Yes only when the supplier provided a GST purchase invoice. Unit purchase
+                  CP remains GST-inclusive.
+                </p>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">Supplier invoice available?</span>
+                  <Button
+                    type="button"
+                    variant={hasSupplierInvoice ? "default" : "outline"}
+                    disabled={!supplier.trim()}
+                    onClick={() => chooseSupplierInvoice(true)}
+                  >
+                    Yes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!hasSupplierInvoice ? "default" : "outline"}
+                    disabled={!supplier.trim()}
+                    onClick={() => chooseSupplierInvoice(false)}
+                  >
+                    No
+                  </Button>
+                </div>
+                {hasSupplierInvoice && (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <Input
+                      aria-label="Supplier GSTIN"
+                      placeholder="Supplier GSTIN"
+                      value={supplierGstin}
+                      onChange={(e) => setSupplierGstin(e.target.value.toUpperCase())}
+                    />
+                    <Input
+                      placeholder="Supplier phone (saved for next time)"
+                      value={supplierPhone}
+                      onChange={(e) => setSupplierPhone(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Supplier email (saved for next time)"
+                      value={supplierEmail}
+                      onChange={(e) => setSupplierEmail(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Supplier address (saved for next time)"
+                      value={supplierAddress}
+                      onChange={(e) => setSupplierAddress(e.target.value)}
+                    />
+                    <Input
+                      aria-label="Supplier invoice number"
+                      placeholder="Invoice number"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                    />
+                    <div className="flex h-11 items-center rounded border bg-muted/30 px-3 text-sm font-medium text-emerald-700">
+                      ITC eligible
                     </div>
                   </div>
-                </details>
+                )}
               </div>
-            ))}
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => setLines((rows) => [...rows, blankLine()])}>
-                <PackagePlus className="mr-2 size-4" />
-                Add material type
-              </Button>
-              <Button onClick={submit}>
-                {receive.isPending
-                  ? "Saving…"
-                  : pending
-                    ? "Retry unchanged batch"
-                    : "Save batch and generate M barcodes"}
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Transport and other charges are divided equally across all physical units and added to
-              each unit's landed CP.
-            </p>
-          </fieldset>
-        </Panel>
+              {lines.map((line, index) => (
+                <div key={line.key} className="rounded-xl border p-3">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="font-semibold">Material type {index + 1}</h3>
+                    {lines.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        onClick={() =>
+                          setLines((rows) => rows.filter((row) => row.key !== line.key))
+                        }
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem_8rem]">
+                    <label className="text-sm">
+                      Material name
+                      <Input
+                        value={line.name}
+                        onChange={(e) =>
+                          setLines((rows) =>
+                            rows.map((row) =>
+                              row.key === line.key ? { ...row, name: e.target.value } : row,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="text-sm">
+                      Category
+                      <select
+                        className="block min-h-10 w-full rounded-md border bg-background px-3"
+                        value={line.category}
+                        onChange={(e) => {
+                          const selected = categoryOptions.find(
+                            (item) => item.code === e.target.value,
+                          );
+                          setLine(line.key, (row) => ({
+                            ...row,
+                            category: e.target.value,
+                            unit: selected?.measurement_unit ?? row.unit,
+                          }));
+                        }}
+                      >
+                        {categoryOptions.map((category) => (
+                          <option key={category.id} value={category.code}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-sm">
+                      Measurement unit
+                      <Input value={line.unit} readOnly className="w-24 bg-muted" />
+                    </label>
+                    <label className="text-sm">
+                      Physical units
+                      <Input
+                        inputMode="numeric"
+                        value={line.unitCount}
+                        onChange={(e) =>
+                          setLine(line.key, (row) => resizeUnits(row, e.target.value))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <details
+                    className="mt-4 rounded-lg border bg-muted/20"
+                    open={line.units.length <= 10}
+                  >
+                    <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
+                      Units ({line.units.length}) — expand to set individual quantity and CP
+                    </summary>
+                    <div className="border-t p-3">
+                      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-sm">
+                          Default quantity in each unit ({line.unit})
+                          <Input
+                            inputMode="decimal"
+                            value={line.quantityEach}
+                            onChange={(e) =>
+                              setLine(line.key, (row) =>
+                                setDefault(row, "quantityEach", e.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="text-sm">
+                          Default purchase CP per unit, including GST ₹
+                          <Input
+                            inputMode="decimal"
+                            value={line.purchaseCostEach}
+                            onChange={(e) =>
+                              setLine(line.key, (row) =>
+                                setDefault(row, "purchaseCostEach", e.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                      <div className="space-y-2 border-l-2 border-primary/30 pl-3">
+                        {line.units.map((unit, unitIndex) => (
+                          <div
+                            key={unit.key}
+                            className="grid items-end gap-3 rounded-lg border bg-background p-2 sm:grid-cols-[7rem_minmax(0,1fr)_minmax(0,1fr)]"
+                          >
+                            <p className="pb-2 text-sm font-medium">
+                              └ Unit {String(unitIndex + 1).padStart(2, "0")}
+                            </p>
+                            <label className="text-xs text-muted-foreground">
+                              Quantity ({line.unit})
+                              <Input
+                                inputMode="decimal"
+                                value={unit.quantity}
+                                onChange={(e) =>
+                                  setLine(line.key, (row) => ({
+                                    ...row,
+                                    units: row.units.map((child) =>
+                                      child.key === unit.key
+                                        ? { ...child, quantity: e.target.value }
+                                        : child,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </label>
+                            <label className="text-xs text-muted-foreground">
+                              Purchase CP incl. GST ₹
+                              <Input
+                                inputMode="decimal"
+                                value={unit.purchaseCost}
+                                onChange={(e) =>
+                                  setLine(line.key, (row) => ({
+                                    ...row,
+                                    units: row.units.map((child) =>
+                                      child.key === unit.key
+                                        ? { ...child, purchaseCost: e.target.value }
+                                        : child,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setLines((rows) => [...rows, blankLine()])}
+                >
+                  <PackagePlus className="mr-2 size-4" />
+                  Add material type
+                </Button>
+                <Button onClick={submit}>
+                  {receive.isPending
+                    ? "Saving…"
+                    : pending
+                      ? "Retry unchanged batch"
+                      : "Save batch and generate M barcodes"}
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Transport and other charges are divided equally across all physical units and added
+                to each unit's landed CP.
+              </p>
+            </fieldset>
+          </Panel>
+        </>
       )}
       {showInventory && (
         <Panel
