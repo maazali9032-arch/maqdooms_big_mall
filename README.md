@@ -1,5 +1,11 @@
 # Maqdoom's Fabric Manager
 
+## Current implementation reference
+
+For the current, implemented operating model—including barcode families, receiving, materials, factory workflow, POS, GST, returns, roles, and reporting—see [the current system reference](docs/CURRENT_SYSTEM_REFERENCE.md).
+
+This README retains the original project brief and rollout planning context. Where it differs from the dated current reference, the current reference takes precedence.
+
 Compact bill, production and tailoring scan identities are documented in [Short document scan codes](docs/SHORT_DOCUMENT_SCAN_CODES.md). Original invoice references and historical barcodes are preserved.
 
 Finished-garment receiving uses [one scanner with automatic document detection](docs/UNIFIED_FINISHED_RECEIPT.md).

@@ -2,7 +2,7 @@
 
 This is the permanent chronological record of work actually completed. The root `MAQDOOMS_Big_Mall_ERP_Implementation_Master_Plan.md` is the complete ERP source of truth. The operations guide describes the previous system; where they disagree, the master plan governs future work.
 
-> **Latest status — 21 October 2026, including Section 81:** Migrations 0065–0076 are applied live and verified after commit. Section 72's receipt, amount-only deposit and optional transfer-note changes are pushed and their hosted code markers verified. Section 73 corrects the stock receiver's generated-barcode lookup permission. Historical business records were preserved; no live test sale or customer garment receipt was posted. Physical printer/authenticated workflow acceptance remains pending. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
+> **Latest status — 29 October 2026, including Section 93:** The current operating reference is consolidated across the released receiving, material, transfer, factory, POS, GST, return, supplier and reporting workflows. See `docs/CURRENT_SYSTEM_REFERENCE.md`. Earlier pending-rollout/zero-configuration observations are dated evidence, not current-state assertions.
 
 ## Permanent recording and migration rules
 
@@ -6989,3 +6989,11 @@ The 80 mm customer receipt now replaces the prior asymmetric inset with a fixed 
 # 92. RESTORE PREVIOUS 80 MM BILL CALIBRATION — 22 OCTOBER 2026
 
 After physical review, the customer-bill layout is restored to the immediately preceding print calibration: the full 76 mm printable receipt width retains its 4 mm left safety inset, and only left-aligned receipt text has the additional 1 mm safety offset. The barcode, centred heading/footer, right-side monetary values and right edge return to their proven previous positions. The fixed label-cell implementation from Section 91 remains active and unchanged.
+
+# 93. CURRENT OPERATING REFERENCE CONSOLIDATION — 29 OCTOBER 2026
+
+Added `docs/CURRENT_SYSTEM_REFERENCE.md` as the authoritative, dated reference for the implemented ERP operating model. It consolidates the current barcode families (`T`, `R`, `F`, `C`, `M`, `B`, `J`, `P`), fixed-cell label printing, unified stock receiving, supplier profiles and purchase invoices, material-unit tracking, barcode-aware transfers, factory transit, the explicit `Issued → Work Recorded → Finished & Ready` lifecycle, POS billing and discounts, inclusive-GST price slabs, defect returns, roles, salesperson attribution and current workspaces.
+
+The reference explicitly distinguishes repository state from remote deployment state: `supabase/migrations/` remains the canonical ordered schema history and the latest repository migration is `20261027000000_material_categories_and_unit_tree.sql`. The target database must be checked against its own migration ledger before release; no unsupported claim that an unreachable remote environment has applied every later migration is made.
+
+The root README, the system operations guide, migration README, original labels-first and stock-entry UI notes, and the original six-character barcode rollout note now point readers to the current reference rather than presenting their dated rollout statements as live operating truth. Historical phase, rollout and evidence documents remain preserved and are not rewritten as if they had been created today. No product records, inventory, invoices, migrations, permissions, or production code changed in this documentation-only update.

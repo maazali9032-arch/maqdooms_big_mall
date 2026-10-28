@@ -1,5 +1,7 @@
 # Six-character barcode identities — 21 October 2026
 
+> **Current implementation note (29 October 2026):** This document records the original six-identity rollout. Material-unit (`M`) barcodes were added later; use [the current system reference](CURRENT_SYSTEM_REFERENCE.md) for the complete current barcode contract.
+
 New identities use one uppercase type letter plus five base-36 characters (`0–9`, `A–Z`), exactly six decoded characters. CODE128 encodes that identity, and the same identity is printed under the bars. The namespace includes `00000` through `ZZZZZ`: 60,466,176 slots per type. Sequence gaps are normal; no promise of consecutive invoice/label numbering is made.
 
 | Type | Prefix | Example |
@@ -10,6 +12,7 @@ New identities use one uppercase type letter plus five base-36 characters (`0–
 | Customer bill scanner alias | B | B00001 |
 | Customer stitching work order scanner alias | J | J00001 |
 | Customer finished garment | C | C00001 |
+| Material / consumable physical unit | M | M00001 |
 
 ## Database and permanence
 

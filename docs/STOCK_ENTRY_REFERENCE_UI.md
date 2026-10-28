@@ -1,7 +1,9 @@
 # Stock Entry reference layout — 12 October 2026
 
+> **Current implementation note (29 October 2026):** This reference captures the early fabric receiving UI. It is superseded for active operations by [the current system reference](CURRENT_SYSTEM_REFERENCE.md), which covers the unified three-type receiving flow.
+
 Owner-approved presentation update based on the latest screenshot. Implemented
-locally; frontend publication remains pending.
+locally; that original frontend-publication note is now historical.
 
 - Compact batch information row on wide screens, stacked fields on mobile.
 - One optional-entry notice explains when actual stock becomes available.

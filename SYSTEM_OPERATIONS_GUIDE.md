@@ -1,5 +1,7 @@
 # Maqdoom's Big Mall ERP — Complete System and Operations Guide
 
+> **Current implementation note (29 October 2026):** This guide is retained as an operating baseline. For the current end-to-end workflow and the later materials, transit, returns, supplier, GST, and reporting work, use [the current system reference](docs/CURRENT_SYSTEM_REFERENCE.md) first.
+
 > **Prepared revision — 19 October 2026:** New bills, production documents and customer tailoring jobs support separate 15-character scan codes. Invoice references and historical barcodes remain unchanged. See `docs/SHORT_DOCUMENT_SCAN_CODES.md` for the migration prerequisite and verification status.
 
 > **Current workflow update — 17 October 2026:** POS terminal administration,

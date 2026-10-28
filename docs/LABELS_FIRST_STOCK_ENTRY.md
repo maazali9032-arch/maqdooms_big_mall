@@ -1,7 +1,9 @@
 # Labels-first Stock Entry — 12 October 2026
 
+> **Current implementation note (29 October 2026):** This is the original labels-first receiving rollout note. Current receiving supports fabric, vendor ready-made, and material-unit batches; use [the current system reference](CURRENT_SYSTEM_REFERENCE.md) for the active workflow.
+
 Implemented following the Owner's images and explicit authorization. The database
-migration is applied and verified live. Frontend publication is pending.
+migration is applied and verified live. The original frontend-publication note is now historical.
 
 The subsequent [optional-details revision](OPTIONAL_THAAN_DETAILS.md) now also
 supports expandable per-Thaan fields before generation and independently saved
