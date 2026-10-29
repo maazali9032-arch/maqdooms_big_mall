@@ -7562,6 +7562,42 @@ export type Database = {
       ecommerce_listing_links: { Args: { p_listing: string }; Returns: Json };
       ecommerce_listing_stock: { Args: never; Returns: Json };
       ecommerce_scan_stock: { Args: { p_barcode: string }; Returns: Json };
+      ecom_add_stock: { Args: { p_barcode: string; p_listing: string }; Returns: Json };
+      ecom_archive_product: { Args: { p_listing: string }; Returns: undefined };
+      ecom_catalogue_admin: { Args: never; Returns: Json };
+      ecom_categories_admin: { Args: never; Returns: Json };
+      ecom_create_product: {
+        Args: { p_barcode: string; p_category: string; p_title: string };
+        Returns: string;
+      };
+      ecom_delete_category: { Args: { p_id: string }; Returns: undefined };
+      ecom_product_admin: { Args: { p_listing: string }; Returns: Json };
+      ecom_remove_stock: { Args: { p_listing: string; p_stock_id: string }; Returns: Json };
+      ecom_save_category: {
+        Args: {
+          p_description: string;
+          p_hidden: boolean;
+          p_id: string;
+          p_name: string;
+          p_section: string;
+          p_slug: string;
+          p_sort_order: number;
+        };
+        Returns: string;
+      };
+      ecom_save_product: { Args: { p_details: Json; p_listing: string }; Returns: undefined };
+      ecom_save_settings: { Args: { p_whatsapp_number: string }; Returns: undefined };
+      ecom_scan: { Args: { p_barcode: string }; Returns: Json };
+      ecom_set_featured: {
+        Args: { p_featured: boolean; p_listing: string; p_rank: number };
+        Returns: undefined;
+      };
+      ecom_set_home_featured: { Args: { p_listing: string; p_on: boolean }; Returns: undefined };
+      ecom_set_published: {
+        Args: { p_listing: string; p_published: boolean };
+        Returns: undefined;
+      };
+      ecom_settings_admin: { Args: never; Returns: Json };
       edit_workshop_thaan: {
         Args: {
           p_changes: Json;

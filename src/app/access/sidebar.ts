@@ -81,8 +81,9 @@ export function sidebarSections(roles: string[], permissions: string[]): NavSect
       add("/pos", undefined, "Counter / POS", "pos", ShoppingCart);
     }
     if (roles.includes("ecommerce_manager")) {
-      add("/ecommerce", "fabric", "Showroom Fabric", "ecommerce");
-      add("/ecommerce", "products", "Showroom Finished Products", "ecommerce");
+      add("/ecommerce", "catalogue", "Product Catalogue", "ecommerce");
+      add("/ecommerce", "publish", "Publish by scan", "ecommerce");
+      add("/ecommerce", "categories", "Website Categories", "ecommerce");
     }
     if (roles.includes("salesperson"))
       add("/my-work", undefined, "My Work", "salesperson_work", UserRound);
