@@ -310,6 +310,7 @@ export function StockRegistration() {
     }
     for (const [id, units] of materialBatches) {
       const first = units[0];
+      if (!first) continue;
       result.push({
         key: `materials:${id}`,
         kind: "materials",
@@ -334,6 +335,7 @@ export function StockRegistration() {
     }
     for (const [code, pieces] of vendorBatches) {
       const first = pieces[0];
+      if (!first) continue;
       result.push({
         key: `vendor_finished:${code}`,
         kind: "vendor_finished",

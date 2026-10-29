@@ -85,6 +85,7 @@ export function StockActivity() {
               setApplied(value);
               setCameraOpen(false);
             }}
+            onStop={() => setCameraOpen(false)}
           />
         </DialogContent>
       </Dialog>

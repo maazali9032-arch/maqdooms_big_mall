@@ -270,6 +270,7 @@ export function FactoryTransitStock() {
               setSearch(code.trim());
               setCameraOpen(false);
             }}
+            onStop={() => setCameraOpen(false)}
           />
         </DialogContent>
       </Dialog>

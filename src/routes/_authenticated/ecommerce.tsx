@@ -205,18 +205,20 @@ function EcommercePage() {
       ) : null}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1.5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10">
-          {[
-            ["overview", "Overview"],
-            ["catalogue", "Catalogue"],
-            ["publish", "Publish"],
-            ["pricing", "Pricing"],
-            ["orders", "Orders"],
-            ["shipping", "Shipping"],
-            ["customers", "Customers"],
-            ["content", "Content"],
-            ["reports", "Reports"],
-            ["health", "Health"],
-          ].map(([id, label]) => (
+          {(
+            [
+              ["overview", "Overview"],
+              ["catalogue", "Catalogue"],
+              ["publish", "Publish"],
+              ["pricing", "Pricing"],
+              ["orders", "Orders"],
+              ["shipping", "Shipping"],
+              ["customers", "Customers"],
+              ["content", "Content"],
+              ["reports", "Reports"],
+              ["health", "Health"],
+            ] as const
+          ).map(([id, label]) => (
             <TabsTrigger key={id} value={id} className="min-h-10 whitespace-normal px-2">
               {label}
             </TabsTrigger>
