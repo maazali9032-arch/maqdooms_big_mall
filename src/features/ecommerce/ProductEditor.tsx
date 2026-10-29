@@ -91,16 +91,18 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
   // Picked photos wait here and are cropped to 4:5 one at a time.
   const [cropQueue, setCropQueue] = useState<File[]>([]);
 
-  const addPhotos = (files: FileList | null) => {
-    if (!files || !form) return;
-    const room = 6 - form.images.length;
+  const addPhotos = (list: FileList | null) => {
+    // Copy the files out first: clearing the input below empties the browser's FileList.
+    const files = list ? [...list] : [];
     if (fileInput.current) fileInput.current.value = "";
+    if (!files.length || !form) return;
+    const room = 6 - form.images.length;
     if (room <= 0) {
       toast.error("Up to 6 photos per product");
       return;
     }
     if (files.length > room) toast.message(`Only ${room} more photo(s) fit; the rest were skipped`);
-    setCropQueue([...files].slice(0, room));
+    setCropQueue(files.slice(0, room));
   };
 
   const uploadCropped = async (cropped: File[]) => {
