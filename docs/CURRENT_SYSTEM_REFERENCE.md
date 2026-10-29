@@ -2,7 +2,7 @@
 
 > **Purpose:** This is the current operational reference for the ERP repository and its version-controlled database schema. It supersedes a dated rollout, phase, or UI note when they conflict. Older documents remain valuable historical records; they describe the state at the date in their title and are not silently rewritten as current fact.
 
-> **Schema source:** `supabase/migrations/` is the canonical ordered migration chain. The newest repository migration is `20261030000000_security_hardening_baseline.sql` (applied live 29 October 2026). This reference records the repository state, not a claim that an arbitrary remote database has applied every migration. Verify a target environment from its own migration ledger before release.
+> **Schema source:** `supabase/migrations/` is the canonical ordered migration chain. The newest repository migration is `20261030000100_revoke_legacy_entry_points.sql` (applied live 29 October 2026). This reference records the repository state, not a claim that an arbitrary remote database has applied every migration. Verify a target environment from its own migration ledger before release.
 
 ## Operating rules
 

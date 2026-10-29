@@ -1,6 +1,6 @@
 # Database migrations — Maqdoom's Big Mall ERP
 
-> **Current migration note (29 October 2026):** `supabase/migrations/` is the canonical database migration chain. The latest repository migration is `20261030000000_security_hardening_baseline.sql` (applied live 29 October 2026). The current operational behaviour is documented in [the current system reference](../../docs/CURRENT_SYSTEM_REFERENCE.md). The Drizzle history below is an older mirror and does not replace this Supabase chain.
+> **Current migration note (29 October 2026):** `supabase/migrations/` is the canonical database migration chain. The latest repository migration is `20261030000100_revoke_legacy_entry_points.sql` (applied live 29 October 2026). The current operational behaviour is documented in [the current system reference](../../docs/CURRENT_SYSTEM_REFERENCE.md). The Drizzle history below is an older mirror and does not replace this Supabase chain.
 
 **Phase 12 live update — 4 October 2026:**
 `20261004000300_phase12_production_costing.sql` applied/verified; byte-identical
