@@ -67,6 +67,8 @@ export type ProductDetail = {
   slug: string;
   description: string | null;
   tags: string[];
+  /** Short bullet list for the website product page (missing before migration 20261030000800). */
+  highlights?: string[];
   seo_title: string | null;
   seo_description: string | null;
   category_id: string | null;

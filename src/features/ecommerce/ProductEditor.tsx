@@ -33,6 +33,22 @@ import { AiSuggestButton } from "./AiSuggestButton";
 import { ImageCropDialog } from "@/shared/components/image-crop-dialog";
 import { IMAGE_SPECS } from "@/shared/utils/image-pipeline";
 
+/** Website text limits: what fits the storefront cards, product page and Google results. */
+const LIMIT = { title: 40, description: 300, seoTitle: 38, seoDescription: 155 } as const;
+const HIGHLIGHT_MAX = 6;
+const HIGHLIGHT_LENGTH = 60;
+
+/** "12 / 40" under a field; turns red past the recommended length. */
+function Counter({ value, max, hint }: { value: string; max: number; hint?: string }) {
+  const n = value.trim().length;
+  return (
+    <p className={`text-xs ${n > max ? "text-destructive" : "text-muted-foreground"}`}>
+      {n} / {max}
+      {hint ? ` · ${hint}` : ""}
+    </p>
+  );
+}
+
 const selectClass = "h-11 w-full rounded-md border border-input bg-background px-3 text-sm";
 
 type Form = {
@@ -40,6 +56,7 @@ type Form = {
   category_id: string;
   description: string;
   tags: string;
+  highlights: string;
   seo_title: string;
   seo_description: string;
   fabric_price: string;
@@ -53,6 +70,7 @@ function toForm(p: ProductDetail): Form {
     category_id: p.category_id ?? "",
     description: p.description ?? "",
     tags: (p.tags ?? []).join(", "),
+    highlights: (p.highlights ?? []).join("\n"),
     seo_title: p.seo_title ?? "",
     seo_description: p.seo_description ?? "",
     fabric_price:
@@ -147,6 +165,11 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
+        highlights: form.highlights
+          .split("\n")
+          .map((h) => h.replace(/^[-•*\s]+/, "").trim())
+          .filter(Boolean)
+          .slice(0, HIGHLIGHT_MAX),
         seo_title: form.seo_title,
         seo_description: form.seo_description,
         images: form.images,
@@ -208,6 +231,11 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
+                <Counter
+                  value={form.title}
+                  max={LIMIT.title}
+                  hint="Colour + detail + garment, e.g. Dark Teal Striped Kurta Pajama. No size."
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="category">Category</Label>
@@ -259,6 +287,24 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
+                <Counter
+                  value={form.description}
+                  max={LIMIT.description}
+                  hint="Two short sentences."
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label htmlFor="highlights">Highlights (one per line, up to {HIGHLIGHT_MAX})</Label>
+                <Textarea
+                  id="highlights"
+                  rows={4}
+                  value={form.highlights}
+                  placeholder={
+                    "Band collar with half placket\nVertical stripe pattern\nFull sleeves"
+                  }
+                  onChange={(e) => setForm({ ...form, highlights: e.target.value })}
+                />
+                <HighlightNote text={form.highlights} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor="tags">Tags (comma separated)</Label>
@@ -269,16 +315,21 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="seo-title">Search title (up to 70 characters)</Label>
+                <Label htmlFor="seo-title">Search title (Google)</Label>
                 <Input
                   id="seo-title"
                   maxLength={70}
                   value={form.seo_title}
                   onChange={(e) => setForm({ ...form, seo_title: e.target.value })}
                 />
+                <Counter
+                  value={form.seo_title}
+                  max={LIMIT.seoTitle}
+                  hint="The store name is added after it."
+                />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="seo-description">Search description (up to 170)</Label>
+                <Label htmlFor="seo-description">Search description (Google)</Label>
                 <Textarea
                   id="seo-description"
                   rows={2}
@@ -286,6 +337,7 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                   value={form.seo_description}
                   onChange={(e) => setForm({ ...form, seo_description: e.target.value })}
                 />
+                <Counter value={form.seo_description} max={LIMIT.seoDescription} />
               </div>
               <div className="sm:col-span-2">
                 <AiSuggestButton
@@ -299,6 +351,9 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                             title: s.title ?? f.title,
                             description: s.description ?? f.description,
                             tags: s.tags?.length ? s.tags.join(", ") : f.tags,
+                            highlights: s.highlights?.length
+                              ? s.highlights.join("\n")
+                              : f.highlights,
                             seo_title: s.seo_title ?? f.seo_title,
                             seo_description: s.seo_description ?? f.seo_description,
                           }
@@ -333,13 +388,16 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                   onChange={(e) => addPhotos(e.target.files)}
                 />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Add 3–4 photos: front, back, a close-up of the work and the fabric texture.
+              </p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {form.images.map((path) => (
                   <figure key={path} className="relative overflow-hidden rounded-lg border">
                     <img
                       src={publicImageUrl(path) ?? ""}
                       alt=""
-                      className="aspect-square w-full object-cover"
+                      className="aspect-[4/5] w-full object-cover"
                     />
                     <div className="absolute inset-x-0 bottom-0 flex justify-between bg-background/85 p-1">
                       <Button
@@ -531,5 +589,25 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function HighlightNote({ text }: { text: string }) {
+  const lines = text
+    .split("\n")
+    .map((h) => h.trim())
+    .filter(Boolean);
+  const long = lines.filter((h) => h.length > HIGHLIGHT_LENGTH).length;
+  const problem =
+    lines.length > HIGHLIGHT_MAX
+      ? `Only the first ${HIGHLIGHT_MAX} are kept`
+      : long
+        ? `${long} line(s) over ${HIGHLIGHT_LENGTH} characters`
+        : "";
+  return (
+    <p className={`text-xs ${problem ? "text-destructive" : "text-muted-foreground"}`}>
+      {lines.length} / {HIGHLIGHT_MAX}
+      {problem ? ` · ${problem}` : " · 2–6 words each, things a shopper can see."}
+    </p>
   );
 }

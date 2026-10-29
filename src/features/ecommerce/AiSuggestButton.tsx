@@ -7,7 +7,7 @@ import { suggestProductText, type AiSuggestionResult } from "./ai-suggest.functi
 export type AiSuggestion = Partial<AiSuggestionResult>;
 
 /**
- * Asks the ERP server to suggest name, description, tags and search text from the
+ * Asks the ERP server to suggest name, description, highlights, tags and search text from the
  * starred photo. Suggestions fill the form only; nothing is saved until staff press Save.
  */
 export function AiSuggestButton({
