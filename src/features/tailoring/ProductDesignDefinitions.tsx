@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { definiteDatabaseRejection } from "@/features/inventory/consumable-input";
 import type { Database } from "@/integrations/supabase/types";
 import { DeleteDefinition } from "@/shared/components/delete-definition";
+import { sqlNull } from "@/shared/utils/sql-null";
 type Definition = { id: string; code: string; name: string; active: boolean };
 type MaterialCategory = Definition & { measurement_unit: string };
 type Args = Database["public"]["Functions"]["manage_production_catalog"]["Args"];
@@ -251,11 +252,11 @@ export function ProductDesignDefinitions() {
                   save.mutate({
                     p_request: crypto.randomUUID(),
                     p_kind: kind,
-                    p_id: form.id || null,
+                    p_id: form.id || sqlNull,
                     p_code: form.code.trim(),
                     p_name: form.name.trim(),
                     p_active: form.active,
-                    p_charge_paise: null,
+                    p_charge_paise: sqlNull,
                     p_reason: "Owner saved " + kind + " definition",
                   })
                 }

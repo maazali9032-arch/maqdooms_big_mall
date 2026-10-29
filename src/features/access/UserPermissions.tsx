@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { permissionLabel, RETIRED_CREATOR_PERMISSIONS } from "./permissionLabels";
+import { sqlNull } from "@/shared/utils/sql-null";
 
 type PermissionState = {
   key: string;
@@ -53,7 +54,7 @@ export function UserPermissions({ userId, onClose }: { userId: string; onClose: 
       const { error } = await supabase.rpc("owner_set_user_permission", {
         p_user: userId,
         p_permission: permission,
-        p_granted: value === "inherit" ? null : value === "allow",
+        p_granted: value === "inherit" ? sqlNull : value === "allow",
       });
       if (error) throw error;
     },

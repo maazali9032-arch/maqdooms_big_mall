@@ -34,6 +34,7 @@ import { MaterialUnits } from "./MaterialUnits";
 import { BarcodeSticker } from "./BarcodeSticker";
 import { inclusivePurchaseAmounts } from "./purchase-invoice";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sqlNull } from "@/shared/utils/sql-null";
 type Variant = {
   id: string;
   code: string;
@@ -414,9 +415,9 @@ export function StockRegistration() {
                 ? await supabase.rpc("save_registered_thaan_details", {
                     p_request: args.request,
                     p_barcode: w.barcode,
-                    p_colour: w.colour,
-                    p_length_mm: w.length,
-                    p_cp: w.cp,
+                    p_colour: w.colour ?? sqlNull,
+                    p_length_mm: w.length ?? sqlNull,
+                    p_cp: w.cp ?? sqlNull,
                   })
                 : await supabase.rpc("fill_registered_thaan_cp", {
                     p_request: args.request,

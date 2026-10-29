@@ -60,7 +60,7 @@ export function useWorkshopInventory() {
   return useQuery({
     queryKey: ["workshop-fabric-inventory", userId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("workshop_fabric_inventory", {});
+      const { data, error } = await supabase.rpc("workshop_fabric_inventory");
       if (error) throw error;
       return data as unknown as WorkshopRow[];
     },

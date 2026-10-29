@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DeleteDefinition } from "@/shared/components/delete-definition";
 import { reportQuantity } from "@/features/reports/report-value";
+import { sqlNull } from "@/shared/utils/sql-null";
 type LocationSummary = {
   id: string;
   name: string;
@@ -35,7 +36,7 @@ export function LocationDefinitions() {
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.rpc("manage_showroom_location", {
-        p_id: form.id || null,
+        p_id: form.id || sqlNull,
         p_code: form.code || `FLR-${crypto.randomUUID().slice(0, 8)}`,
         p_name: form.name.trim(),
         p_active: form.active,

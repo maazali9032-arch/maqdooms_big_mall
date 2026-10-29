@@ -125,7 +125,7 @@ export function FabricStockSummary() {
   const showroom = useQuery({
     queryKey: ["showroom-fabric-available-total"],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("showroom_fabric_available_total", {});
+      const { data, error } = await supabase.rpc("showroom_fabric_available_total");
       if (error) throw error;
       return Number(data ?? 0);
     },

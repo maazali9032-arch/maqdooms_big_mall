@@ -24,6 +24,7 @@ import { definiteDatabaseRejection } from "@/features/inventory/consumable-input
 import type { Database } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { formatDateTime, initials } from "@/shared/utils/format";
+import { sqlNull } from "@/shared/utils/sql-null";
 
 type Entity = Database["public"]["Functions"]["manage_tailoring_entity"]["Args"];
 type Assign = Database["public"]["Functions"]["owner_assign_factory_user"]["Args"];
@@ -194,7 +195,7 @@ export function OwnerFactoryDefinitions() {
       args: {
         p_request: crypto.randomUUID(),
         p_kind: "factory",
-        p_id: form.id || null,
+        p_id: form.id || sqlNull,
         p_code: form.code.trim(),
         p_name: form.name.trim(),
         p_active: form.active,
