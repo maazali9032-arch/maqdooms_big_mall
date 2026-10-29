@@ -218,20 +218,25 @@ function EcommercePage() {
               ["reports", "Reports"],
               ["health", "Health"],
             ] as const
-          ).map(([id, label]) => (
-            <TabsTrigger key={id} value={id} className="min-h-10 whitespace-normal px-2">
-              {label}
-            </TabsTrigger>
-          ))}
+          )
+            // Revenue is shown only to the Owner (ERP Owner dashboard); e-commerce staff don't need it.
+            .filter(([id]) => isOwner || id !== "reports")
+            .map(([id, label]) => (
+              <TabsTrigger key={id} value={id} className="min-h-10 whitespace-normal px-2">
+                {label}
+              </TabsTrigger>
+            ))}
         </TabsList>
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <StatCard label="Online orders" value={orderRows.length} icon={ShoppingCart} />
-            <StatCard
-              label="Online revenue"
-              value={formatMoney(fulfilledRevenue)}
-              icon={CircleDollarSign}
-            />
+            {isOwner ? (
+              <StatCard
+                label="Online revenue"
+                value={formatMoney(fulfilledRevenue)}
+                icon={CircleDollarSign}
+              />
+            ) : null}
             <StatCard
               label="Products published"
               value={listingRows.filter((row) => row.published).length}
@@ -448,36 +453,38 @@ function EcommercePage() {
             </p>
           </Panel>
         </TabsContent>
-        <TabsContent value="reports">
-          <Panel
-            title="E-commerce reports"
-            description="Operational totals from recorded online orders."
-          >
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                label="Fulfilled revenue"
-                value={formatMoney(fulfilledRevenue)}
-                icon={BarChart3}
-              />
-              <StatCard
-                label="Average order"
-                value={formatMoney(
-                  orderRows.length
-                    ? Math.round(
-                        orderRows.reduce((sum, row) => sum + (row.amount_paise ?? 0), 0) /
-                          orderRows.length,
-                      )
-                    : 0,
-                )}
-              />
-              <StatCard
-                label="Cancelled"
-                value={orderRows.filter((row) => row.status === "cancelled").length}
-              />
-              <StatCard label="Customers" value={customers.length} icon={Users} />
-            </div>
-          </Panel>
-        </TabsContent>
+        {isOwner ? (
+          <TabsContent value="reports">
+            <Panel
+              title="E-commerce reports"
+              description="Operational totals from recorded online orders."
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatCard
+                  label="Fulfilled revenue"
+                  value={formatMoney(fulfilledRevenue)}
+                  icon={BarChart3}
+                />
+                <StatCard
+                  label="Average order"
+                  value={formatMoney(
+                    orderRows.length
+                      ? Math.round(
+                          orderRows.reduce((sum, row) => sum + (row.amount_paise ?? 0), 0) /
+                            orderRows.length,
+                        )
+                      : 0,
+                  )}
+                />
+                <StatCard
+                  label="Cancelled"
+                  value={orderRows.filter((row) => row.status === "cancelled").length}
+                />
+                <StatCard label="Customers" value={customers.length} icon={Users} />
+              </div>
+            </Panel>
+          </TabsContent>
+        ) : null}
         <TabsContent value="health" className="space-y-4">
           <Panel
             title="Integration health"

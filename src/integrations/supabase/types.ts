@@ -7584,6 +7584,7 @@ export type Database = {
           tailor_name: string;
         }[];
       };
+      ensure_fabric: { Args: { p_name: string }; Returns: string };
       fabric_inventory_archive: { Args: never; Returns: Json };
       fabric_stock_catalog: { Args: { p_barcode?: string }; Returns: Json };
       fabric_stock_history: { Args: { p_stock: string }; Returns: Json };

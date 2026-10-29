@@ -277,32 +277,9 @@ export function useEnsureFabric() {
     mutationFn: async (name: string): Promise<string | null> => {
       const clean = name.trim();
       if (!clean) return null;
-      const pattern = clean.replace(/[\\%_]/g, "\\$&");
-      const { data: found } = await supabase
-        .from("fabrics")
-        .select("id")
-        .ilike("name", pattern)
-        .limit(1);
-      if (found?.[0]) return found[0].id;
-      const slug = clean
-        .toUpperCase()
-        .replace(/[^A-Z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 16);
-      const code = `FB-${slug}-${Date.now().toString().slice(-4)}`;
-      const { data, error } = await supabase
-        .from("fabrics")
-        .insert({ name: clean, code, category: "Fabric" })
-        .select("id")
-        .single();
+      const { data, error } = await supabase.rpc("ensure_fabric", { p_name: clean });
       if (error) throw error;
-      await supabase.rpc("log_audit", {
-        _action: "create_fabric",
-        _entity: "fabric",
-        _ref: code,
-        _detail: { name: clean },
-      });
-      return data.id;
+      return data;
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: inventoryKeys.fabrics }),
   });
