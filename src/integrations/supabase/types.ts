@@ -7946,6 +7946,17 @@ export type Database = {
         Returns: Json;
       };
       owner_create_pos_terminal: { Args: { p_code: string }; Returns: string };
+      owner_customer_activity: {
+        Args: never;
+        Returns: {
+          bill_count: number;
+          customer_id: string;
+          last_bill_at: string | null;
+          open_tailoring_jobs: number;
+          spend_paise: number;
+          tailoring_jobs: number;
+        }[];
+      };
       owner_customer_tailoring_costs: { Args: { p_job: string }; Returns: Json };
       owner_daily_business: { Args: { p_day: string }; Returns: Json };
       owner_delete_definition: {
@@ -8099,6 +8110,7 @@ export type Database = {
         Args: { p_terminal?: string; p_user: string };
         Returns: undefined;
       };
+      owner_stock_correction_lookup: { Args: { p_barcode: string }; Returns: Json };
       owner_supplier_profiles: { Args: never; Returns: Json };
       owner_tailoring_hierarchy: { Args: never; Returns: Json };
       owner_tailoring_line_prices: {

@@ -74,9 +74,6 @@ function CustomersPage() {
         ) : (
           <div className="divide-y divide-border">
             {(customers.data ?? []).map((c) => {
-              const sales = (c.sales ?? []) as { id: string; total_paise: number }[];
-              const jobs = (c.tailoring_jobs ?? []) as { id: string; code: string }[];
-              const spend = sales.reduce((sum, s) => sum + s.total_paise, 0);
               return (
                 <div key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
@@ -84,9 +81,10 @@ function CustomersPage() {
                     <p className="numeric text-xs text-muted-foreground">{c.phone ?? "—"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="numeric text-sm">{formatMoney(spend)}</p>
+                    <p className="numeric text-sm">{formatMoney(c.spend_paise)}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {sales.length} bills · {jobs.length} tailoring jobs
+                      {c.bill_count} bills · {c.tailoring_jobs} tailoring jobs
+                      {c.open_tailoring_jobs ? ` (${c.open_tailoring_jobs} open)` : ""}
                     </p>
                   </div>
                 </div>

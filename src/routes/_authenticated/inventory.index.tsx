@@ -12,6 +12,7 @@ import { FabricArchive } from "@/features/inventory/FabricArchive";
 import { ShowroomFloorStock } from "@/features/inventory/ShowroomFloorStock";
 import { VendorReadymadeStock } from "@/features/inventory/VendorReadymadeStock";
 import { FactoryTransitStock } from "@/features/inventory/FactoryTransitStock";
+import { OwnerStockCorrection } from "@/features/inventory/OwnerStockCorrection";
 import { useWorkshopInventory } from "@/features/inventory/WorkshopFabricStock";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -43,9 +44,17 @@ function InventoryPage() {
     ) : (
       <p>Owner access required.</p>
     );
-  return <StockInventory active={nav.activeId} onChange={nav.onChange} />;
+  return <StockInventory active={nav.activeId} onChange={nav.onChange} isOwner={isOwner} />;
 }
-function StockInventory({ active, onChange }: { active: string; onChange: (id: string) => void }) {
+function StockInventory({
+  active,
+  onChange,
+  isOwner,
+}: {
+  active: string;
+  onChange: (id: string) => void;
+  isOwner: boolean;
+}) {
   const [search, setSearch] = useState(""),
     [incomplete, setIncomplete] = useState(false);
   const normalizedActive = active === "consumables" ? "material-stock" : active;
@@ -57,6 +66,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
     "transit",
     "movements",
     "archived",
+    ...(isOwner ? ["corrections"] : []),
   ].includes(normalizedActive)
     ? normalizedActive
     : "fabric-stock";
@@ -73,7 +83,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
       {chosen === "fabric-stock" && <FabricStockSummary />}
       <Tabs value={chosen} onValueChange={onChange}>
         <TabsList
-          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-4 xl:grid-cols-7"
+          className="mt-4 grid h-auto w-full grid-cols-2 gap-1 p-1.5 md:grid-cols-4 xl:grid-cols-8"
           aria-label="Fabric inventory views"
         >
           {[
@@ -84,6 +94,7 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
             ["transit", "Transit"],
             ["movements", "Stock movements"],
             ["archived", "Depleted / archived"],
+            ...(isOwner ? [["corrections", "Stock corrections"]] : []),
           ].map(([id, label]) => (
             <TabsTrigger key={id} value={id!} className="min-h-11 whitespace-normal px-2">
               {label}
@@ -116,6 +127,11 @@ function StockInventory({ active, onChange }: { active: string; onChange: (id: s
         <TabsContent value="archived">
           <FabricArchive />
         </TabsContent>
+        {isOwner ? (
+          <TabsContent value="corrections">
+            <OwnerStockCorrection />
+          </TabsContent>
+        ) : null}
       </Tabs>
     </>
   );

@@ -6,14 +6,25 @@ export function useCustomers(enabled = true) {
     queryKey: ["customers"],
     enabled,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select(
-          "*, sales(id, bill_no, total_paise, created_at), tailoring_jobs(id, code, garment, status)",
-        )
-        .order("name");
-      if (error) throw error;
-      return data ?? [];
+      const [list, activity] = await Promise.all([
+        supabase.from("customers").select("*").order("name"),
+        supabase.rpc("owner_customer_activity"),
+      ]);
+      if (list.error) throw list.error;
+      if (activity.error) throw activity.error;
+      // Bills and tailoring jobs come from the current order tables, not the retired legacy ones.
+      const byCustomer = new Map((activity.data ?? []).map((row) => [row.customer_id, row]));
+      return (list.data ?? []).map((customer) => {
+        const row = byCustomer.get(customer.id);
+        return {
+          ...customer,
+          bill_count: row?.bill_count ?? 0,
+          spend_paise: Number(row?.spend_paise ?? 0),
+          last_bill_at: row?.last_bill_at ?? null,
+          tailoring_jobs: row?.tailoring_jobs ?? 0,
+          open_tailoring_jobs: row?.open_tailoring_jobs ?? 0,
+        };
+      });
     },
   });
 }
