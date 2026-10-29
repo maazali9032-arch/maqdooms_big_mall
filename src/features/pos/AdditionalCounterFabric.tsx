@@ -43,7 +43,11 @@ export function AdditionalCounterFabric({
   canIssue: boolean;
 }) {
   const qc = useQueryClient();
-  const [job, setJob] = useState(work.jobs.length === 1 ? work.jobs[0]!.id : "");
+  // Customer orders: only the scanned J order can receive extra fabric.
+  const jobOnly = work.kind === "customer";
+  const [job, setJob] = useState(
+    jobOnly ? (work.issueJobId ?? "") : work.jobs.length === 1 ? work.jobs[0]!.id : "",
+  );
   const [quantity, setQuantity] = useState("");
   const [cutUnit, setCutUnit] = useState<FabricCutUnit>("m");
   const [pending, setPending] = useState<Issue | null>(null);
@@ -123,6 +127,18 @@ export function AdditionalCounterFabric({
       toast.error(e instanceof Error ? e.message : "Check the issue details");
     }
   }
+  if (jobOnly && !work.issueJobId)
+    return (
+      <Panel
+        title="Extra fabric"
+        description="Extra fabric for customer stitching is issued only against its J work order."
+      >
+        <p role="status" className="text-sm">
+          You scanned a bill or a garment label. To issue extra fabric, scan the J work order slip
+          of the garment that needs it.
+        </p>
+      </Panel>
+    );
   return (
     <Panel
       title={
@@ -135,7 +151,7 @@ export function AdditionalCounterFabric({
       }
     >
       <fieldset className="space-y-3" disabled={frozen || disabled}>
-        {work.jobs.length > 1 && (
+        {!jobOnly && work.jobs.length > 1 && (
           <label className="block text-sm">
             Tailoring job receiving this fabric
             <select

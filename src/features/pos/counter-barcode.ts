@@ -19,7 +19,18 @@ export type CounterJob = {
   /** Customer stitching only: one row per garment, with its C label once printed. */
   garments?: StitchingGarment[];
 };
-export type CounterWork = { kind: "customer" | "production"; code: string; jobs: CounterJob[] };
+export type CounterWork = {
+  kind: "customer" | "production";
+  code: string;
+  jobs: CounterJob[];
+  /** Exactly what was scanned, so a refresh reloads the same context. */
+  scannedCode: string;
+  /**
+   * Customer orders: the J order that was scanned itself. Extra fabric can be issued only
+   * then — never after scanning the B bill or a C garment label.
+   */
+  issueJobId?: string;
+};
 export type CounterBarcode =
   | { kind: "item"; item: ScanRecord }
   | { kind: "document"; work: CounterWork | null; receipt: CounterReceipt | null };
@@ -59,12 +70,24 @@ export async function resolveCounterBarcode(code: string): Promise<CounterBarcod
       receipt = linked.data as unknown as CounterReceipt | null;
     }
   }
+  const scannedJob =
+    jobs.length === 1 && !bill.data
+      ? jobs.find((j) =>
+          [j.code, j.scan_code, j.id].some((c) => c?.toUpperCase() === value.toUpperCase()),
+        )
+      : undefined;
   return {
     kind: "document",
     work: jobs.length
-      ? { kind: "customer", code: receipt?.code ?? value, jobs }
+      ? {
+          kind: "customer",
+          code: receipt?.code ?? value,
+          jobs,
+          scannedCode: value,
+          issueJobId: scannedJob?.id,
+        }
       : job
-        ? { kind: "production", code: job.code, jobs: [job] }
+        ? { kind: "production", code: job.code, jobs: [job], scannedCode: value }
         : null,
     receipt,
   };

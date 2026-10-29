@@ -19,6 +19,7 @@ import { useSuppliers } from "@/features/inventory";
 import { PickOrTypeInput } from "@/shared/components/pick-or-type";
 import { Panel } from "@/shared/components/page";
 import { QueryState } from "@/shared/components/query-state";
+import { CompactPicker } from "@/shared/components/compact-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -532,25 +533,24 @@ export function StockRegistration() {
                 ]);
               }}
             />
-            <select
-              aria-label="Previous batch"
-              className="h-11 w-full rounded border bg-background p-2"
+            <CompactPicker
+              ariaLabel="Previous batch"
+              placeholder="Select a batch to resume printing"
+              emptyText="No batch matches"
               value={previousBatchKey}
               disabled={frozen}
-              onChange={(e) => setPreviousBatchKey(e.target.value)}
-            >
-              <option value="">Select a batch to resume printing</option>
-              {previousBatches.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.code} / {item.provider || "No supplier"} ·{" "}
-                  {item.kind === "fabric"
+              onChange={setPreviousBatchKey}
+              options={previousBatches.map((item) => ({
+                value: item.key,
+                label: `${item.code} / ${item.provider || "No supplier"} · ${
+                  item.kind === "fabric"
                     ? "Fabric"
                     : item.kind === "materials"
                       ? "Materials"
-                      : "Ready-made"}
-                </option>
-              ))}
-            </select>
+                      : "Ready-made"
+                }`,
+              }))}
+            />
             <Button
               variant="outline"
               className="mt-2"

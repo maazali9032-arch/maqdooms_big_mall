@@ -30,7 +30,8 @@ export const Route = createFileRoute("/auth")({
 export function AuthPage() {
   const navigate = useNavigate();
   const { signingOut, logoutError, signOut } = useSession();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const [resetSent, setResetSent] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -41,6 +42,15 @@ export function AuthPage() {
     if (signingOut || logoutError) return;
     setBusy(true);
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        // Same message whether or not the email has an account.
+        setResetSent(true);
+        return;
+      }
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -124,11 +134,16 @@ export function AuthPage() {
             Secure staff access
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            {mode === "signin" ? "Staff sign in" : "Create staff account"}
+            {mode === "signin"
+              ? "Staff sign in"
+              : mode === "signup"
+                ? "Create staff account"
+                : "Reset your password"}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            The first account created becomes the Owner. Later accounts start as Counter staff until
-            the owner assigns roles.
+            {mode === "forgot"
+              ? "Enter your staff email. We will send a link to set a new password."
+              : "The first account created becomes the Owner. Later accounts start as Counter staff until the owner assigns roles."}
           </p>
 
           {signingOut && (
@@ -170,41 +185,81 @@ export function AuthPage() {
                   className="h-11"
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                  className="h-11"
-                />
-              </div>
+              {mode === "forgot" && resetSent && (
+                <p role="status" className="rounded-md border bg-muted/40 p-3 text-sm">
+                  If an account exists for {email.trim()}, a reset link is on its way. Check the
+                  inbox and spam folder. The link works once and expires after a short time.
+                </p>
+              )}
+              {mode !== "forgot" && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    {mode === "signin" && (
+                      <button
+                        type="button"
+                        className="text-xs text-primary underline-offset-4 hover:underline"
+                        onClick={() => {
+                          setMode("forgot");
+                          setResetSent(false);
+                          setPassword("");
+                        }}
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    className="h-11"
+                  />
+                </div>
+              )}
               <Button type="submit" disabled={busy} className="h-11 w-full">
-                {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+                {busy
+                  ? "Please wait…"
+                  : mode === "signin"
+                    ? "Sign in"
+                    : mode === "signup"
+                      ? "Create account"
+                      : resetSent
+                        ? "Send the link again"
+                        : "Send reset link"}
               </Button>
             </form>
 
-            <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span className="h-px flex-1 bg-border" /> or{" "}
-              <span className="h-px flex-1 bg-border" />
-            </div>
+            {mode !== "forgot" && (
+              <>
+                <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" /> or{" "}
+                  <span className="h-px flex-1 bg-border" />
+                </div>
 
-            <Button variant="outline" className="h-11 w-full" onClick={google}>
-              Continue with Google
-            </Button>
+                <Button variant="outline" className="h-11 w-full" onClick={google}>
+                  Continue with Google
+                </Button>
+              </>
+            )}
 
             <button
               type="button"
               className="mt-6 w-full text-center text-sm text-primary underline-offset-4 hover:underline"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              onClick={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setResetSent(false);
+              }}
             >
               {mode === "signin"
                 ? "No account yet? Create one"
-                : "Already have an account? Sign in"}
+                : mode === "forgot"
+                  ? "Back to sign in"
+                  : "Already have an account? Sign in"}
             </button>
           </fieldset>
         </div>

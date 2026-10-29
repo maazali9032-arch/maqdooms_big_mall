@@ -221,6 +221,13 @@ function CounterContent({
         return;
       }
       if (work) {
+        if (work.kind === "customer" && !work.issueJobId) {
+          toast.error(
+            "Extra fabric is issued only against the J work order. Scan the garment's J slip, not the bill or a label.",
+          );
+          setBarcode("");
+          return;
+        }
         if (choices.length !== 1) {
           setAmbiguous(record);
           toast.info("Choose the Showroom floor holding this fabric");
@@ -401,7 +408,7 @@ function CounterContent({
     if (!work) return;
     const version = contextVersion.current;
     try {
-      const result = await resolveCounterBarcode(work.code);
+      const result = await resolveCounterBarcode(work.scannedCode);
       if (version !== contextVersion.current) return;
       if (result.kind === "document") {
         setWork(result.work);
@@ -522,7 +529,9 @@ function CounterContent({
         title="Scan item, customer bill, tailor work order or Production ID"
         description={
           work
-            ? "Order loaded below. Scan a Thaan next to issue extra fabric."
+            ? work.kind === "customer" && !work.issueJobId
+              ? "Bill loaded below. To issue extra fabric, scan the J work order instead."
+              : "Order loaded below. Scan a Thaan next to issue extra fabric."
             : "Scan any Showroom item. Its recorded floor is attached automatically to this bill."
         }
         actions={
