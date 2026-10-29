@@ -7034,3 +7034,19 @@ Test project: 23/23 role checks passed, including Owner creation, one row for th
 **Customers page totals.** The page counted bills and tailoring jobs from the retired `sales` and `tailoring_jobs`, so every customer showed 0 bills and Rs 0. `20261030000500_owner_customer_activity.sql` adds Owner-only `owner_customer_activity()`; spend is the sum of completed counter bills, which already include tailoring lines (the per-job `customer_tailoring` orders are copies and are not added). On live it reports 9 bills totalling Rs 50,387.13 and 4 tailoring jobs across 11 customers, matching the orders table exactly.
 
 All three were applied on the test project first (32/32 role checks), dry-run on live, then applied and recorded in both ledgers (SHA-256 `c9f911dded905950…`, `b7d668aeb0c37973…`, `8c01894916630cc0…`). Not changed: the WhatsApp receipt preview still reads the empty legacy `sales` table.
+
+# 98. E-COMMERCE ADMIN FOUNDATION (PHASE A) — 29 OCTOBER 2026
+
+Owner decisions recorded before building: one product page per design with many scanned identical pieces (sizes may differ); garment online price is always the showroom SP; fabric is shown enquire-only with a staff-set "from" price per metre, because fabric has no stored SP (Counter prices each cut); the first release offers "Order on WhatsApp" only (no online payments or stock holds); each category belongs to exactly one section, Main store or Mahib; sold-out products keep their page; the Orders, Shipping, Returns and Customers & Loyalty tabs stay as placeholders; revenue stays on the Owner dashboard.
+
+Migration `20261030000600_ecommerce_admin_foundation.sql` (additive):
+- removes the four September demo listings (never published, no stock linked);
+- adds `ecommerce_categories` (section, name, slug, description, banner, order, hidden; a category with products cannot be deleted) and, on `listings`, `category_id`, `thumbnail_path` (must be one of the ≤6 photos), `featured_in_category` with `featured_rank`, `home_featured` (unique per category) and `updated_at`; `price_paise` is now the fabric display price only;
+- adds `ecommerce_settings` with the shop WhatsApp number 919610415415;
+- creates the public `ecommerce-images` bucket (public read; upload, change and delete need `ecommerce.manage_listings`);
+- adds internal helpers (`resolve_stock_barcode`, `ecom_piece_facts`, `ecom_thaan_facts`, `ecom_listing_offer`) that derive sizes, SP and pieces left from the stock ledger, never stored;
+- adds staff functions (`ecom_categories_admin`, `ecom_save_category`, `ecom_delete_category`, `ecom_scan`, `ecom_create_product`, `ecom_add_stock`, `ecom_remove_stock`, `ecom_save_product`, `ecom_set_published`, `ecom_set_featured`, `ecom_set_home_featured`, `ecom_archive_product`, `ecom_catalogue_admin`, `ecom_product_admin`, `ecom_settings_admin`, `ecom_save_settings`), all requiring `ecommerce.manage_listings`; only identical pieces (same product and design) can share a page, a piece can be on one page only, and publishing needs a category, a photo and linked stock;
+- adds public storefront functions (`storefront_settings`, `storefront_categories`, `storefront_products`, `storefront_home_featured`, `storefront_product`) returning shopper-safe fields only;
+- adds row audit to categories and both listing link tables.
+
+Test project: 45/45 role checks. Live: dry run then apply with 25 in-transaction checks, recorded in both ledgers (SHA-256 `cfcdaf9461685b7c…`). Inside an always-undone savepoint the live checks ran the full flow on real stock: two identical Kurta Pajama pieces (size 40, Rs 1,500) on one page, a different design refused, published and home-featured, visitor view without barcodes, floors or costs, and "left" dropping from 2 to 1 after one piece left the floor. Afterwards live had 0 categories, 0 listings and an unchanged 263 stock movements.
