@@ -30,6 +30,8 @@ import {
   type ProductDetail,
 } from "./admin-api";
 import { AiSuggestButton } from "./AiSuggestButton";
+import { ImageCropDialog } from "@/shared/components/image-crop-dialog";
+import { IMAGE_SPECS } from "@/shared/utils/image-pipeline";
 
 const selectClass = "h-11 w-full rounded-md border border-input bg-background px-3 text-sm";
 
@@ -86,33 +88,34 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
     onClose();
   };
 
-  const addPhotos = async (files: FileList | null) => {
+  // Picked photos wait here and are cropped to 4:5 one at a time.
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+
+  const addPhotos = (files: FileList | null) => {
     if (!files || !form) return;
     const room = 6 - form.images.length;
+    if (fileInput.current) fileInput.current.value = "";
     if (room <= 0) {
       toast.error("Up to 6 photos per product");
       return;
     }
+    if (files.length > room) toast.message(`Only ${room} more photo(s) fit; the rest were skipped`);
+    setCropQueue([...files].slice(0, room));
+  };
+
+  const uploadCropped = async (cropped: File[]) => {
+    setCropQueue((q) => q.slice(1));
     setUploading(true);
     try {
-      const added: string[] = [];
-      for (const file of [...files].slice(0, room)) {
-        const path = await uploadProductPhoto(productId, file);
-        unsaved.current.add(path);
-        added.push(path);
-      }
+      const path = await uploadProductPhoto(productId, cropped);
+      unsaved.current.add(path);
       setForm((f) =>
-        f
-          ? { ...f, images: [...f.images, ...added], thumbnail: f.thumbnail ?? added[0] ?? null }
-          : f,
+        f ? { ...f, images: [...f.images, path], thumbnail: f.thumbnail ?? path } : f,
       );
-      if (files.length > room)
-        toast.message(`Only ${room} more photo(s) fit; the rest were skipped`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   };
 
@@ -325,7 +328,7 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                   accept="image/jpeg,image/png,image/webp"
                   multiple
                   className="hidden"
-                  onChange={(e) => void addPhotos(e.target.files)}
+                  onChange={(e) => addPhotos(e.target.files)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -501,6 +504,17 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
               </Button>
             </section>
           </div>
+        ) : null}
+        {cropQueue[0] ? (
+          <ImageCropDialog
+            key={cropQueue[0].name + cropQueue[0].lastModified}
+            file={cropQueue[0]}
+            aspect={IMAGE_SPECS.ecommerce.aspect}
+            outputs={IMAGE_SPECS.ecommerce.outputs}
+            title={`Crop website photo (4:5) — ${cropQueue.length} left`}
+            onCancel={() => setCropQueue((q) => q.slice(1))}
+            onDone={(files) => void uploadCropped(files)}
+          />
         ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={close}>

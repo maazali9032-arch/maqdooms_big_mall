@@ -111,9 +111,10 @@ async function unwrap<T>(
   return data as T;
 }
 
-export function publicImageUrl(path: string | null | undefined) {
+export function publicImageUrl(path: string | null | undefined, size: "large" | "card" = "large") {
   if (!path) return null;
-  return supabase.storage.from(ECOMMERCE_BUCKET).getPublicUrl(path).data.publicUrl;
+  const target = size === "card" ? cardPath(path) : path;
+  return supabase.storage.from(ECOMMERCE_BUCKET).getPublicUrl(target).data.publicUrl;
 }
 
 export function useCategories() {
@@ -259,24 +260,42 @@ export function useEcomAction() {
   };
 }
 
-const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+// Photos arrive already cropped to 4:5 and compressed by the image pipeline:
+// [large 1600x2000, card 600x750], WebP (or JPEG where WebP encoding is unavailable).
+const ALLOWED = ["image/webp", "image/jpeg"];
 
-/** Uploads one photo into the product's own folder and returns its storage path. */
-export async function uploadProductPhoto(listingId: string, file: File): Promise<string> {
-  if (!ALLOWED.includes(file.type)) throw new Error("Use a JPEG, PNG or WebP photo");
-  if (file.size > 10 * 1024 * 1024) throw new Error("Each photo must be under 10 MB");
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+/** The grid-card copy sits next to the large photo: a/b.webp -> a/b.card.webp */
+export function cardPath(path: string) {
+  return path.replace(/(\.[a-z]+)$/, ".card$1");
+}
+
+/** Uploads both sizes of one cropped photo; returns the large photo's path (stored on the product). */
+export async function uploadProductPhoto(listingId: string, files: File[]): Promise<string> {
+  const [large, card] = files;
+  if (!large || !card) throw new Error("The photo must be processed before upload");
+  for (const f of files) {
+    if (!ALLOWED.includes(f.type)) throw new Error("The photo must be processed before upload");
+    if (f.size > 2 * 1024 * 1024) throw new Error("Processed photo is over 2 MB; try again");
+  }
+  const ext = large.type === "image/webp" ? "webp" : "jpg";
   const path = `${listingId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage
-    .from(ECOMMERCE_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(error.message);
+  const bucket = supabase.storage.from(ECOMMERCE_BUCKET);
+  const first = await bucket.upload(path, large, { contentType: large.type, upsert: false });
+  if (first.error) throw new Error(first.error.message);
+  const second = await bucket.upload(cardPath(path), card, {
+    contentType: card.type,
+    upsert: false,
+  });
+  if (second.error) {
+    await bucket.remove([path]);
+    throw new Error(second.error.message);
+  }
   return path;
 }
 
 export async function deleteProductPhotos(paths: string[]) {
   if (!paths.length) return;
-  await supabase.storage.from(ECOMMERCE_BUCKET).remove(paths);
+  await supabase.storage.from(ECOMMERCE_BUCKET).remove(paths.flatMap((p) => [p, cardPath(p)]));
 }
 
 export function priceLabel(offer: Offer, format: (paise: number) => string) {

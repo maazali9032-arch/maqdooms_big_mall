@@ -114,7 +114,7 @@ export function ProductCatalogue({ onPublishNew }: { onPublishNew: () => void })
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {rows.map((p) => {
-          const thumb = publicImageUrl(p.thumbnail);
+          const thumb = publicImageUrl(p.thumbnail, "card");
           return (
             <article key={p.id} className="overflow-hidden rounded-xl border bg-card shadow-sm">
               <div className="aspect-[4/3] bg-muted">
