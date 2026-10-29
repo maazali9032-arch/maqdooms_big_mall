@@ -26,6 +26,7 @@ import { AdditionalCounterFabric } from "./AdditionalCounterFabric";
 import { FinishedProductExchange } from "./FinishedProductExchange";
 import { DefectiveReturnWorkflow } from "./DefectiveReturnWorkflow";
 import { counterPayment } from "./counter-payment";
+import { CustomerStitchingDelivery } from "./CustomerStitchingDelivery";
 import { resolveCounterBarcode, type CounterWork } from "./counter-barcode";
 import {
   reserveTotals,
@@ -34,6 +35,11 @@ import {
   gstPreview,
   tailoringAmounts,
   availableAt,
+  garmentsError,
+  isLooseRow,
+  resizeGarments,
+  LOOSE_SUFFIX,
+  MAX_GARMENTS,
   type CounterRow,
   type ScanRecord,
   type TailoringGroup,
@@ -63,7 +69,7 @@ const blankGroup = () => ({
   factory: "",
   assignment: "",
   sp: "",
-  size: "",
+  garments: [{ size: "", notes: "" }],
   design: "",
   customDesign: "",
   notes: "",
@@ -266,11 +272,22 @@ function CounterContent({
       setAmbiguous(null);
       return;
     }
-    const key = record.kind === "product" ? record.id! : `${cut!.inventory_item_id}:${source.id}`;
-    if (rows.some((r) => r.key === key)) {
-      toast.info("This barcode is already listed");
-      setBarcode("");
-      return;
+    let key = record.kind === "product" ? record.id! : `${cut!.inventory_item_id}:${source.id}`;
+    const first = rows.find((r) => r.key === key);
+    if (first) {
+      // A roll may be scanned a second time only for loose metres, after its first line is marked for stitching.
+      const markedForStitching = record.kind === "fabric" && (first.selected || !!first.group);
+      if (!markedForStitching || rows.some((r) => r.key === key + LOOSE_SUFFIX)) {
+        toast.info(
+          record.kind === "fabric" && !markedForStitching
+            ? "This roll is already listed. Mark it for stitching first to add loose metres from the same roll."
+            : "This barcode is already listed",
+        );
+        setBarcode("");
+        return;
+      }
+      key += LOOSE_SUFFIX;
+      toast.info("Same roll added again as loose fabric");
     }
     setRows([
       ...rows,
@@ -401,12 +418,13 @@ function CounterContent({
       if (!form.delivery) throw new Error("Select a delivery date before adding the tailoring job");
       if (
         !form.garment.trim() ||
-        !form.size.trim() ||
         !form.assignment ||
         !form.sp.trim() ||
         fabricMoneyInput(form.sp) <= 0
       )
-        throw new Error("Enter garment, size, factory, master tailor and selling price");
+        throw new Error("Enter garment, factory, master tailor and selling price");
+      const garmentProblem = garmentsError(form.garments);
+      if (garmentProblem) throw new Error(garmentProblem);
       const group = { ...form, id: crypto.randomUUID(), keys: selected.map((r) => r.key) };
       counterPayload(
         selected.map((r) => ({ ...r, group: group.id })),
@@ -556,6 +574,16 @@ function CounterContent({
           canIssue={canIssue}
         />
       )}
+      {work?.kind === "customer" && (
+        <CustomerStitchingDelivery
+          jobs={work.jobs}
+          receipt={receipt}
+          isOwner={isOwner}
+          canDeliver={canSell}
+          disabled={frozen || scan.isPending}
+          onDelivered={() => void refreshWork()}
+        />
+      )}
       {!work && !receipt && (
         <>
           <Panel
@@ -571,7 +599,7 @@ function CounterContent({
                   >
                     <div className="col-span-2 min-w-0 md:col-span-1">
                       <div className="flex items-start gap-2">
-                        {r.scan.kind === "fabric" && !r.group && canTailor && (
+                        {r.scan.kind === "fabric" && !r.group && !isLooseRow(r) && canTailor && (
                           <input
                             aria-label={`Select ${r.scan.barcode} for tailoring`}
                             type="checkbox"
@@ -582,6 +610,11 @@ function CounterContent({
                         )}
                         <div className="min-w-0">
                           <strong className="text-sm">{r.scan.name}</strong>
+                          {isLooseRow(r) && (
+                            <span className="ml-2 rounded border px-1.5 py-0.5 text-[11px]">
+                              Loose · same roll
+                            </span>
+                          )}
                           <p className="break-all font-mono text-xs text-muted-foreground">
                             {r.scan.barcode}
                           </p>
@@ -703,25 +736,36 @@ function CounterContent({
                       />
                     </label>
                     <label className="text-sm">
-                      Selling price (SP) ₹
+                      Order SP ₹ (all garments together)
                       <Input
-                        aria-label="Tailored garment selling price"
+                        aria-label="Tailoring order selling price"
                         inputMode="decimal"
                         value={form.sp}
                         onChange={(e) => setForm({ ...form, sp: e.target.value })}
-                        placeholder="Final customer price"
+                        placeholder="Final customer price for the whole order"
                       />
                     </label>
                     <label className="text-sm">
-                      Size
+                      Number of garments
                       <Input
-                        aria-label="Tailored garment size"
-                        maxLength={60}
-                        value={form.size}
-                        onChange={(e) => setForm({ ...form, size: e.target.value })}
-                        placeholder="For example: 38 or 40"
+                        aria-label="Number of garments"
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={MAX_GARMENTS}
+                        value={form.garments.length}
+                        onChange={(e) =>
+                          setForm({
+                            ...form,
+                            garments: resizeGarments(form.garments, Number(e.target.value)),
+                          })
+                        }
                       />
                     </label>
+                    <GarmentRows
+                      garments={form.garments}
+                      onChange={(garments) => setForm({ ...form, garments })}
+                    />
                     <label className="text-sm">
                       Design (optional)
                       <select
@@ -790,7 +834,9 @@ function CounterContent({
                         {g.keys.length} fabrics · Delivery {g.delivery}
                       </p>
                       <p>
-                        Size {g.size} · SP {amounts ? reportMoney(String(amounts.total)) : "—"}
+                        {g.garments.length} {g.garments.length === 1 ? "garment" : "garments"} ·
+                        Size {g.garments.map((x) => x.size.trim()).join(", ")} · Order SP{" "}
+                        {amounts ? reportMoney(String(amounts.total)) : "—"}
                       </p>
                     </div>
                     <Button
@@ -1168,6 +1214,59 @@ function CounterContent({
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function GarmentRows({
+  garments,
+  onChange,
+}: {
+  garments: { size: string; notes: string }[];
+  onChange: (garments: { size: string; notes: string }[]) => void;
+}) {
+  const set = (index: number, change: Partial<{ size: string; notes: string }>) =>
+    onChange(garments.map((g, i) => (i === index ? { ...g, ...change } : g)));
+  return (
+    <div className="space-y-2 sm:col-span-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium">Garments in this order</p>
+        {garments.length > 1 && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={!garments[0]?.size.trim()}
+            onClick={() => onChange(garments.map((g) => ({ ...g, size: garments[0]!.size })))}
+          >
+            Use size of garment 1 for all
+          </Button>
+        )}
+      </div>
+      <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+        {garments.map((g, i) => (
+          <div
+            key={i}
+            className="grid grid-cols-[2.5rem_minmax(0,8rem)_minmax(0,1fr)] items-center gap-2"
+          >
+            <span className="text-sm text-muted-foreground">#{i + 1}</span>
+            <Input
+              aria-label={`Size of garment ${i + 1}`}
+              maxLength={60}
+              value={g.size}
+              onChange={(e) => set(i, { size: e.target.value })}
+              placeholder="Size"
+            />
+            <Input
+              aria-label={`Notes for garment ${i + 1}`}
+              maxLength={300}
+              value={g.notes}
+              onChange={(e) => set(i, { notes: e.target.value })}
+              placeholder="Notes for this garment (optional)"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

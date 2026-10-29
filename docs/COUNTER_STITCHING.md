@@ -1,3 +1,5 @@
+> **Current flow (29 October 2026):** one J order can hold several garments (one row each with size and notes) and one total order SP. Stages: Started at billing → Completed when the Master Tailor submits → Delivery Ready when the godown prints one C label per garment (the order SP split equally) → Delivered at the Counter once the bill balance is zero (Owner override needs a reason). See section 101 of the implementation history. The text below is the earlier pricing note.
+
 Counter tailoring now adds the entire job's stitching charge to its selected
 fabric sale prices. Fabric remains priced per metre; finished products retain
 their saved fixed SP. The Owner-approved example is 5 m × ₹100 = ₹500, and

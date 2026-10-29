@@ -64,6 +64,7 @@ export function fabricCutQuantityMm(value: string, unit: FabricCutUnit) {
     throw new Error("Enter a valid cut quantity");
   return millimetres;
 }
+export type GarmentRow = { size: string; notes: string };
 export type TailoringGroup = {
   id: string;
   keys: string[];
@@ -71,14 +72,36 @@ export type TailoringGroup = {
   delivery: string;
   factory: string;
   assignment: string;
+  /** One total SP for the whole order; the godown splits it across the garments. */
   sp: string;
-  size: string;
+  garments: GarmentRow[];
   design?: string;
   customDesign?: string;
   notes?: string;
 };
+export const MAX_GARMENTS = 50;
+/** Key suffix for the loose-fabric line of a roll that is also cut for stitching. */
+export const LOOSE_SUFFIX = ":loose";
+export function isLooseRow(row: CounterRow) {
+  return row.key.endsWith(LOOSE_SUFFIX);
+}
 export function availableAt(row: CounterRow) {
   return Number(row.cut?.locations.find((l) => l.id === row.source.id)?.quantity_mm ?? 0);
+}
+/** Resizes the garment list, keeping what was already typed. */
+export function resizeGarments(garments: GarmentRow[], count: number) {
+  const n = Math.min(Math.max(Math.trunc(count) || 1, 1), MAX_GARMENTS);
+  return Array.from({ length: n }, (_, i) => garments[i] ?? { size: "", notes: "" });
+}
+export function garmentsError(garments: GarmentRow[]) {
+  if (!garments.length || garments.length > MAX_GARMENTS)
+    return `Enter 1 to ${MAX_GARMENTS} garments`;
+  const missing = garments.findIndex((g) => !g.size.trim());
+  if (missing >= 0) return `Enter the size for garment ${missing + 1}`;
+  if (garments.some((g) => g.size.trim().length > 60)) return "Sizes can be up to 60 characters";
+  if (garments.some((g) => g.notes.trim().length > 300))
+    return "Garment notes can be up to 300 characters";
+  return null;
 }
 export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
   if (!rows.length) throw new Error("Scan at least one item");
@@ -91,6 +114,20 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
         return [r.key, mm];
       }),
   );
+  // The same roll may appear twice (stitching + loose); together they must fit the roll.
+  const perRoll = new Map<string, number>();
+  for (const r of rows) {
+    if (r.scan.kind !== "fabric") continue;
+    const base = isLooseRow(r) ? r.key.slice(0, -LOOSE_SUFFIX.length) : r.key;
+    if (isLooseRow(r) && !rows.find((x) => x.key === base)?.group)
+      throw new Error(
+        `${r.scan.barcode}: a second line from the same roll is allowed only when the first line is added to a stitching job`,
+      );
+    const total = (perRoll.get(base) ?? 0) + quantities.get(r.key)!;
+    if (total > availableAt(r))
+      throw new Error(`${r.scan.barcode}: stitching and loose metres together exceed the roll`);
+    perRoll.set(base, total);
+  }
   const items = rows
     .filter((r) => !r.group)
     .map((r) =>
@@ -112,7 +149,6 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
   const tailoring = groups.map((g) => {
     if (
       !g.garment.trim() ||
-      !g.size.trim() ||
       !g.delivery ||
       !g.assignment ||
       !g.sp.trim() ||
@@ -120,8 +156,12 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
       !g.keys.length
     )
       throw new Error(
-        "Enter garment, size, delivery date, factory, tailor and selling price for each tailoring job",
+        "Enter garment, delivery date, factory, tailor and selling price for each tailoring job",
       );
+    const garmentProblem = garmentsError(g.garments);
+    if (garmentProblem) throw new Error(garmentProblem);
+    if (fabricMoneyInput(g.sp) < g.garments.length)
+      throw new Error("The order SP is too small to split across its garments");
     return {
       items: g.keys.map((key) => {
         const r = rows.find((r) => r.key === key && r.group === g.id);
@@ -136,7 +176,10 @@ export function counterPayload(rows: CounterRow[], groups: TailoringGroup[]) {
       delivery_date: g.delivery,
       assignment_id: g.assignment,
       sp_paise: fabricMoneyInput(g.sp),
-      size: g.size.trim(),
+      garments: g.garments.map((x) => ({
+        size: x.size.trim(),
+        ...(x.notes.trim() ? { notes: x.notes.trim() } : {}),
+      })),
       ...(g.design ? { design_id: g.design === "custom" ? null : g.design } : {}),
       ...(g.design === "custom" ? { custom_design: g.customDesign?.trim() } : {}),
       ...(g.notes?.trim() ? { notes: g.notes.trim() } : {}),

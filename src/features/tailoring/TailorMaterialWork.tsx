@@ -8,6 +8,7 @@ import { BarcodeEntry } from "@/shared/components/barcode-entry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Panel, StatCard } from "@/shared/components/page";
+import { stitchingStatusLabel } from "./stitching-status";
 
 type Work = {
   id: string;
@@ -87,7 +88,11 @@ function MasterTailorConsumption() {
       setStaff("");
       setLines([{ key: crypto.randomUUID(), barcode: "", quantity: "" }]);
       void qc.invalidateQueries();
-      toast.success("Job consumption submitted permanently");
+      toast.success(
+        job.data?.kind === "customer_tailoring"
+          ? "Submitted. The customer order is now Completed and can go to the godown."
+          : "Job consumption submitted permanently",
+      );
     },
     onError: (error) => toast.error(error.message),
   });
@@ -120,7 +125,9 @@ function MasterTailorConsumption() {
             </strong>
             <p className="text-sm text-muted-foreground">
               {job.data.kind === "production" ? "Own production" : "Customer stitching"} ·{" "}
-              {job.data.status}
+              {job.data.kind === "production"
+                ? job.data.status
+                : stitchingStatusLabel(job.data.status)}
             </p>
           </div>
           <label className="block text-sm">

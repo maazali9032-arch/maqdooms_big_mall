@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/shared/utils/format";
 import { reportInteger, reportMoney, reportQuantity } from "@/features/reports/report-value";
 import { CounterBillReceipt, type CounterReceipt } from "@/features/pos/CounterBillReceipt";
+import { stitchingStatusLabel, type StitchingGarment } from "./stitching-status";
 type Job = {
   id: string;
   code: string;
@@ -31,6 +32,7 @@ type Job = {
   total_paise: string | null;
   cp_paise: string | null;
   paid: boolean | null;
+  garments?: StitchingGarment[];
   fabrics: {
     barcode: string;
     name: string;
@@ -43,13 +45,9 @@ type Job = {
   }[];
 };
 export function CustomerTailoringWork() {
-  const { isOwner, roles, can } = useSession();
+  const { isOwner, roles } = useSession();
   const allowed = isOwner || roles.includes("counter") || roles.includes("tailor");
   const mayBill = isOwner || roles.includes("counter");
-  const mayProgress =
-    isOwner ||
-    can("tailoring.manage_jobs") ||
-    (roles.includes("counter") && can("pos.issue_to_tailoring"));
   const qc = useQueryClient();
   const [search, setSearch] = useState(""),
     [selected, setSelected] = useState(""),
@@ -70,7 +68,7 @@ export function CustomerTailoringWork() {
     },
     onSuccess: () => {
       void qc.invalidateQueries();
-      toast.success("Job status saved");
+      toast.success("Order cancelled");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -130,7 +128,7 @@ export function CustomerTailoringWork() {
                 </span>
               </span>
               <span>
-                {j.status.replace("_", " ")}
+                {stitchingStatusLabel(j.status)}
                 {j.delivery_date ? " · Due " + j.delivery_date : ""}
               </span>
             </button>
@@ -156,8 +154,28 @@ export function CustomerTailoringWork() {
               Created {formatDateTime(job.created_at)} · {job.creator || "User not recorded"}
             </p>
             <p>
-              Delivery: {job.delivery_date || "Not recorded"} · Source: {job.source}
+              Stage: <strong>{stitchingStatusLabel(job.status)}</strong> · Delivery:{" "}
+              {job.delivery_date || "Not recorded"} · Source: {job.source}
             </p>
+            {!!job.garments?.length && (
+              <details open className="rounded border p-3">
+                <summary className="font-semibold">Garments ({job.garments.length})</summary>
+                <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                  {job.garments.map((g) => (
+                    <li key={g.line_no} className="flex flex-wrap justify-between gap-2">
+                      <span>
+                        #{g.line_no} · Size {g.size}
+                        {g.notes ? ` · ${g.notes}` : ""}
+                      </span>
+                      <span className="font-mono text-xs">
+                        {g.barcode ?? "Label not printed"}
+                        {g.sp_paise ? ` · ${reportMoney(g.sp_paise)}` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
             {mayBill && (
               <p>
                 Customer total{" "}
@@ -196,23 +214,21 @@ export function CustomerTailoringWork() {
                 ))}
               </div>
             </details>
-            {mayProgress && (
-              <label className="block">
-                Job status
-                <select
-                  aria-label="Customer job status"
-                  disabled={status.isPending}
-                  className="ml-3 min-h-11 rounded border bg-background p-2"
-                  value={job.status}
-                  onChange={(e) => status.mutate({ p_job: job.id, p_status: e.target.value })}
-                >
-                  {["open", "in_progress", "ready", "delivered", "cancelled"].map((s) => (
-                    <option key={s} value={s}>
-                      {s.replace("_", " ")}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <p className="text-xs text-muted-foreground">
+              Stages move by themselves: Started at billing, Completed when the Master Tailor
+              submits, Delivery Ready when the godown prints the labels, Delivered at the Counter.
+            </p>
+            {isOwner && !["delivered", "cancelled"].includes(job.status) && (
+              <Button
+                variant="outline"
+                disabled={status.isPending}
+                onClick={() => {
+                  if (window.confirm("Cancel this stitching order? This cannot be undone."))
+                    status.mutate({ p_job: job.id, p_status: "cancelled" });
+                }}
+              >
+                Cancel order (Owner)
+              </Button>
             )}
             {mayBill && job.bill_id && (
               <Button

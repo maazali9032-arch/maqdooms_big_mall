@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CounterReceipt } from "./CounterBillReceipt";
 import type { ScanRecord } from "./counter-workspace-model";
 import type { ProductionRecord } from "@/features/tailoring/ProductionDocument";
+import type { StitchingGarment } from "@/features/tailoring/stitching-status";
 
 export type CounterJob = {
   id: string;
@@ -15,6 +16,8 @@ export type CounterJob = {
   tailor?: string;
   delivery_date?: string | null;
   fabrics?: ProductionRecord["fabrics"];
+  /** Customer stitching only: one row per garment, with its C label once printed. */
+  garments?: StitchingGarment[];
 };
 export type CounterWork = { kind: "customer" | "production"; code: string; jobs: CounterJob[] };
 export type CounterBarcode =
@@ -46,7 +49,8 @@ export async function resolveCounterBarcode(code: string): Promise<CounterBarcod
       "This barcode matches different records. Use the exact item, bill or Production ID.",
     );
   if (stock.data) return { kind: "item", item: stock.data as unknown as ScanRecord };
-  if (!matches) throw new Error("No item, customer bill or Production ID matches this barcode");
+  if (!matches)
+    throw new Error("No item, customer bill, garment label or Production ID matches this barcode");
   if (jobs.length && !receipt) {
     const billIds = [...new Set(jobs.map((j) => j.bill_id).filter(Boolean))];
     if (billIds.length === 1) {
