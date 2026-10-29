@@ -1,8 +1,9 @@
 /**
  * Browser-side photo pipeline used before every upload:
  * upright orientation, crop to a fixed shape, resize to a standard size,
- * strip hidden metadata (EXIF/GPS) and encode as WebP (JPEG where the browser
- * cannot encode WebP, e.g. some Safari versions).
+ * strip hidden metadata (EXIF/GPS) and always encode as WebP. Staff can pick any
+ * photo of any size or format the browser can open; nothing is refused up front.
+ * Browsers without native WebP encoding (some Safari versions) use a WebAssembly encoder.
  */
 
 export type CropRect = { sx: number; sy: number; sw: number; sh: number };
@@ -20,11 +21,7 @@ export const IMAGE_SPECS = {
   },
 } as const;
 
-export const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
-
 export async function loadPhoto(file: File): Promise<ImageBitmap | HTMLImageElement> {
-  if (!file.type.startsWith("image/")) throw new Error("Choose a photo");
-  if (file.size > MAX_SOURCE_BYTES) throw new Error("This photo is over 30 MB");
   if (typeof createImageBitmap === "function") {
     try {
       return await createImageBitmap(file, { imageOrientation: "from-image" });
@@ -58,7 +55,7 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-/** Render one crop of the photo at the given output size; WebP first, JPEG fallback. */
+/** Render one crop of the photo at the given output size, always as WebP. */
 export async function renderCrop(
   photo: ImageBitmap | HTMLImageElement,
   crop: CropRect,
@@ -76,10 +73,14 @@ export async function renderCrop(
   ctx.fillRect(0, 0, spec.width, spec.height);
   ctx.drawImage(photo, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, spec.width, spec.height);
   let blob = await toBlob(canvas, "image/webp", spec.quality);
-  if (!blob || blob.type !== "image/webp") blob = await toBlob(canvas, "image/jpeg", spec.quality);
-  if (!blob) throw new Error("The photo could not be processed");
-  const ext = blob.type === "image/webp" ? "webp" : "jpg";
-  return new File([blob], `${baseName}.${ext}`, { type: blob.type });
+  if (!blob || blob.type !== "image/webp") {
+    // No native WebP encoder here: encode the same pixels with WebAssembly (loaded only when needed).
+    const { encode } = await import("@jsquash/webp");
+    const pixels = ctx.getImageData(0, 0, spec.width, spec.height);
+    const bytes = await encode(pixels, { quality: Math.round(spec.quality * 100) });
+    blob = new Blob([bytes], { type: "image/webp" });
+  }
+  return new File([blob], `${baseName}.webp`, { type: "image/webp" });
 }
 
 /** The largest centred crop with the given aspect (width / height). */

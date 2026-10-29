@@ -261,8 +261,7 @@ export function useEcomAction() {
 }
 
 // Photos arrive already cropped to 4:5 and compressed by the image pipeline:
-// [large 1600x2000, card 600x750], WebP (or JPEG where WebP encoding is unavailable).
-const ALLOWED = ["image/webp", "image/jpeg"];
+// [large 1600x2000, card 600x750], always WebP.
 
 /** The grid-card copy sits next to the large photo: a/b.webp -> a/b.card.webp */
 export function cardPath(path: string) {
@@ -273,12 +272,9 @@ export function cardPath(path: string) {
 export async function uploadProductPhoto(listingId: string, files: File[]): Promise<string> {
   const [large, card] = files;
   if (!large || !card) throw new Error("The photo must be processed before upload");
-  for (const f of files) {
-    if (!ALLOWED.includes(f.type)) throw new Error("The photo must be processed before upload");
-    if (f.size > 2 * 1024 * 1024) throw new Error("Processed photo is over 2 MB; try again");
-  }
-  const ext = large.type === "image/webp" ? "webp" : "jpg";
-  const path = `${listingId}/${crypto.randomUUID()}.${ext}`;
+  if (files.some((f) => f.type !== "image/webp"))
+    throw new Error("The photo must be processed before upload");
+  const path = `${listingId}/${crypto.randomUUID()}.webp`;
   const bucket = supabase.storage.from(ECOMMERCE_BUCKET);
   const first = await bucket.upload(path, large, { contentType: large.type, upsert: false });
   if (first.error) throw new Error(first.error.message);

@@ -3,12 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 export type StockImageKind = "thaan" | "finished_product";
 export type StockImageAssignment = { kind: StockImageKind; itemId: string; file: File };
 
-// Photos arrive already cropped and compressed by the image pipeline (WebP, or JPEG fallback).
-const allowed = new Set(["image/webp", "image/jpeg"]);
-
+// Photos arrive already cropped to the standard square and converted to WebP by the image pipeline.
 export function validateStockImage(file: File) {
-  if (!allowed.has(file.type)) throw new Error("The photo must be processed before upload");
-  if (file.size > 1024 * 1024) throw new Error("Processed photo is over 1 MB; try again");
+  if (file.type !== "image/webp") throw new Error("The photo must be processed before upload");
 }
 
 export async function saveStockImages(userId: string, assignments: StockImageAssignment[]) {
@@ -19,8 +16,7 @@ export async function saveStockImages(userId: string, assignments: StockImageAss
     for (const { file } of assignments) {
       if (uploads.has(file)) continue;
       validateStockImage(file);
-      const extension = file.type === "image/webp" ? "webp" : "jpg";
-      const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+      const path = `${userId}/${crypto.randomUUID()}.webp`;
       const { error } = await supabase.storage.from("stock-images").upload(path, file, {
         contentType: file.type,
         upsert: false,
