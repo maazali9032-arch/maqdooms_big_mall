@@ -29,6 +29,7 @@ type Labels = {
   work_recorded: boolean;
   labels_created: boolean;
   total_sp_paise: string | null;
+  quoted_sp_paise: string | null;
   fabric_cp_paise: string;
   consumables_cp_paise: string;
   stitching_cp_paise: string | null;
@@ -230,11 +231,14 @@ export function CustomerTailoringReceipt({
             </table>
           </div>
           <p className="text-sm">
-            Order SP agreed at billing:{" "}
+            Final order SP after the bill discount:{" "}
             <strong>
               {order.total_sp_paise ? reportMoney(order.total_sp_paise) : "Not recorded"}
             </strong>
             {count > 1 ? " · split equally across the garments" : ""}
+            {order.quoted_sp_paise && order.quoted_sp_paise !== order.total_sp_paise
+              ? ` · quoted at billing ${reportMoney(order.quoted_sp_paise)}`
+              : ""}
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">

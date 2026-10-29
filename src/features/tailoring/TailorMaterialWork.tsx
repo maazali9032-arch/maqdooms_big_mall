@@ -44,6 +44,7 @@ function MasterTailorConsumption() {
   const [code, setCode] = useState("");
   const [lookup, setLookup] = useState("");
   const [staff, setStaff] = useState("");
+  const [noMaterial, setNoMaterial] = useState(false);
   const [lines, setLines] = useState<Line[]>([
     { key: crypto.randomUUID(), barcode: "", quantity: "" },
   ]);
@@ -60,10 +61,17 @@ function MasterTailorConsumption() {
     mutationFn: async () => {
       if (!job.data || !staff)
         throw new Error("Scan a job and choose the Tailor Staff who completed it");
-      const p_lines = lines.map((line) => ({
-        barcode: line.barcode.trim().toUpperCase(),
-        quantity: Number(line.quantity),
-      }));
+      // Material is optional: tick "No material used" to submit without any M unit.
+      const p_lines = noMaterial
+        ? []
+        : lines
+            .filter((line) => line.barcode.trim() || line.quantity.trim())
+            .map((line) => ({
+              barcode: line.barcode.trim().toUpperCase(),
+              quantity: Number(line.quantity),
+            }));
+      if (!noMaterial && !p_lines.length)
+        throw new Error('Scan the M units used, or tick "No material was used for this job"');
       if (
         p_lines.some(
           (line) =>
@@ -86,6 +94,7 @@ function MasterTailorConsumption() {
       setLookup("");
       setCode("");
       setStaff("");
+      setNoMaterial(false);
       setLines([{ key: crypto.randomUUID(), barcode: "", quantity: "" }]);
       void qc.invalidateQueries();
       toast.success(
@@ -99,7 +108,7 @@ function MasterTailorConsumption() {
   return (
     <Panel
       title="Record completed work"
-      description="Scan the P production slip or J customer-stitching slip. Then scan the exact M units consumed, enter quantities and credit the Tailor Staff."
+      description="Scan the P production slip or J customer-stitching slip. Credit the Tailor Staff, then scan the exact M units consumed, or tick No material used."
     >
       <BarcodeEntry
         value={code}
@@ -145,7 +154,16 @@ function MasterTailorConsumption() {
               ))}
             </select>
           </label>
-          <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4"
+              checked={noMaterial}
+              onChange={(e) => setNoMaterial(e.target.checked)}
+            />
+            No material was used for this job
+          </label>
+          <div className={noMaterial ? "hidden" : "space-y-2"}>
             <h3 className="font-semibold">Consumed material units</h3>
             {lines.map((line, index) => (
               <div

@@ -241,11 +241,18 @@ export function gstPreview(
             "fabric_sale" | "finished_sale",
           itemRef: `${row.scan.kind === "product" ? "PRODUCT" : "FABRIC"}:${row.scan.name.toUpperCase()}`,
         })),
-      ...groups.map((group) => ({
-        amount: tailoringAmounts(rows, group).total,
-        category: "finished_sale" as const,
-        itemRef: `PRODUCT:${group.garment.trim().toUpperCase()}`,
-      })),
+      // A stitching order is taxed per garment: its SP is split equally (leftover paise on the
+      // last garment) and each garment gets its own slab rate, as the database does.
+      ...groups.flatMap((group) => {
+        const total = tailoringAmounts(rows, group).total;
+        const count = BigInt(Math.max(group.garments.length, 1));
+        const each = total / count;
+        return Array.from({ length: Number(count) }, (_, index) => ({
+          amount: BigInt(index) === count - 1n ? total - each * (count - 1n) : each,
+          category: "finished_sale" as const,
+          itemRef: `PRODUCT:${group.garment.trim().toUpperCase()}`,
+        }));
+      }),
     ];
     const gross = entries.reduce((sum, entry) => sum + entry.amount, 0n);
     const target = discountMode === "amount" ? gross - discountValue : gross;
