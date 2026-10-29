@@ -125,7 +125,7 @@ export function ImageCropDialog({
 
   return (
     <Dialog open onOpenChange={(open) => (!open ? onCancel() : undefined)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
@@ -140,8 +140,9 @@ export function ImageCropDialog({
         ) : null}
         <div
           ref={frame}
-          className="relative w-full touch-none select-none overflow-hidden rounded-lg bg-muted"
-          style={{ aspectRatio: String(aspect) }}
+          className="relative mx-auto w-full touch-none select-none overflow-hidden rounded-lg bg-muted"
+          // The frame shrinks on short screens so the whole dialog, buttons included, stays visible.
+          style={{ aspectRatio: String(aspect), maxWidth: `calc((100dvh - 17rem) * ${aspect})` }}
           onPointerDown={(e) => {
             (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
             drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };

@@ -325,7 +325,7 @@ export function ProductEditor({ productId, onClose }: { productId: string; onClo
                 <input
                   ref={fileInput}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/*"
                   multiple
                   className="hidden"
                   onChange={(e) => addPhotos(e.target.files)}
