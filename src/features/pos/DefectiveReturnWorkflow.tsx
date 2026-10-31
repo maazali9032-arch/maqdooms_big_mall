@@ -24,7 +24,8 @@ export function DefectiveReturnWorkflow({ receipt, disabled }: Props) {
   const eligible = useMemo(
     () =>
       receipt.lines.filter(
-        (line) => line.kind === "product" || line.kind === "fabric" || line.kind === "tailoring",
+        // custom stitched outfits are never taken back as damaged returns
+        (line) => line.kind === "product" || line.kind === "fabric",
       ),
     [receipt.lines],
   );
@@ -43,7 +44,6 @@ export function DefectiveReturnWorkflow({ receipt, disabled }: Props) {
   const [result, setResult] = useState<ReturnResult | null>(null);
   const selected = eligible.find((line) => line.id === lineId);
   const fabric = selected?.kind === "fabric";
-  const tailoring = selected?.kind === "tailoring";
   const submit = useMutation({
     mutationFn: async () => {
       if (!selected || !reason.trim())
@@ -139,7 +139,7 @@ export function DefectiveReturnWorkflow({ receipt, disabled }: Props) {
               }
             >
               <option value="refund">Refund / credit note</option>
-              {!fabric && !tailoring ? <option value="exchange">Exchange</option> : null}
+              {!fabric ? <option value="exchange">Exchange</option> : null}
               <option value="repair">Repair</option>
             </select>
           </label>

@@ -20,10 +20,21 @@ type Work = {
   units: { id: string; barcode: string; material: string; remaining: number; unit: string }[];
 };
 type Line = { key: string; barcode: string; quantity: string };
+/** Equal shares that add up to exactly 100 (the last person takes the rounding). */
+function equalShares(ids: string[]) {
+  const each = Math.floor(10000 / ids.length) / 100;
+  return Object.fromEntries(
+    ids.map((id, i) => [
+      id,
+      String(i === ids.length - 1 ? +(100 - each * (ids.length - 1)).toFixed(2) : each),
+    ]),
+  );
+}
 type StaffSummary = {
   month_count: number;
   work: {
     submitted_at: string;
+    share_pct?: number;
     job_code: string;
     kind: string;
     materials: { barcode: string; material: string; quantity: number; unit: string }[];
@@ -43,7 +54,8 @@ function MasterTailorConsumption() {
   const qc = useQueryClient();
   const [code, setCode] = useState("");
   const [lookup, setLookup] = useState("");
-  const [staff, setStaff] = useState("");
+  // selected Tailor Staff and each one's share in %
+  const [shares, setShares] = useState<Record<string, string>>({});
   const [noMaterial, setNoMaterial] = useState(false);
   const [lines, setLines] = useState<Line[]>([
     { key: crypto.randomUUID(), barcode: "", quantity: "" },
@@ -59,8 +71,17 @@ function MasterTailorConsumption() {
   });
   const submit = useMutation({
     mutationFn: async () => {
-      if (!job.data || !staff)
-        throw new Error("Scan a job and choose the Tailor Staff who completed it");
+      const chosen = Object.entries(shares);
+      if (!job.data || !chosen.length)
+        throw new Error("Scan a job and choose the Tailor Staff who did the work");
+      const p_staff = chosen.map(([assignment_id, share]) => ({
+        assignment_id,
+        share: Number(share),
+      }));
+      if (p_staff.some((s) => !Number.isFinite(s.share) || s.share <= 0 || s.share > 100))
+        throw new Error("Each Tailor Staff needs a share above 0%");
+      const total = Math.round(p_staff.reduce((sum, s) => sum + s.share, 0) * 100) / 100;
+      if (total !== 100) throw new Error(`Shares must add up to 100% (now ${total}%)`);
       // Material is optional: tick "No material used" to submit without any M unit.
       const p_lines = noMaterial
         ? []
@@ -85,7 +106,7 @@ function MasterTailorConsumption() {
         p_request: crypto.randomUUID(),
         p_job_kind: job.data.kind,
         p_job: job.data.id,
-        p_staff_assignment: staff,
+        p_staff,
         p_lines,
       });
       if (error) throw error;
@@ -93,7 +114,7 @@ function MasterTailorConsumption() {
     onSuccess: () => {
       setLookup("");
       setCode("");
-      setStaff("");
+      setShares({});
       setNoMaterial(false);
       setLines([{ key: crypto.randomUUID(), barcode: "", quantity: "" }]);
       void qc.invalidateQueries();
@@ -115,7 +136,7 @@ function MasterTailorConsumption() {
         onChange={setCode}
         onScan={(value) => {
           setLookup(value);
-          setStaff("");
+          setShares({});
         }}
         label="Production or customer-tailoring slip"
         placeholder="Scan P##### or J#####"
@@ -139,21 +160,7 @@ function MasterTailorConsumption() {
                 : stitchingStatusLabel(job.data.status)}
             </p>
           </div>
-          <label className="block text-sm">
-            Tailor Staff
-            <select
-              className="mt-1 min-h-11 w-full rounded-md border bg-background px-3"
-              value={staff}
-              onChange={(e) => setStaff(e.target.value)}
-            >
-              <option value="">Choose Tailor Staff</option>
-              {job.data.staff.map((row) => (
-                <option key={row.assignment_id} value={row.assignment_id}>
-                  {row.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <StaffShares staff={job.data.staff} shares={shares} onChange={setShares} />
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -243,6 +250,66 @@ function MasterTailorConsumption() {
     </Panel>
   );
 }
+/** Tick every Tailor Staff who worked on the job and set each one's share (total 100%). */
+function StaffShares({
+  staff,
+  shares,
+  onChange,
+}: {
+  staff: Work["staff"];
+  shares: Record<string, string>;
+  onChange: (next: Record<string, string>) => void;
+}) {
+  const ids = Object.keys(shares);
+  const total = Math.round(ids.reduce((sum, id) => sum + (Number(shares[id]) || 0), 0) * 100) / 100;
+  const toggle = (id: string, on: boolean) => {
+    const next = on ? [...ids, id] : ids.filter((x) => x !== id);
+    onChange(next.length ? equalShares(next) : {});
+  };
+  return (
+    <fieldset className="space-y-2 rounded-lg border p-3">
+      <legend className="px-1 text-sm font-medium">Tailor Staff who did the work</legend>
+      {!staff.length && (
+        <p className="text-sm text-muted-foreground">No active Tailor Staff in this factory.</p>
+      )}
+      {staff.map((row) => {
+        const on = row.assignment_id in shares;
+        return (
+          <div key={row.assignment_id} className="flex items-center gap-3">
+            <label className="flex min-h-11 flex-1 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4"
+                checked={on}
+                onChange={(e) => toggle(row.assignment_id, e.target.checked)}
+              />
+              {row.name}
+            </label>
+            {on && (
+              <label className="flex items-center gap-1 text-sm">
+                <Input
+                  aria-label={`Share for ${row.name}`}
+                  inputMode="decimal"
+                  className="w-20 text-right"
+                  value={shares[row.assignment_id]}
+                  onChange={(e) => onChange({ ...shares, [row.assignment_id]: e.target.value })}
+                />
+                %
+              </label>
+            )}
+          </div>
+        );
+      })}
+      {ids.length > 0 && (
+        <p
+          className={`text-right text-sm ${total === 100 ? "text-muted-foreground" : "text-destructive"}`}
+        >
+          Total {total}% {total === 100 ? "" : "· must be 100%"}
+        </p>
+      )}
+    </fieldset>
+  );
+}
 function TailorStaffSummary() {
   const query = useQuery({
     queryKey: ["tailor-staff-work"],
@@ -265,6 +332,9 @@ function TailorStaffSummary() {
             <strong>{row.job_code}</strong>
             <p className="text-sm text-muted-foreground">
               {row.kind.replace("_", " ")} · {new Date(row.submitted_at).toLocaleString()}
+              {row.share_pct != null && Number(row.share_pct) < 100
+                ? ` · your share ${Number(row.share_pct)}%`
+                : ""}
             </p>
             <p className="text-sm">
               {row.materials
