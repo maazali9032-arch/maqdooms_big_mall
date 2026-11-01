@@ -77,3 +77,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+# Internal documents (public/ is served to anyone)
+public/*.pdf
+public/*.pptx
