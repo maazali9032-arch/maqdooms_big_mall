@@ -7586,6 +7586,7 @@ export type Database = {
         Returns: string;
       };
       ecom_save_product: { Args: { p_details: Json; p_listing: string }; Returns: undefined };
+      ecom_set_category_banner: { Args: { p_id: string; p_path: string }; Returns: undefined };
       ecom_save_settings: { Args: { p_whatsapp_number: string }; Returns: undefined };
       ecom_scan: { Args: { p_barcode: string }; Returns: Json };
       ecom_set_featured: {

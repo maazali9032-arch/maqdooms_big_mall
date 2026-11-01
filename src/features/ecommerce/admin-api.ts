@@ -14,6 +14,7 @@ export type Category = {
   name: string;
   slug: string;
   description: string | null;
+  banner_path: string | null;
   sort_order: number;
   hidden: boolean;
   products: number;
@@ -180,6 +181,11 @@ export function useEcomAction() {
         ),
       onSuccess: () => refresh(),
     }),
+    setCategoryPhoto: useMutation({
+      mutationFn: (c: { id: string; path: string | null }) =>
+        unwrap(supabase.rpc("ecom_set_category_banner", { p_id: c.id, p_path: c.path ?? sqlNull })),
+      onSuccess: () => refresh(),
+    }),
     deleteCategory: useMutation({
       mutationFn: (id: string) => unwrap(supabase.rpc("ecom_delete_category", { p_id: id })),
       onSuccess: () => refresh(),
@@ -271,12 +277,12 @@ export function cardPath(path: string) {
 }
 
 /** Uploads both sizes of one cropped photo; returns the large photo's path (stored on the product). */
-export async function uploadProductPhoto(listingId: string, files: File[]): Promise<string> {
+export async function uploadProductPhoto(folder: string, files: File[]): Promise<string> {
   const [large, card] = files;
   if (!large || !card) throw new Error("The photo must be processed before upload");
   if (files.some((f) => f.type !== "image/webp"))
     throw new Error("The photo must be processed before upload");
-  const path = `${listingId}/${crypto.randomUUID()}.webp`;
+  const path = `${folder}/${crypto.randomUUID()}.webp`;
   const bucket = supabase.storage.from(ECOMMERCE_BUCKET);
   const first = await bucket.upload(path, large, { contentType: large.type, upsert: false });
   if (first.error) throw new Error(first.error.message);
@@ -289,6 +295,11 @@ export async function uploadProductPhoto(listingId: string, files: File[]): Prom
     throw new Error(second.error.message);
   }
   return path;
+}
+
+/** A category's website photo lives in its own folder; the server checks the folder matches. */
+export function uploadCategoryPhoto(categoryId: string, files: File[]) {
+  return uploadProductPhoto(`categories/${categoryId}`, files);
 }
 
 export async function deleteProductPhotos(paths: string[]) {
